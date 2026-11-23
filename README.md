@@ -22,7 +22,7 @@ npm test           # Vitest (Node)
 | --- | --- |
 | `npm run build` | Builds rules and map data, then the Vite bundle into `dist/` |
 | `npm run build:rules` / `build:maps` | Compiles `data/` YAML into JSON (`src/generated/`, `public/maps/`) |
-| `npm run test:e2e` | Builds, then runs the Playwright smoke test against a fresh `vite preview` on port 5179 (which must be free) |
+| `npm run test:e2e` | Builds, then runs the Playwright tests (a smoke test, full car and scooter runs of tutorial 01, the OSM attribution; about 4.5 min) against a fresh `vite preview` on port 5179 (which must be free) |
 | `npm run fetch:osm` | Refreshes the raw OpenStreetMap extracts (manual) |
 | `npm run release:check` | Release gate: verified legal data, checked sign figures, site settings, credits, OSM licence |
 | `npm run deploy` | Builds, runs the release gate, then `wrangler deploy` (manual) |

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ROOT } from '../../../scripts/rules/lib/test-support.js';
-import { gatesOf, loadShippedMap, planDrive, runPlan, vehicleOf } from './drive.js';
+import { gatesOf, laneLineCrossings, loadShippedMap, planDrive, runPlan, vehicleOf } from './drive.js';
 
 /** Ids of every shipped map, from the generated index. */
 const MAP_IDS = JSON.parse(readFileSync(path.join(ROOT, 'public', 'maps', 'index.json'), 'utf8')).map((m) => m.id);
@@ -39,6 +39,17 @@ describe('clean kinematic runs of every shipped map', () => {
       }, 120000);
     }
   }
+
+  it('the routes draw one lane change to the kerb lane on tutorial 01 and on osm-pasteur, none on the others', () => {
+    const sides = (/** @type {string} */ id) => {
+      const map = loadShippedMap(id);
+      return laneLineCrossings(map, planDrive(map, vehicleOf('car-sedan')).path).map((c) => c.side);
+    };
+    expect(sides('tutorial-01-co-ban')).toEqual(['right']);
+    expect(sides('osm-pasteur')).toEqual(['right']);
+    expect(sides('tutorial-02-nga-tu')).toEqual([]);
+    expect(sides('tutorial-03-ban-dem')).toEqual([]);
+  }, 120000);
 
   it('gives byte-equal frames for the same plan', async () => {
     const map = loadShippedMap('tutorial-02-nga-tu');

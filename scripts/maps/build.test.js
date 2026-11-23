@@ -129,6 +129,34 @@ describe('shipped maps', () => {
     expect(t3.actors.filter((a) => a.kind === 'car')).toHaveLength(4);
     expect(t3.roads).toEqual(t1.roads);
   });
+
+  it('puts the road works in the inner lane on tutorial 01 and in the kerb lane on tutorial 03', () => {
+    const barrierZ = (/** @type {string} */ id) => {
+      const ob = shippedMap(id).obstacles.find((o) => o.id === 'ob-barrier');
+      if (!ob) throw new Error(`No barrier on ${id}`);
+      return ob.footprint.reduce((acc, p) => acc + p[1], 0) / ob.footprint.length;
+    };
+    expect(barrierZ('tutorial-01-co-ban')).toBeCloseTo(1.75);
+    expect(barrierZ('tutorial-03-ban-dem')).toBeCloseTo(5.25);
+  });
+
+  it('paves the corners a wide junction trim leaves between two pavement ends', () => {
+    const t2 = shippedMap('tutorial-02-nga-tu');
+    const paved = (/** @type {[number, number]} */ p) => t2.pavements.some((pv) => pointInPolygon(p, pv.polygon));
+    // Inside the triangle between the uu-tien and mot-chieu pavement ends and the j3 chamfer, and
+    // its mirror at j4 between mot-chieu and cuoi.
+    expect(paved([256, -244])).toBe(true);
+    expect(paved([494, -244])).toBe(true);
+    const inJunction = (/** @type {[number, number]} */ p) => t2.junctions.some((j) => pointInPolygon(p, j.polygon));
+    expect(inJunction([252, -248])).toBe(true);
+    expect(paved([252, -248])).toBe(false);
+    const corners = (/** @type {string} */ id) => shippedMap(id).pavements.filter((p) => /-c\d+$/u.test(p.id)).map((p) => p.id);
+    expect(corners('tutorial-02-nga-tu')).toEqual(['pv-j-j3-c1', 'pv-j-j3-c2', 'pv-j-j3-c3', 'pv-j-j3-c4', 'pv-j-j4-c1', 'pv-j-j4-c2']);
+    // Default trims leave no gap, so no corner pavement is added there.
+    expect(corners('tutorial-01-co-ban')).toEqual([]);
+    // The straight side of a T-junction between two nearly aligned arms is not a corner.
+    expect(corners('osm-pasteur').filter((c) => c.startsWith('pv-j-n2408528251-'))).toEqual([]);
+  });
 });
 
 describe('fetch helpers', () => {

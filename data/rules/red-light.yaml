@@ -1,14 +1,11 @@
-# Red light, in two tiers. Tier 1: the front passed the stop line on red (or on a yellow it could
-# have stopped for) but the vehicle stayed out of the crosswalk and the junction; it cites the
-# sign-and-marking catch-all by inference. Tier 2: it went on into the crosswalk or the junction,
-# by entryToleranceM or more, while the light was not green. Shipped stop lines sit about 1 m
-# before the crosswalk, so without the tolerance any overshoot would reach tier 2. A vehicle
-# already on or past the line when yellow comes on may go on; on yellow the game also excuses a
-# vehicle that could not stop at 3 m/s².
-#
-# Tier 1 is contestable: 6.1.a / 7.1.a exclude 9.b / 7.c (the signal clauses), and QCVN 41 6.3.3
-# reads red as "phải dừng lại trước vạch dừng", so crossing the line on red may already be 9.b /
-# 7.c. The tier stays `inferred` as a recorded design choice; see docs/known-issues.md.
+# Red light. The front passing a signal stop line on red (or on a yellow the vehicle could have
+# stopped for) cites the signal clause 6.9.b / 7.7.c: QCVN 41 6.3.3 makes "stop before the stop
+# line" the content of the red signal. The stage split is a score split only: a front past the line
+# that stays out of the crosswalk and the junction (by less than entryToleranceM) is danger 2;
+# going on into them while the light is not green is danger 4. Shipped stop lines sit about 1 m
+# before the crosswalk, so without the tolerance any overshoot would reach the higher tier. A
+# vehicle already on or past the line when yellow comes on may go on; on yellow the game also
+# excuses a vehicle that could not stop at 3 m/s².
 id: red-light
 title: { vi: "Vượt đèn đỏ" }
 description: { vi: "Đầu xe vượt qua vạch dừng khi đèn đỏ, hoặc khi đèn vàng mà vẫn kịp dừng." }
@@ -26,6 +23,11 @@ obligation:
     url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
   - sourceId: qcvn41-2024
     article: Điều 6
+    clause: '6.3.3'
+    quote: "Tín hiệu đèn màu đỏ là cấm đi: báo hiệu phải dừng lại trước vạch dừng. Nếu không có vạch dừng thì phải dừng trước đèn tín hiệu theo chiều đi."
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
+  - sourceId: qcvn41-2024
+    article: Điều 6
     clause: '6.3.2'
     quote: Tín hiệu đèn màu vàng phải dừng lại trước vạch dừng; trường hợp đang đi trên vạch dừng hoặc đã đi qua vạch dừng mà tín hiệu đèn màu vàng thì được đi tiếp.
     url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
@@ -33,9 +35,8 @@ tiers:
   - when: { stage: line }
     danger: 2
     scoreOnly: false
-    clause: { D6: D6.1.a, D7: D7.1.a }
-    inferred: true
-    note: { vi: "Đầu xe đã qua vạch dừng nhưng chưa vào phần đường dành cho người đi bộ hay nút giao; áp dụng lỗi không chấp hành vạch kẻ đường." }
+    clause: { D6: D6.9.b, D7: D7.7.c }
+    note: { vi: "Đèn đỏ buộc dừng trước vạch dừng (QCVN 41 mục 6.3.3); đầu xe đã qua vạch là không chấp hành hiệu lệnh đèn tín hiệu, kể cả khi dừng lại ngay sau đó." }
   - when: { stage: entered }
     danger: 4
     scoreOnly: false

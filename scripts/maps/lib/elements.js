@@ -8,6 +8,7 @@ import {
   distance,
   footprint,
   headingOf,
+  headingVector,
   leftVector,
   offsetPolyline,
   pointInPolygon,
@@ -47,6 +48,82 @@ export const STOP_LINE_CROSSWALK_RANGE_M = 15;
 export const STOP_LINE_GAP_M = 1;
 /** Distance of a sign post or a signal head beyond the carriageway edge (m). */
 export const POST_OFFSET_M = 1;
+
+/** Smallest sine of the angle between two arms whose pavement corner is filled (30°). */
+const CORNER_MIN_SIN = 0.5;
+
+/**
+ * Corner pavements. Where a junction is trimmed back further than the pavements reach, two arms
+ * meeting at an angle leave a gap between their pavement ends and the junction's chamfer that is
+ * neither road nor pavement. Each such gap gets its own pavement, bounded by the two pavement end
+ * edges, their outer edges up to where those meet, and the chamfer, so the kerb wraps the corner.
+ * A pair is skipped when the arms meet at less than 30° (the straight side of a T-junction), when
+ * the outer edges do not meet towards the junction within its trim (the pavements already touch
+ * or overlap there), or when the polygon would
+ * overlap the junction, another pavement or a road.
+ * @param {Topology} topo Topology.
+ * @param {Map<string, Vec2[]>} junctionPolys Junction polygons by id.
+ * @param {GameMap['pavements']} existing Road pavements.
+ * @returns {GameMap['pavements']} Corner pavements, `pv-<junction>-c<n>`.
+ */
+function cornerPavements(topo, junctionPolys, existing) {
+  /** @type {GameMap['pavements']} */
+  const out = [];
+  const roadPolys = topo.roads.map((road) => {
+    const cw = carriageway(road.way, LANE_WIDTH_M);
+    return band(road.points, 0, polylineLength(road.points), cw.lo, cw.hi);
+  });
+  for (const j of topo.junctions) {
+    const poly = junctionPolys.get(j.id);
+    if (!poly) continue;
+    /** @type {Array<{roadId: string, inner: Vec2, outer: Vec2, d: Vec2}>} */
+    const ends = [];
+    for (const road of topo.roads) {
+      const cw = carriageway(road.way, LANE_WIDTH_M);
+      const len = polylineLength(road.points);
+      const { left, right } = road.way.pavement;
+      for (const atStart of [true, false]) {
+        if ((atStart ? road.startJunction : road.endJunction) !== j.id) continue;
+        const s = atStart ? 0 : len;
+        // Unit direction from the junction into the road.
+        const [hx, hz] = headingVector(pointOnRoad(road, s, 0).heading);
+        const d = /** @type {Vec2} */ (atStart ? [hx, hz] : [-hx, -hz]);
+        if (right > 0) ends.push({ roadId: road.id, inner: pointOnRoad(road, s, cw.lo).point, outer: pointOnRoad(road, s, cw.lo - right).point, d });
+        if (left > 0) ends.push({ roadId: road.id, inner: pointOnRoad(road, s, cw.hi).point, outer: pointOnRoad(road, s, cw.hi + left).point, d });
+      }
+    }
+    let n = 0;
+    for (let i = 0; i < ends.length; i += 1) {
+      for (let k = i + 1; k < ends.length; k += 1) {
+        const A = ends[i];
+        const B = ends[k];
+        if (A.roadId === B.roadId) continue;
+        // Outer edge lines, walked back towards the junction: A.outer − t·A.d = B.outer − u·B.d.
+        // The sine of the angle between the arms: only a real corner (30° or more) is paved, not
+        // the straight side of a T-junction between two nearly aligned arms.
+        const det = -A.d[0] * B.d[1] + A.d[1] * B.d[0];
+        if (Math.abs(det) < CORNER_MIN_SIN) continue;
+        const rx = B.outer[0] - A.outer[0];
+        const rz = B.outer[1] - A.outer[1];
+        const t = (rx * B.d[1] - rz * B.d[0]) / det;
+        const u = (A.d[1] * rx - A.d[0] * rz) / det;
+        if (!(t > 1e-6 && u > 1e-6 && t <= j.trimM && u <= j.trimM)) continue;
+        const x = /** @type {Vec2} */ ([A.outer[0] - t * A.d[0], A.outer[1] - t * A.d[1]]);
+        const ring = /** @type {Vec2[]} */ ([A.inner, A.outer, x, B.outer, B.inner]);
+        const area = ring.reduce((acc, p, q) => acc + p[0] * ring[(q + 1) % ring.length][1] - ring[(q + 1) % ring.length][0] * p[1], 0) / 2;
+        if (Math.abs(area) < 0.05) continue;
+        // A point well inside the gap must be in no junction, pavement or road.
+        const probe = /** @type {Vec2} */ ([(A.inner[0] + B.inner[0] + x[0]) / 3, (A.inner[1] + B.inner[1] + x[1]) / 3]);
+        if (pointInPolygon(probe, poly)) continue;
+        if ([...existing, ...out].some((pv) => pointInPolygon(probe, pv.polygon))) continue;
+        if (roadPolys.some((rp) => pointInPolygon(probe, rp))) continue;
+        n += 1;
+        out.push({ id: `pv-${j.id}-c${n}`, polygon: ring });
+      }
+    }
+  }
+  return out;
+}
 
 /** Signs that turn into restrictions, with what they ban. */
 const RESTRICTION_SIGNS = Object.freeze({ 'P.123a': ['left'], 'P.124a': ['uturn'] });
@@ -374,6 +451,7 @@ export function compileMap(spec) {
     if (right > 0) pavements.push({ id: `pv-${road.id}-r`, polygon: band(road.points, 0, len, cw.lo - right, cw.lo) });
     if (left > 0) pavements.push({ id: `pv-${road.id}-l`, polygon: band(road.points, 0, len, cw.hi, cw.hi + left) });
   }
+  pavements.push(...cornerPavements(topo, junctionPolys, pavements));
 
   // Obstacles.
   /**

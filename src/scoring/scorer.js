@@ -8,8 +8,12 @@
  *    so a contact that knocks the rider over escalates one episode instead of opening a second.
  * 2. The step context is derived once (location, zones, limit, crossings, junction pass).
  * 3. Each applicable rule's detector runs; superseding rules run first and the collision rule
- *    last, so a crash sees every cause that opens or escalates on the same step. An active rule
- *    whose superseding rule is active this step, or still has an open episode, is dropped.
+ *    last, so a crash sees every cause that opens or escalates on the same step. Supersession
+ *    works in one of two ways per pair. When the two rules cite no clause in common (the
+ *    superseding clause covers the act, as 9.d covers a no-entry), an active rule whose
+ *    superseding rule is active this step, or still has an open episode, is dropped. When they
+ *    share a clause, only a detection citing that same clause is dropped, so one clause is never
+ *    counted twice while a different clause of the superseded rule still stands.
  * 4. Episodes: a rule turning active opens an episode (a `new` breach); a worse severity inside it
  *    emits an `escalated` breach with the same episode id; it closes after `rearmS` inactive. The
  *    report deducts once per episode, at its worst tier.
@@ -114,13 +118,21 @@ export function createScorer(bundle, map, vehicleInfo) {
   for (const r of rules) {
     if (!DETECTORS[r.detection.type]) throw new Error(`Rule ${r.id}: unknown detector "${r.detection.type}"`);
   }
-  /** Superseding rule ids per superseded rule id, for this vehicle's decree group. */
-  /** @type {Map<string, string[]>} */
+  /**
+   * Superseding rules per superseded rule id, for this vehicle's decree group. `byClause` is set
+   * when the two rules share a clause for the group: then only a detection citing the clause the
+   * superseding rule cites at that moment is dropped.
+   */
+  /** @type {Map<string, {ruleId: string, byClause: boolean}[]>} */
   const supersededBy = new Map();
+  const ruleById = new Map(rules.map((r) => [r.id, r]));
   for (const r of rules) {
     for (const s of r.supersedes ?? []) {
       if (s.decreeGroups && !s.decreeGroups.includes(group)) continue;
-      supersededBy.set(s.ruleId, [...(supersededBy.get(s.ruleId) ?? []), r.id]);
+      const other = ruleById.get(s.ruleId);
+      const mine = new Set(r.tiers.map((t) => tierClauseId(t, group)).filter((id) => id !== null));
+      const byClause = other ? other.tiers.some((t) => mine.has(tierClauseId(t, group) ?? '')) : false;
+      supersededBy.set(s.ruleId, [...(supersededBy.get(s.ruleId) ?? []), { ruleId: r.id, byClause }]);
     }
   }
   const policy = bundle.collisionPolicy;
@@ -193,10 +205,28 @@ export function createScorer(bundle, map, vehicleInfo) {
       if (tierIndex < 0) continue;
       active.push({ rule, tierIndex, severity: res.severity ?? tierIndex, input: res.tierInput, basisVerified: res.basisVerified ?? true });
     }
-    const activeIds = new Set(active.map((a) => a.rule.id));
-    const kept = active.filter(
-      (a) => !(supersededBy.get(a.rule.id) ?? []).some((s) => activeIds.has(s) || openIndex[s] !== undefined),
-    );
+    /**
+     * Whether a superseding rule is active or open now, and the clause ids it cites: its active
+     * tier and its open episode.
+     * @param {string} ruleId Superseding rule id.
+     * @returns {{any: boolean, ids: Set<string | null>}} State.
+     */
+    const citedNow = (ruleId) => {
+      /** @type {Set<string | null>} */
+      const ids = new Set();
+      const act = active.find((x) => x.rule.id === ruleId);
+      if (act) ids.add(tierClauseId(act.rule.tiers[act.tierIndex], group));
+      const open = openIndex[ruleId];
+      if (open !== undefined) ids.add(episodes[open].breach.clause?.id ?? null);
+      return { any: act !== undefined || open !== undefined, ids };
+    };
+    const kept = active.filter((a) => {
+      const own = tierClauseId(a.rule.tiers[a.tierIndex], group);
+      return !(supersededBy.get(a.rule.id) ?? []).some((s) => {
+        const now = citedNow(s.ruleId);
+        return s.byClause ? own !== null && now.ids.has(own) : now.any;
+      });
+    });
 
     /** @type {Breach[]} */
     const breaches = [];
@@ -295,9 +325,7 @@ function findCause(episodes, crashRuleId, fromT, floorT, group) {
   let best = null;
   for (const e of episodes) {
     if (e.ruleId === crashRuleId || e.lastActiveT < Math.max(fromT, floorT) - 1e-9) continue;
-    if (!best || e.breach.danger > best.breach.danger || (e.breach.danger === best.breach.danger && e.lastActiveT >= best.lastActiveT)) {
-      best = e;
-    }
+    if (!best || causeRank(e, best, group) >= 0) best = e;
   }
   if (!best) return null;
   const clauseId = best.breach.clause ? best.breach.clause.id : null;
@@ -307,6 +335,32 @@ function findCause(episodes, crashRuleId, fromT, floorT, group) {
     clauseId: clauseId && clauseId.startsWith(`${group}.`) ? clauseId : null,
     episodeId: best.episodeId,
   };
+}
+
+/**
+ * Orders two candidate crash causes: higher danger first; at equal danger one whose clause belongs
+ * to the vehicle's decree group (a legal cause) before one without (score only); then the most
+ * recently active.
+ * @param {Episode} a Candidate.
+ * @param {Episode} b Current best.
+ * @param {import('../contracts/index.js').DecreeGroup} group Decree group.
+ * @returns {number} Positive or zero when `a` should replace `b`, negative otherwise.
+ */
+function causeRank(a, b, group) {
+  if (a.breach.danger !== b.breach.danger) return a.breach.danger - b.breach.danger;
+  const legal = (/** @type {Episode} */ e) => (e.breach.clause?.id.startsWith(`${group}.`) ? 1 : 0);
+  if (legal(a) !== legal(b)) return legal(a) - legal(b);
+  return a.lastActiveT - b.lastActiveT;
+}
+
+/**
+ * Clause id a rule tier cites for a decree group, or null for a score-only tier.
+ * @param {Rule['tiers'][number]} tier Tier.
+ * @param {import('../contracts/index.js').DecreeGroup} group Decree group.
+ * @returns {string | null} Clause id.
+ */
+function tierClauseId(tier, group) {
+  return tier.clause?.[group] ?? null;
 }
 
 /**

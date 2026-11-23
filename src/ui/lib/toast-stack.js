@@ -1,7 +1,8 @@
 /**
  * Breach-toast stack as a pure reducer with injected time. HUD states may resend the same
- * breaches on every update, so each (episode, tier) is shown once; an escalation of an open
- * episode updates its toast in place and restarts its timer.
+ * breaches on every update, so each (episode, tier, clause) is shown once; an escalation of an open
+ * episode, or a change of the clause it cites at the same tier, updates its toast in place and
+ * restarts its timer.
  */
 
 /** @typedef {import('../../contracts/score.js').Breach} Breach */
@@ -21,7 +22,8 @@ export const TOAST_MS = 6000;
 /**
  * @typedef {object} ToastStack
  * @property {Toast[]} items Visible toasts, oldest first.
- * @property {Record<string, true>} seen `episodeId#tierIndex` keys already shown.
+ * @property {Record<string, true>} seen `episodeId#tierIndex#clauseId` keys already shown
+ *   (`score-only` in place of the clause id when there is none).
  */
 
 /**
@@ -43,7 +45,7 @@ export function ingestBreaches(stack, breaches, now) {
   let items = stack.items;
   let seen = stack.seen;
   for (const breach of breaches) {
-    const key = `${breach.episodeId}#${breach.tierIndex}`;
+    const key = `${breach.episodeId}#${breach.tierIndex}#${breach.clause?.id ?? 'score-only'}`;
     if (seen[key]) continue;
     seen = { ...seen, [key]: true };
     const open = items.findIndex((toast) => toast.episodeId === breach.episodeId);

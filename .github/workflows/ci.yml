@@ -11,7 +11,8 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The e2e suite drives two full runs in software WebGL (about 4.5 min on a desktop CPU).
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

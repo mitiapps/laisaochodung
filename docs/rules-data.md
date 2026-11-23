@@ -68,8 +68,8 @@ old record once nothing cites it.
   figure, `null` until then. `countUnverified` lists every null under `figures`, and the release
   gate fails while any drawing is unchecked.
 - **`inferred`** (tier): no điểm names the behaviour exactly, and the clause applies by
-  reading. The UI shows "suy luận". Examples: the sign-and-marking catch-all for a red-light
-  overshoot that stops before the crosswalk, or for going straight onto an occupied zebra.
+  reading. The UI shows "suy luận". Example: the sign-and-marking catch-all for going straight
+  onto an occupied zebra.
 - **`paramBasis: design`**: the threshold is the game's own, not the law's ("ngưỡng của trò
   chơi"). Breaches list these in `designParams`.
 
@@ -81,8 +81,16 @@ in the listed groups (both groups when omitted):
 - `wrong-way` wins over `no-entry` and `wrong-side`.
 - `banned-turn` wins over `turn-signal` for motorbikes only, where both cite 7.3.a.
 
-A superseded rule is dropped when its superseding rule is active in the same step or still has
-an open episode. An emitted breach cannot be taken back, so a superseding detector must fire no
+The scorer works out per pair, from the tiers, which of two ways applies:
+
+- The two rules cite no clause in common for the group (`wrong-way` 9.d against `no-entry` 5.i,
+  whose text excepts 9.d, and `wrong-side` 5.b): the superseded rule is dropped whenever its
+  superseding rule is active in the same step or still has an open episode.
+- They share a clause (`banned-turn` and `turn-signal` on 7.3.a): only a detection citing the
+  clause the superseding rule cites at that moment is dropped. A motorbike's banned U-turn
+  (7.2.k) with no indicator therefore reports both 7.2.k and the separate 7.3.a.
+
+An emitted breach cannot be taken back, so a superseding detector must fire no
 later than the rule it supersedes. Wrong-way fires on the P.102 entry crossing itself, and both
 junction-turn rules fire on the junction exit.
 
@@ -97,7 +105,9 @@ scooter. It is measured along the contact normal, so a fast sideswipe counts as 
   (`accidentA`) otherwise, including when there is no cause.
 - `accidentBList` copies the lists quoted in 6.10.b and 7.10.b, and a test keeps the two
   equal.
-- The cause is the worst other breach active in the last `crashCauseWindowS`. The crash rule is
+- The cause is the worst other breach active in the last `crashCauseWindowS`: the highest
+  danger, then one with a clause of the vehicle's decree group over a score-only one, then the
+  most recent. The crash rule is
   evaluated after every other rule of a step, so a cause that opens or escalates on the crash's
   own step counts, at its new tier.
 - A cause in `inferredAccidentCauses` (a clause id or a rule id) marks the accident as

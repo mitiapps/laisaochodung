@@ -61,7 +61,13 @@ two builds are byte-identical.
   after every checkpoint. A checkpoint sits at the centre of the lane it names (`lane`, index 0
   next to the kerb, as for the start); on a direction with one lane `lane` may be left out. A
   checkpoint without `lane` on a multi-lane direction fails the build, because the nav arrow
-  points at the gate centre and the middle of two lanes is the lane line.
+  points at the gate centre and the middle of two lanes is the lane line. After the last
+  checkpoint the arrow points at the finish band straight ahead of it (`finishTarget`), in the
+  lane the route arrives in. A lane change is drawn by two checkpoints on one straight road in
+  different lanes, where the lane line is dashed; the test drivers signal it.
+- Where a junction is trimmed back further than the pavements reach (a large `trimM`), the gap
+  between two arms' pavement ends and the junction's chamfer gets a corner pavement
+  (`pv-<junction>-c<n>`), so the kerb wraps the corner.
 
 Game values (lane width, crosswalk width 4 m, pavement width, light cycle, class lane defaults,
 cluster and stub lengths) are constants at the top of the `lib/` modules.
@@ -110,9 +116,9 @@ attribution `© OpenStreetMap contributors, ODbL`; the data licence is in
 
 | Id | Teaches |
 | --- | --- |
-| `tutorial-01-co-ban` | R.420; one lane each way (centre line dashed, then solid) widening to two (dashed, then solid lane lines); P.127 40 zone ended by DP.134; crosswalk with a triggered pedestrian; road works in the kerb lane; P.130 stretch before a side junction; finish |
-| `tutorial-02-nga-tu` | R.420; signalled crossroads with P.123a and P.124a on the approach; W.208 give-way entry onto an I.401 priority road; P.101 closed side road; one-way street (I.407a) with P.102 at its far end; R.122 STOP junction |
-| `tutorial-03-ban-dem` | The tutorial-01 layout at 22:30 in rain (grip 0.7, a game value), lit; NPC car ahead, NPC car in the kerb lane, oncoming NPC cars |
+| `tutorial-01-co-ban` | R.420; one lane each way (centre line dashed, then solid) widening to two (dashed, then solid lane lines); P.127 40 zone ended by DP.134; crosswalk with a triggered pedestrian; road works in the inner lane, so the route moves to the kerb lane while the lane line is dashed; P.130 stretch before a side junction; finish |
+| `tutorial-02-nga-tu` | R.420; signalled crossroads with P.123a and P.124a on the approach; W.208 give-way entry onto an I.401 priority road; P.101 closed side road; one-way street (I.407a) with P.102 at its far end; R.122 STOP junction; right turns kerb lane to kerb lane at the two one-way junctions, widened with `trimM: 8` |
+| `tutorial-03-ban-dem` | The tutorial-01 roads at 22:30 in rain (grip 0.7, a game value), lit, with its own road works (kerb lane) and route (inner lane); NPC car ahead, NPC car in the kerb lane, oncoming NPC cars |
 | `osm-pasteur` | About 0.4 km of Pasteur and Lê Duẩn, Quận 1, TP.HCM, from OpenStreetMap |
 
 ### `osm-pasteur` corridor choice (decision D1)
@@ -151,6 +157,9 @@ default road therefore satisfies the D1 constraint without a fallback:
 - Marked crossing: node 14118646229 (`crossing=traffic_signals`, `crossing:markings=yes`) on the
   Pasteur approach, plus others along the route.
 - One-way street: Pasteur. Turn between two mapped ways: Pasteur → Lê Duẩn.
+- The route moves from the middle lane to the kerb lane mid-block on way 747231131, where the
+  lane lines are dashed, and leaves the right turn in Lê Duẩn's kerb lane (Law 36 Điều 15
+  khoản 2: before a turn, move to the lane nearest the turn).
 
 None of the extract's 17 traffic_signals nodes lies within 30 m of Pasteur × Nguyễn Du (nearest
 146 m) or Pasteur × Hàn Thuyên, so those junctions have no stop lines in the game. Way 678315474 is tagged `sidewalk=no`, so it has no

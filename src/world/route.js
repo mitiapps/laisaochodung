@@ -8,7 +8,7 @@
  * `timeout` no further events are emitted. Progress survives `reset` events.
  */
 
-import { headingOf, headingVector, pointInPolygon, polygonCentroid } from '../geometry/index.js';
+import { headingOf, headingVector, pointInPolygon, polygonCentroid, segmentIntersection } from '../geometry/index.js';
 
 /** @typedef {import('../contracts/map.js').GameMap} GameMap */
 /** @typedef {import('../contracts/telemetry.js').RouteNav} RouteNav */
@@ -19,6 +19,37 @@ export const CHECKPOINT_DEPTH_M = 3;
 
 /** Half width of a checkpoint gate across its heading, in metres. */
 export const CHECKPOINT_HALF_WIDTH_M = 8;
+
+/** How far ahead of the last checkpoint the finish band is searched for, in metres. */
+const FINISH_RAY_M = 2000;
+
+/**
+ * Navigation target inside the finish area: the middle of the stretch of the finish polygon
+ * straight ahead of the last checkpoint (of the start with no checkpoint), so the target stays in
+ * the lane the route arrives in. On a road with several lanes per direction the polygon's centroid
+ * can sit on a lane line. Falls back to the centroid when that ray misses the polygon.
+ * @param {GameMap} map Map.
+ * @returns {import('../contracts/map.js').Vec2} Target point.
+ */
+export function finishTarget(map) {
+  const { checkpoints, finish, start } = map.route;
+  const from = checkpoints.at(-1) ?? start;
+  const p = /** @type {import('../contracts/map.js').Vec2} */ ([from.pos.x, from.pos.z]);
+  const [fx, fz] = headingVector(from.heading);
+  const far = /** @type {import('../contracts/map.js').Vec2} */ ([p[0] + fx * FINISH_RAY_M, p[1] + fz * FINISH_RAY_M]);
+  const poly = finish.polygon;
+  /** @type {number[]} */
+  const hits = [];
+  for (let i = 0; i < poly.length; i += 1) {
+    const hit = segmentIntersection(p, far, poly[i], poly[(i + 1) % poly.length]);
+    if (hit) hits.push(hit.t);
+  }
+  hits.sort((a, b) => a - b);
+  if (hits.length < 2) return polygonCentroid(poly);
+  const t = (hits[0] + hits[1]) / 2;
+  const target = /** @type {import('../contracts/map.js').Vec2} */ ([p[0] + (far[0] - p[0]) * t, p[1] + (far[1] - p[1]) * t]);
+  return pointInPolygon(target, poly) ? target : polygonCentroid(poly);
+}
 
 /**
  * @typedef {object} RouteState
@@ -76,10 +107,7 @@ export function stepRoute(routeState, map, egoPos, t) {
       timedOut = true;
     }
   }
-  const target =
-    next < checkpoints.length
-      ? [checkpoints[next].pos.x, checkpoints[next].pos.z]
-      : polygonCentroid(finish.polygon);
+  const target = next < checkpoints.length ? [checkpoints[next].pos.x, checkpoints[next].pos.z] : finishTarget(map);
   const dx = target[0] - egoPos.x;
   const dz = target[1] - egoPos.z;
   return {

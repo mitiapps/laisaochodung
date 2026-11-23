@@ -92,8 +92,8 @@ describe('physics contacts with the NPC car ahead on tutorial 03', () => {
 
 describe('physics contacts with the road-works barrier on tutorial 01', () => {
   it('a light hit on the barrier at about 9 km/h is tier 0', async () => {
-    const map = startAt(loadShippedMap('tutorial-01-co-ban'), 230, 5);
-    const run = await drivePhysics(map, 'car-sedan', { cruiseMps: 2.5, path: straightLine(230, 340, 5), maxS: 110 });
+    const map = startAt(loadShippedMap('tutorial-01-co-ban'), 230, 1.75);
+    const run = await drivePhysics(map, 'car-sedan', { cruiseMps: 2.5, path: straightLine(230, 340, 1.75), maxS: 110 });
     expectReplayEqual(run);
     const hit = firstContact(run);
     expect(hit?.otherKind).toBe('static');
@@ -102,8 +102,8 @@ describe('physics contacts with the road-works barrier on tutorial 01', () => {
   }, 120000);
 
   it('a heavy hit on the barrier at 30 km/h is tier 1', async () => {
-    const map = startAt(loadShippedMap('tutorial-01-co-ban'), 230, 5);
-    const run = await drivePhysics(map, 'car-sedan', { cruiseMps: 8.33, path: straightLine(230, 340, 5), maxS: 110 });
+    const map = startAt(loadShippedMap('tutorial-01-co-ban'), 230, 1.75);
+    const run = await drivePhysics(map, 'car-sedan', { cruiseMps: 8.33, path: straightLine(230, 340, 1.75), maxS: 110 });
     expectReplayEqual(run);
     const hit = firstContact(run);
     expect(hit?.otherKind).toBe('static');

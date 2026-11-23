@@ -3,8 +3,8 @@ import { breachesOf, constantPlan, expectBreach, loadShippedMap, planDrive, runP
 
 const MAP = 'tutorial-01-co-ban';
 const CAR = vehicleOf('car-sedan');
-/** On the inner lane of the P.127 40 km/h stretch (x 240 to 420). */
-const STRETCH = straightLine(240, 400, 2);
+/** In the kerb lane of the P.127 40 km/h stretch (x 240 to 420), clear of the road works. */
+const STRETCH = straightLine(240, 400, 5);
 
 describe('speeding', () => {
   it('breaches at 54 km/h on the 40 km/h stretch, in the 10 to 20 km/h band', async () => {

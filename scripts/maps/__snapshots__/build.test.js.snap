@@ -1691,19 +1691,19 @@ exports[`fixture builds > matches the snapshot for tutorial 01 1`] = `
       "footprint": [
         [
           321.5,
-          4.45
+          0.95
         ],
         [
           321.5,
-          6.05
+          2.55
         ],
         [
           318.5,
-          6.05
+          2.55
         ],
         [
           318.5,
-          4.45
+          0.95
         ]
       ],
       "height": 1,
@@ -2519,15 +2519,29 @@ exports[`fixture builds > matches the snapshot for tutorial 01 1`] = `
       {
         "heading": 0,
         "pos": {
-          "x": 370,
+          "x": 235,
           "z": 1.75
         }
       },
       {
         "heading": 0,
         "pos": {
+          "x": 290,
+          "z": 5.25
+        }
+      },
+      {
+        "heading": 0,
+        "pos": {
+          "x": 370,
+          "z": 5.25
+        }
+      },
+      {
+        "heading": 0,
+        "pos": {
           "x": 560,
-          "z": 1.75
+          "z": 5.25
         }
       }
     ],

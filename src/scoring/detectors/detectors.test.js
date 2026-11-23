@@ -139,18 +139,26 @@ describe('stop-line-on-red', () => {
     ]);
   });
 
-  it('cites the catch-all by inference when the front stops past the line, before the crosswalk', async () => {
-    const { report } = await scoreScript({ map: quiet(), path: [[5, 1.75], [86.75, 1.75]], speed: steps([[31, 0], [12, 10]]), durationS: 45 });
-    expect(summary(report)).toEqual(['red-light:0:D6.1.a']);
-    expect(report.breaches[0].inferred).toBe(true);
-    expect(report.breaches[0].note?.vi).toMatch(/vạch dừng/u);
+  it('cites the signal clause at the lower score tier when the front stops just past the line', async () => {
+    // Front at x = 88.5: half a metre past the line, before the crosswalk.
+    const speed = steps([[31, 0], [12, 10]]);
+    const { report } = await scoreScript({ map: quiet(), path: [[5, 1.75], [86.25, 1.75]], speed, durationS: 45 });
+    expect(summary(report)).toEqual(['red-light:0:D6.9.b']);
+    const [breach] = report.breaches;
+    expect(breach.inferred).toBe(false);
+    expect(breach.clause?.licencePoints).toBe(4);
+    expect(breach.deduction).toBe(0.5);
+    expect(breach.note?.vi).toMatch(/vạch dừng/u);
+    const scooter = await scoreScript({ map: quiet(), vehicleId: 'scooter', path: [[5, 1.75], [87.575, 1.75]], speed, durationS: 45 });
+    expect(summary(scooter.report)).toEqual(['red-light:0:D7.7.c']);
+    expect(scooter.report.breaches[0].inferred).toBe(false);
   });
 
   it('stays at the line tier for a front less than entryToleranceM into the crosswalk', async () => {
     const speed = steps([[31, 0], [12, 10]]);
     // Front at x = 90.75: 0.75 m into the crosswalk.
     const short = await scoreScript({ map: quiet(), path: [[5, 1.75], [88.5, 1.75]], speed, durationS: 45 });
-    expect(summary(short.report)).toEqual(['red-light:0:D6.1.a']);
+    expect(summary(short.report)).toEqual(['red-light:0:D6.9.b']);
     // Front at x = 91.75: 1.75 m into it.
     const deep = await scoreScript({ map: quiet(), path: [[5, 1.75], [89.5, 1.75]], speed, durationS: 45 });
     expect(summary(deep.report)).toEqual(['red-light:1:D6.9.b']);
@@ -378,13 +386,19 @@ describe('junction-turn', () => {
     expect(await run({ ...banned, vehicleId: 'scooter' })).toEqual(['banned-turn:0:D7.3.a']);
   });
 
-  it('cites 7.2.k for a banned U-turn on a motorbike', async () => {
+  it('cites 7.2.k for a banned U-turn on a motorbike and keeps the separate 7.3.a for no indicator', async () => {
     const map = quiet((m) => {
       m.signs.push({ id: 's-p124a', code: 'P.124a', pos: { x: 95.5, z: -12 }, heading: -Math.PI / 2, source: 'tutorial' });
       m.restrictions.push({ id: 'rx-n-u', junctionId: 'j1', fromLaneIds: ['rn-s'], banned: ['uturn'], signId: 's-p124a' });
     });
     const path = /** @type {Vec2[]} */ ([[98.25, -40], [98.25, -1], [101.75, -1], [101.75, -40]]);
-    expect(await run({ map, vehicleId: 'scooter', path, speed: steps([[31, 0], [12, 8]]), durationS: 43 })).toEqual([
+    const speed = steps([[31, 0], [12, 8]]);
+    expect(await run({ map, vehicleId: 'scooter', path, speed, durationS: 43 })).toEqual([
+      'banned-turn:1:D7.2.k',
+      'turn-signal:0:D7.3.a',
+    ]);
+    // With the indicator on, only the banned U-turn remains.
+    expect(await run({ map, vehicleId: 'scooter', path, speed, durationS: 43, controls: [{ t: 0, indicators: 'left' }] })).toEqual([
       'banned-turn:1:D7.2.k',
     ]);
   });

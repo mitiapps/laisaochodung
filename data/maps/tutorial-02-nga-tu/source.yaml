@@ -53,6 +53,10 @@ ways:
 
 junctions:
   - { node: j1, signals: { green: 27, yellow: 3, red: 30 } }
+  # Wider corners for the right turns kerb lane to kerb lane: a 6.25 m arc, drivable at a car's
+  # lock up to about 25 km/h.
+  - { node: j3, trimM: 8 }
+  - { node: j4, trimM: 8 }
 
 signs:
   - { id: s-r420, code: R.420, at: { way: tay, s: 3 } }
@@ -60,7 +64,7 @@ signs:
   - { id: s-p124a, code: P.124a, at: { way: tay, s: 160 } }
   - { id: s-w208, code: W.208, at: { way: giua, s: 170 } }
   - { id: s-i401, code: I.401, at: { way: uu-tien, s: 12 } }
-  - { id: s-p101, code: P.101, at: { way: cam, s: 8 } }
+  - { id: s-p101, code: P.101, at: { way: cam, s: 12 } }
   - { id: s-i407a, code: I.407a, at: { way: mot-chieu, s: 10 } }
   - { id: s-p102, code: P.102, at: { way: mot-chieu, s: 240 }, dir: backward }
   - { id: s-r122, code: R.122, at: { way: mot-chieu, s: 225 } }

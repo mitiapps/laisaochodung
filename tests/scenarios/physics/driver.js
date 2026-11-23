@@ -2,7 +2,8 @@
  * Physics autopilot for scenario tests (Node only). It drives the real sim (Rapier) along a path,
  * closed loop: pure pursuit for steering along the lane centreline, a speed controller that tracks
  * the target from the shared stop logic (`speedTarget`), and the turn signal, headlight and gear
- * commands a driver would give. It is kept small on purpose: no overtaking, no lane changes.
+ * commands a driver would give. It is kept small on purpose: no overtaking; a lane change is only
+ * the one the route's checkpoints draw, signalled as the kinematic plan signals it.
  *
  * The run is scored twice: live, one scorer step per sim frame, and replayed with `scoreRun` over
  * the recorded frames. The two must agree, `endedBy` included.
@@ -16,7 +17,7 @@ import { angleDiff, headingOf, pointAtDistance, polylineLength, projectOntoPolyl
 import { neutralInput } from '../../../src/contracts/controls.js';
 import { SCOOTER_FRONT_BRAKE_PER_GRIP } from '../../../src/game/input.js';
 import { realBundle } from '../../../scripts/rules/lib/test-support.js';
-import { CLEAN_KMH, gatesOf, insideS, routePath, speedTarget, vehicleOf } from '../kinematic/drive.js';
+import { CLEAN_KMH, gatesOf, routePath, signalWindows, speedTarget, vehicleOf } from '../kinematic/drive.js';
 
 /** @typedef {import('../../../src/contracts/index.js').GameMap} GameMap */
 /** @typedef {import('../../../src/contracts/index.js').Vec2} Vec2 */
@@ -50,30 +51,6 @@ export async function initRapier() {
  */
 function clamp(x, lo, hi) {
   return Math.max(lo, Math.min(hi, x));
-}
-
-/**
- * Turn windows of the path: the side of each junction turn and the distance interval the
- * indicator must cover (45 m before the entry until 15 m after the exit, as the kinematic plan).
- * @param {GameMap} map Map.
- * @param {Vec2[]} line Path.
- * @returns {Array<{side: Indicators, from: number, to: number}>} Windows.
- */
-function turnWindows(map, line) {
-  /** @type {Array<{side: Indicators, from: number, to: number}>} */
-  const out = [];
-  for (const j of map.junctions) {
-    const r = insideS(line, j.polygon);
-    if (!r) continue;
-    const delta = angleDiff(r.exitHeading, r.enterHeading);
-    if (Math.abs(delta) < (45 * Math.PI) / 180) continue;
-    const [lx, lz] = [-Math.sin(r.enterHeading), -Math.cos(r.enterHeading)];
-    const [ex, ez] = [Math.cos(r.exitHeading), -Math.sin(r.exitHeading)];
-    const uTurn = Math.abs(delta) >= (135 * Math.PI) / 180;
-    const side = uTurn || ex * lx + ez * lz > 0 ? 'left' : 'right';
-    out.push({ side, from: Math.max(0, r.enter - 45), to: r.exit + 15 });
-  }
-  return out;
 }
 
 /**
@@ -194,19 +171,20 @@ export function createDriver(map, vehicleId, options = {}) {
   const env = map.environment;
   const night = env.startClockMin >= 1080 || env.startClockMin < 360;
   const lightsWanted = (options.lights ?? (env.weather === 'rain' || night)) ? 'low' : 'off';
+  const cruise = options.cruiseMps ?? CLEAN_KMH / 3.6;
   const controller = {
     map,
     line,
     total,
     gates: gatesOf(map, line, veh.lengthM / 2),
-    cruise: options.cruiseMps ?? (CLEAN_KMH / 3.6),
+    cruise,
     ignore: new Set(options.ignore ?? []),
     signals: new Map(map.signals.map((sig) => [sig.id, sig])),
     veh,
     lightsWanted,
     lightsPressed: 0,
     lastShiftT: -10,
-    windows: turnWindows(map, line),
+    windows: signalWindows(map, line, cruise),
     corners: cornerStretches(line),
   };
   return {

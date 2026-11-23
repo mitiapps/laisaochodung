@@ -9,6 +9,19 @@ environment: { startClockMin: 1350, weather: rain, surfaceGrip: 0.7 }
 timeLimitS: 300
 lit: true
 
+# The road works stay in the kerb lane here, and the route keeps the inner lane: the NPC car ahead
+# drives the inner lane for the following-distance lesson.
+obstacles:
+  - { id: ob-barrier, kind: barrier, at: { way: rong, s: 100 }, lateral: -5.25, lengthM: 3, widthM: 1.6, heightM: 1 }
+
+route:
+  start: { way: hep, s: 12, lane: 0 }
+  checkpoints:
+    - { way: hep, s: 160 }
+    - { way: rong, s: 150, lane: 1 }
+    - { way: cuoi, s: 40, lane: 1 }
+  finish: { way: cuoi, s: 90 }
+
 actors:
   - id: ped-hep
     kind: pedestrian

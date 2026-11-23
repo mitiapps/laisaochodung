@@ -11,7 +11,10 @@ route:
   ways: [329878186, 747231131, 678315474, 803279638]
   start: { at: { way: 329878186, s: 25 }, lane: 1 }
   checkpoints:
-    - { way: 747231131, s: 70, lane: 1 }
-    - { way: 678315474, s: 40, lane: 1 }
-    - { way: 803279638, s: 100, lane: 1 }
+    # Move to the kerb lane mid-block, where the lane lines are dashed, before the right turn
+    # (Law 36 Điều 15 khoản 2), and leave the turn in the kerb lane.
+    - { way: 747231131, s: 40, lane: 1 }
+    - { way: 747231131, s: 110, lane: 0 }
+    - { way: 678315474, s: 40, lane: 0 }
+    - { way: 803279638, s: 100, lane: 0 }
   finish: { way: 803279638, s: 75 }

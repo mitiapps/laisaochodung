@@ -7,6 +7,7 @@ import {
   clockAt,
   createActorState,
   createRouteState,
+  finishTarget,
   signalState,
   stepActors,
   stepRoute,
@@ -203,5 +204,34 @@ describe('stepRoute', () => {
   it('gives the bearing in the heading convention', () => {
     const r = stepRoute(createRouteState(), MAP, { x: 60, z: 51.75 }, 0);
     expect(r.nav.bearingRad).toBeCloseTo(Math.PI / 2);
+  });
+});
+
+describe('finishTarget', () => {
+  /**
+   * A map with only the route fields finishTarget reads.
+   * @param {{x: number, z: number}} lastPos Last checkpoint position (heading east).
+   * @returns {import('../contracts/index.js').GameMap} Map.
+   */
+  const withRoute = (lastPos) =>
+    /** @type {import('../contracts/index.js').GameMap} */ (
+      /** @type {unknown} */ ({
+        route: {
+          start: { pos: { x: 0, z: 1.75 }, heading: 0 },
+          checkpoints: [{ pos: lastPos, heading: 0 }],
+          // A finish band across both lanes of one direction (z 0 to 7), from x 100 to 110.
+          finish: { polygon: [[100, 0], [110, 0], [110, 7], [100, 7]] },
+          timeLimitS: 60,
+        },
+      })
+    );
+
+  it('aims at the band straight ahead of the last checkpoint, in its lane', () => {
+    expect(finishTarget(withRoute({ x: 50, z: 5.25 }))).toEqual([105, 5.25]);
+    expect(finishTarget(withRoute({ x: 50, z: 1.75 }))).toEqual([105, 1.75]);
+  });
+
+  it('falls back to the centroid when the band is not straight ahead', () => {
+    expect(finishTarget(withRoute({ x: 50, z: 20 }))).toEqual([105, 3.5]);
   });
 });

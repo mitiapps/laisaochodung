@@ -25,11 +25,10 @@ import {
   leftVector,
   pointAtDistance,
   pointInPolygon,
-  polygonCentroid,
   polylineLength,
   segmentIntersection,
 } from '../../../src/geometry/index.js';
-import { clockAt, createActorState, signalState, stepActors } from '../../../src/world/index.js';
+import { clockAt, createActorState, finishTarget, signalState, stepActors } from '../../../src/world/index.js';
 import { distanceToPolygon } from '../../../src/map-query/index.js';
 import { ROOT, realBundle, vehicle as catalogVehicle } from '../../../scripts/rules/lib/test-support.js';
 
@@ -76,6 +75,8 @@ const CORNER_RADIUS_M = 4;
  * @property {number} [cruiseMps] Cruising speed in m/s (default 30 km/h).
  * @property {GateKind[]} [ignore] Requirements not honoured by this plan.
  * @property {boolean} [turnSignals] Signal turns at junctions (default true).
+ * @property {boolean} [laneChangeSignals] Signal lane changes (default true for `planDrive`, false
+ *   for `constantPlan`, whose scripted paths set their own indicators).
  * @property {Lights} [lights] Headlights for the whole run; default on at night and in rain.
  * @property {ControlChange[]} [controls] Extra control changes, merged with the plan's own.
  * @property {ForcedEvent[]} [events] Injected events, such as a collision.
@@ -177,13 +178,14 @@ function toVec(p) {
 }
 
 /**
- * The route as one polyline: start, every checkpoint, then the centre of the finish area.
+ * The route as one polyline: start, every checkpoint, then the navigation target of the finish
+ * area (the point of the finish band straight ahead of the last checkpoint).
  * @param {GameMap} map Map.
  * @returns {Vec2[]} Path.
  */
 export function routePath(map) {
   const last = map.route.checkpoints.at(-1);
-  const finishPose = { pos: polygonCentroid(map.route.finish.polygon), heading: last.heading };
+  const finishPose = { pos: finishTarget(map), heading: last.heading };
   const poses = [map.route.start, ...map.route.checkpoints, finishPose];
   /** @type {Vec2[]} */
   const out = [];
@@ -345,34 +347,131 @@ export function planDrive(map, vehicleInfo, options = {}) {
   }
   if (s < total - 1e-6) throw new Error(`Planner did not reach the path end (s=${s.toFixed(1)} of ${total.toFixed(1)} m)`);
 
-  const controls = controlsFor(map, line, sPerTick, lightsOn, options);
+  const controls = controlsFor(map, line, sPerTick, lightsOn, options, cruise);
   return { path: line, speed, controls, events: options.events ?? [], durationS: speed.length * DT, sPerTick };
 }
 
 /**
- * Indicators and headlights of a run: lights from the options or the night and rain rule, and a
- * turn signal from 45 m before each junction turn until 15 m after its exit.
+ * Indicator lead time the lane-change rule asks for, from the built rules bundle.
+ * @returns {number} Seconds.
+ */
+function laneChangeLeadS() {
+  const file = path.join(ROOT, 'src', 'generated', 'rules.json');
+  if (!existsSync(file)) throw new Error(`Missing ${file}; run npm run build:rules first`);
+  /** @type {import('../../../src/contracts/index.js').RulesBundle} */
+  const bundle = JSON.parse(readFileSync(file, 'utf8'));
+  const lead = bundle.rules.find((r) => r.id === 'lane-change')?.detection.params.signalLeadS;
+  if (typeof lead !== 'number') throw new Error('The lane-change rule has no signalLeadS');
+  return lead;
+}
+
+/**
+ * Points where a path crosses a painted line between two lanes of the same direction, with the
+ * side the path moves to.
+ * @param {GameMap} map Map.
+ * @param {Vec2[]} line Path.
+ * @returns {Array<{s: number, side: 'left' | 'right'}>} Crossings in path order.
+ */
+export function laneLineCrossings(map, line) {
+  /** @type {Map<string, 'forward' | 'backward'>} */
+  const dirOf = new Map();
+  for (const road of map.roads) for (const lane of road.lanes) dirOf.set(lane.id, lane.dir);
+  /** @type {Array<{s: number, side: 'left' | 'right'}>} */
+  const out = [];
+  let acc = 0;
+  for (let i = 0; i < line.length - 1; i += 1) {
+    const a = line[i];
+    const b = line[i + 1];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    for (const road of map.roads) {
+      for (const ll of road.laneLines) {
+        if (!ll.left || !ll.right || dirOf.get(ll.left) !== dirOf.get(ll.right)) continue;
+        for (let k = 0; k < ll.polyline.length - 1; k += 1) {
+          const q1 = ll.polyline[k];
+          const q2 = ll.polyline[k + 1];
+          const hit = segmentIntersection(a, b, q1, q2);
+          if (!hit) continue;
+          // Line direction aligned with the travel direction; the move is to its left or right.
+          let dx = q2[0] - q1[0];
+          let dz = q2[1] - q1[1];
+          if (dx * (b[0] - a[0]) + dz * (b[1] - a[1]) < 0) {
+            dx = -dx;
+            dz = -dz;
+          }
+          const [lx, lz] = leftVector(headingOf(dx, dz));
+          out.push({ s: acc + hit.t * len, side: (b[0] - a[0]) * lx + (b[1] - a[1]) * lz > 0 ? 'left' : 'right' });
+        }
+      }
+    }
+    acc += len;
+  }
+  return out.sort((x, y) => x.s - y.s).filter((c, i, all) => i === 0 || c.s - all[i - 1].s > 0.5);
+}
+
+/**
+ * Where along a path the indicator must be on: each junction turn from 45 m before its entry until
+ * 15 m after its exit, and each lane change from the distance covered at `cruiseMps` in the
+ * lane-change rule's lead time plus a second until 15 m after the crossing. Overlapping windows of
+ * one side merge, so the indicator never goes off between a lane change and the turn it leads to.
+ * @param {GameMap} map Map.
+ * @param {Vec2[]} line Path.
+ * @param {number} cruiseMps Highest planned speed, so the lead in time is at least the rule's.
+ * @param {{turns?: boolean, laneChanges?: boolean}} [which] Which windows to include (both default).
+ * @returns {Array<{side: 'left' | 'right', from: number, to: number}>} Windows in path order.
+ */
+export function signalWindows(map, line, cruiseMps, which = {}) {
+  /** @type {Array<{side: 'left' | 'right', from: number, to: number}>} */
+  const raw = [];
+  if (which.turns !== false) {
+    for (const j of map.junctions) {
+      const r = insideS(line, j.polygon);
+      if (!r) continue;
+      const delta = angleDiff(r.exitHeading, r.enterHeading);
+      if (Math.abs(delta) < (45 * Math.PI) / 180) continue;
+      const [lx, lz] = leftVector(r.enterHeading);
+      const [ex, ez] = headingVector(r.exitHeading);
+      const uTurn = Math.abs(delta) >= (135 * Math.PI) / 180;
+      const side = uTurn || ex * lx + ez * lz > 0 ? 'left' : 'right';
+      raw.push({ side, from: Math.max(0, r.enter - TURN_SIGNAL_M), to: r.exit + TURN_SIGNAL_OFF_M });
+    }
+  }
+  if (which.laneChanges !== false) {
+    const leadM = cruiseMps * (laneChangeLeadS() + 1);
+    for (const c of laneLineCrossings(map, line)) raw.push({ side: c.side, from: Math.max(0, c.s - leadM), to: c.s + TURN_SIGNAL_OFF_M });
+  }
+  raw.sort((a, b) => a.from - b.from);
+  /** @type {Array<{side: 'left' | 'right', from: number, to: number}>} */
+  const out = [];
+  for (const w of raw) {
+    const last = out.at(-1);
+    if (last && last.side === w.side && w.from <= last.to) last.to = Math.max(last.to, w.to);
+    else if (last && w.from <= last.to) {
+      // A window of the other side starts: the earlier one ends there.
+      last.to = w.from;
+      out.push({ ...w });
+    } else out.push({ ...w });
+  }
+  return out;
+}
+
+/**
+ * Indicators and headlights of a run: lights from the options or the night and rain rule, and the
+ * indicator over every signal window of the path (`signalWindows`).
  * @param {GameMap} map Map.
  * @param {Vec2[]} line Path.
  * @param {number[]} sPerTick Distance along the path at each tick.
  * @param {boolean} lightsOn Default headlight state.
  * @param {PlanOptions} options Options.
+ * @param {number} cruiseMps Highest planned speed.
  * @returns {ControlChange[]} Controls, sorted by time, with the extra controls of the options.
  */
-function controlsFor(map, line, sPerTick, lightsOn, options) {
+function controlsFor(map, line, sPerTick, lightsOn, options, cruiseMps) {
   /** @type {ControlChange[]} */
   const controls = [{ t: 0, lights: options.lights ?? (lightsOn ? 'low' : 'off'), indicators: 'off' }];
-  for (const j of options.turnSignals === false ? [] : map.junctions) {
-    const r = insideS(line, j.polygon);
-    if (!r) continue;
-    const delta = angleDiff(r.exitHeading, r.enterHeading);
-    if (Math.abs(delta) < (45 * Math.PI) / 180) continue;
-    const [lx, lz] = leftVector(r.enterHeading);
-    const [ex, ez] = headingVector(r.exitHeading);
-    const uTurn = Math.abs(delta) >= (135 * Math.PI) / 180;
-    const side = uTurn || ex * lx + ez * lz > 0 ? 'left' : 'right';
-    controls.push({ t: tAtS(sPerTick, Math.max(0, r.enter - TURN_SIGNAL_M)), indicators: side });
-    controls.push({ t: tAtS(sPerTick, r.exit + TURN_SIGNAL_OFF_M), indicators: 'off' });
+  const which = { turns: options.turnSignals !== false, laneChanges: options.laneChangeSignals !== false };
+  for (const w of signalWindows(map, line, cruiseMps, which)) {
+    controls.push({ t: tAtS(sPerTick, w.from), indicators: w.side });
+    controls.push({ t: tAtS(sPerTick, w.to), indicators: 'off' });
   }
   controls.push(...(options.controls ?? []));
   return controls.sort((a, b) => a.t - b.t);
@@ -407,7 +506,9 @@ export function constantPlan(map, vehicleInfo, line, speedMps, options = {}) {
     sPerTick.push(s);
     s = Math.min(total, s + v * DT);
   }
-  const controls = controlsFor(map, line, sPerTick, lightsAtNight(map), options);
+  // A scripted path sets its own lane-change indicators; only junction turns are signalled for it.
+  const scripted = { laneChangeSignals: false, ...options };
+  const controls = controlsFor(map, line, sPerTick, lightsAtNight(map), scripted, Math.max(speedMps, ...speed.map((k) => k.value)));
   return { path: line, speed, controls, events: options.events ?? [], durationS: n * DT, sPerTick };
 }
 

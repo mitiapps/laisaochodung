@@ -43,6 +43,17 @@ describe('toast stack', () => {
     expect(pruneToasts(stack, 6500).items.map((t) => t.episodeId)).toEqual(['e-1']);
   });
 
+  it('shows the clause an episode moves to at the same tier', () => {
+    // A light crash tier first scored only, then citing the va chạm clause with its fine.
+    const scoreOnly = breach({ episodeId: 'crash-0', tierIndex: 0, kind: 'new', clause: null, scoreOnly: true });
+    const cited = breach({ episodeId: 'crash-0', tierIndex: 0, kind: 'escalated', clause: { ...fixture[0].clause, id: 'D6.4.l' } });
+    let stack = ingestBreaches(emptyToastStack(), [scoreOnly], 0);
+    stack = ingestBreaches(stack, [scoreOnly, cited], 1000);
+    expect(stack.items).toHaveLength(1);
+    expect(stack.items[0].breach.clause?.id).toBe('D6.4.l');
+    expect(stack.items[0].shownAt).toBe(1000);
+  });
+
   it('expires each toast after six seconds', () => {
     const stack = ingestBreaches(emptyToastStack(), [fixture[0]], 1000);
     expect(pruneToasts(stack, 1000 + TOAST_MS - 1)).toBe(stack);

@@ -1,8 +1,9 @@
 # Tailgating: a time gap under minTimeGapS to the car ahead in the same lane for sustainS, only
-# above minSpeedMps so a queue does not count. ND 168 (6.4.l / 7.3.i) fines a short gap only when
-# it leads to a va chạm with the vehicle ahead (handled by the crash rule) or breaks the distance
-# of a "Cự ly tối thiểu giữa hai xe" sign. No shipped map places that sign, so this deducts score
-# only; a map that adds it needs a legal tier here.
+# above minSpeedMps so a queue does not count. ND 168 (6.4.l / 7.3.i) fines a short gap in two
+# separate cases: a va chạm with the vehicle ahead (the crash rule), or, with no collision needed,
+# breaking the distance of a "Cự ly tối thiểu giữa hai xe" sign. 6.4.l excepts the expressway
+# distance clause (6.5.d); expressways are out of scope. No shipped map places the sign, so this
+# rule deducts score only; a map that adds it needs a legal tier here.
 id: following-distance
 title: { vi: "Không giữ khoảng cách an toàn" }
 description: { vi: "Bám quá sát xe phía trước cùng làn." }
@@ -20,4 +21,4 @@ obligation:
 tiers:
   - danger: 2
     scoreOnly: true
-    note: { vi: "Luật chỉ phạt khi không giữ khoảng cách mà gây va chạm với xe phía trước, hoặc khi vi phạm biển “Cự ly tối thiểu giữa hai xe”; đoạn đường này không có biển đó nên lỗi chỉ trừ điểm trò chơi." }
+    note: { vi: "Giữ khoảng cách an toàn là nghĩa vụ ở mọi lúc. Ngoài đường cao tốc, Nghị định 168 chỉ có mức phạt riêng khi để xảy ra va chạm với xe chạy liền trước, hoặc khi không giữ khoảng cách theo biển “Cự ly tối thiểu giữa hai xe” (không cần có va chạm). Bản đồ này không có biển đó nên lỗi bám sát chỉ trừ điểm trò chơi." }

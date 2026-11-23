@@ -6,6 +6,8 @@ const PORT = 5179;
 export default defineConfig({
   testDir: 'tests/e2e',
   forbidOnly: !!process.env.CI,
+  // One browser at a time: the full runs drive real-time WebGL in software and share the CPU.
+  workers: 1,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? 'github' : 'list',
   use: {

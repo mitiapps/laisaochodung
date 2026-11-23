@@ -236,6 +236,32 @@ describe('crash cause on the same step', () => {
     expect(report.fineTotalVnd).toEqual(crash.clause?.fineVnd);
   });
 
+  it('prefers a legal cause over a more recent score-only one of equal danger', async () => {
+    // Headlights made score-only at danger 2, active on every step at night with the lights off;
+    // speeding 15 km/h over (danger 2, a legal clause) opens first. The legal cause must win.
+    const bundle = structuredClone(await realBundle());
+    const lights = bundle.rules.find((r) => r.id === 'headlights');
+    if (!lights) throw new Error('No headlights rule');
+    lights.tiers = [{ danger: 2, scoreOnly: true, note: { vi: 'Chỉ trừ điểm.' } }];
+    const night = mapVariant((m) => {
+      m.actors = [];
+      m.environment = { ...m.environment, startClockMin: 1350 };
+    });
+    const { report } = await scoreScript({
+      map: night,
+      bundle,
+      laneId: 'rw-e',
+      startS: 5,
+      durationS: 6,
+      speed: 65 / 3.6,
+      events: [{ t: 5, event: hit({ relSpeed: 8 }) }],
+    });
+    const crash = report.breaches.find((b) => b.ruleId === 'crash');
+    expect(report.breaches.map((b) => b.ruleId).sort()).toEqual(['crash', 'headlights', 'speeding']);
+    expect(crash?.cause).toBe('speeding');
+    expect(crash?.clause?.id).toMatch(/^D6\.10\./u);
+  });
+
   it('keeps the cause when a pedestrian hit and a fall share a tick', async () => {
     const tick = (await causeTick()) + 5;
     const { report } = await scoreScript({

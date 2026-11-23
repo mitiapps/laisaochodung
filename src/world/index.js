@@ -16,6 +16,7 @@ export {
   CHECKPOINT_DEPTH_M,
   CHECKPOINT_HALF_WIDTH_M,
   createRouteState,
+  finishTarget,
   insideCheckpoint,
   stepRoute,
 } from './route.js';
