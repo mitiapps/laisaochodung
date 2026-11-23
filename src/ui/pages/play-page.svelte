@@ -98,14 +98,14 @@
   }
 </script>
 
-<div class="relative h-screen w-screen overflow-hidden bg-black text-slate-100" data-testid="play-screen">
+<div class="relative h-screen w-screen overflow-hidden bg-stone-100 text-stone-900" data-testid="play-screen">
   <div class="absolute inset-0" data-testid="canvas-mount" {@attach attachCanvas}></div>
 
   {#if problem || error}
     <div class="absolute inset-0 flex items-center justify-center">
-      <div class="rounded-xl bg-slate-900 p-6 text-center" data-testid="play-error">
+      <div class="rounded-xl border border-stone-200 bg-white p-6 text-center shadow-xl" data-testid="play-error">
         <p class="mb-4">{problem ?? error}</p>
-        <a class="rounded-lg bg-slate-700 px-4 py-2 hover:bg-slate-600" href={pageHref('home')}>Về trang chủ</a>
+        <a class="rounded-lg border border-stone-300 bg-white text-stone-900 hover:bg-stone-100 px-4 py-2" href={pageHref('home')}>Về trang chủ</a>
       </div>
     </div>
   {:else if hud}
@@ -120,16 +120,16 @@
     {/if}
 
     {#if hud.runStatus === 'paused'}
-      <div class="absolute inset-0 flex items-center justify-center bg-black/60" data-testid="pause-overlay">
-        <div class="flex flex-col gap-3 rounded-xl bg-slate-900 p-6 text-center">
+      <div class="absolute inset-0 flex items-center justify-center bg-stone-900/40" data-testid="pause-overlay">
+        <div class="flex flex-col gap-3 rounded-xl border-t-4 border-police-500 bg-white p-6 shadow-xl text-center">
           <h2 class="text-2xl font-bold">Tạm dừng</h2>
-          <button type="button" class="rounded-lg bg-emerald-600 px-4 py-2 font-semibold hover:bg-emerald-500" data-testid="pause-resume" onclick={() => game?.resume()}>
+          <button type="button" class="rounded-lg bg-police-500 text-stone-900 hover:bg-police-400 px-4 py-2 font-semibold" data-testid="pause-resume" onclick={() => game?.resume()}>
             Tiếp tục
           </button>
-          <button type="button" class="rounded-lg bg-slate-700 px-4 py-2 hover:bg-slate-600" data-testid="pause-restart" onclick={restart}>
+          <button type="button" class="rounded-lg border border-stone-300 bg-white text-stone-900 hover:bg-stone-100 px-4 py-2" data-testid="pause-restart" onclick={restart}>
             Chơi lại
           </button>
-          <button type="button" class="rounded-lg bg-rose-700 px-4 py-2 hover:bg-rose-600" data-testid="pause-quit" onclick={() => game?.quit()}>
+          <button type="button" class="rounded-lg bg-kepi-500 px-4 py-2 text-white hover:bg-kepi-600" data-testid="pause-quit" onclick={() => game?.quit()}>
             Kết thúc lượt chơi
           </button>
         </div>
@@ -137,23 +137,23 @@
     {/if}
 
     {#if hud.runStatus === 'finished'}
-      <div class="absolute inset-0 flex items-center justify-center bg-black/70 px-6 pb-8 pt-6">
+      <div class="absolute inset-0 flex items-center justify-center bg-stone-900/50 px-6 pb-8 pt-6">
         {#if hud.report}
           <ResultScreen report={hud.report} onretry={restart} onchangemap={changeMap} />
         {:else}
-          <div class="rounded-xl bg-slate-900 p-6 text-center" data-testid="result-missing">
+          <div class="rounded-xl border border-stone-200 bg-white p-6 text-center shadow-xl" data-testid="result-missing">
             <p class="mb-4">Lượt chơi đã kết thúc nhưng không có kết quả.</p>
-            <button type="button" class="rounded-lg bg-slate-700 px-4 py-2" onclick={changeMap}>Về trang chủ</button>
+            <button type="button" class="rounded-lg border border-stone-300 bg-white text-stone-900 hover:bg-stone-100 px-4 py-2" onclick={changeMap}>Về trang chủ</button>
           </div>
         {/if}
       </div>
     {/if}
   {:else}
-    <div class="absolute inset-0 flex items-center justify-center text-slate-300">Đang tải bản đồ…</div>
+    <div class="absolute inset-0 flex items-center justify-center"><span class="rounded-lg bg-white/90 px-4 py-2 text-stone-800 shadow">Đang tải bản đồ…</span></div>
   {/if}
 
   {#if mapEntry?.kind === 'osm'}
-    <p class="absolute bottom-1 left-1/2 -translate-x-1/2 rounded bg-black/60 px-2 py-0.5 text-xs text-slate-300" data-testid="osm-attribution">
+    <p class="absolute bottom-1 left-1/2 -translate-x-1/2 rounded bg-white/90 px-2 py-0.5 text-xs text-stone-700 shadow-sm" data-testid="osm-attribution">
       <a class="underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
         {mapEntry.attribution ?? '© OpenStreetMap contributors, ODbL'}
       </a>

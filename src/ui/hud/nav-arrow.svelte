@@ -10,7 +10,7 @@
 <div class="flex flex-col items-center gap-1" data-testid="hud-nav">
   <svg
     viewBox="0 0 40 40"
-    class="h-12 w-12 text-emerald-400 drop-shadow"
+    class="h-12 w-12 text-police-700 drop-shadow"
     style="transform: rotate({rotation}deg)"
     aria-label="Hướng tới điểm kiểm tra tiếp theo"
     role="img"

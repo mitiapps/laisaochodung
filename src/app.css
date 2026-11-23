@@ -1,6 +1,27 @@
 @import "tailwindcss";
 
 @theme {
+  /*
+   * Brand palette: the "vàng lúa chín" (ripe-rice golden yellow) of the Vietnamese
+   * traffic police uniform, with the red band of the kepi cap as the accent.
+   * police-500 is the brand colour. On white, use police-700 or darker for text and
+   * police-600 or darker for bare icons; police-500/400 only as fills behind stone-900 text.
+   */
+  --color-police-50: #fdf8e7;
+  --color-police-100: #faeec2;
+  --color-police-200: #f5dc85;
+  --color-police-300: #eec74a;
+  --color-police-400: #e5b023;
+  --color-police-500: #d49a12;
+  --color-police-600: #b07b0c;
+  --color-police-700: #8a5e0e;
+  --color-police-800: #6e4a12;
+  --color-police-900: #5c3e13;
+
+  --color-kepi-50: #fdecee;
+  --color-kepi-500: #c8102e;
+  --color-kepi-600: #a50d26;
+
   /* Turn signals blink at 1.5 Hz: one on/off period every 2/3 s. */
   --animate-blink: blink 0.6667s steps(1, end) infinite;
 
@@ -16,5 +37,10 @@
 
 html,
 body {
-  @apply bg-slate-950 text-slate-100;
+  @apply bg-white text-stone-900;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-police-600);
+  outline-offset: 2px;
 }

@@ -15,27 +15,27 @@
 </script>
 
 <section
-  class="mx-auto flex max-h-full w-full max-w-3xl flex-col gap-4 overflow-y-auto rounded-xl bg-slate-900/95 p-6 shadow-2xl"
+  class="mx-auto flex max-h-full w-full max-w-3xl flex-col gap-4 overflow-y-auto rounded-xl border-t-4 border-police-500 bg-white p-6 text-stone-900 shadow-2xl"
   data-testid="result-screen"
 >
   <header class="flex items-baseline justify-between gap-4">
     <div>
       <h2 class="text-2xl font-bold">Kết quả</h2>
-      <p class="text-slate-300" data-testid="result-ended-by">{endReasonLabel(report.endedBy)}</p>
+      <p class="text-stone-700" data-testid="result-ended-by">{endReasonLabel(report.endedBy)}</p>
     </div>
     <p class="text-4xl font-bold" data-testid="result-score">{formatScore(report.score)}</p>
   </header>
 
-  <dl class="grid grid-cols-2 gap-3 rounded-lg bg-slate-800 p-4 text-sm">
+  <dl class="grid grid-cols-2 gap-3 rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm">
     <div>
-      <dt class="text-slate-400">Tổng tiền phạt <span class="text-amber-300">(ước tính)</span></dt>
+      <dt class="text-stone-600">Tổng tiền phạt <span class="text-police-700">(ước tính)</span></dt>
       <dd class="text-lg font-semibold" data-testid="result-fine-total">{total}</dd>
     </div>
     <div>
-      <dt class="text-slate-400">Điểm giấy phép lái xe</dt>
+      <dt class="text-stone-600">Điểm giấy phép lái xe</dt>
       <dd class="text-lg font-semibold" data-testid="result-licence">{licenceLabel(report.licence)}</dd>
     </div>
-    <p class="col-span-2 text-xs text-slate-400">
+    <p class="col-span-2 text-xs text-stone-600">
       Tổng tiền phạt cộng khung phạt của từng lỗi, trừ lỗi đã tính trong mức phạt gây tai nạn, chỉ để tham khảo. {LICENCE_NOTE}
     </p>
   </dl>
@@ -43,14 +43,14 @@
   <div>
     <h3 class="mb-2 font-semibold">Các lỗi vi phạm ({report.breaches.length})</h3>
     {#if report.breaches.length === 0}
-      <p class="text-emerald-300" data-testid="result-clean">Không có lỗi nào. Lái rất tốt!</p>
+      <p class="rounded-lg bg-emerald-50 px-3 py-2 text-emerald-700" data-testid="result-clean">Không có lỗi nào. Lái rất tốt!</p>
     {:else}
       <ol class="space-y-3" data-testid="result-breaches">
         {#each report.breaches as breach (breach.episodeId)}
-          <li class="rounded-lg border border-slate-700 p-3" data-testid="result-breach">
+          <li class="rounded-lg border border-stone-200 border-l-4 border-l-kepi-500 bg-white p-3" data-testid="result-breach">
             <p class="mb-1 flex justify-between gap-2">
               <span class="font-semibold">{breach.title.vi}</span>
-              <span class="text-xs tabular-nums text-slate-400">{formatClock(breach.t)}</span>
+              <span class="text-xs tabular-nums text-stone-600">{formatClock(breach.t)}</span>
             </p>
             <BreachDetails {breach} />
           </li>
@@ -60,10 +60,10 @@
   </div>
 
   <footer class="flex justify-end gap-3">
-    <button type="button" class="rounded-lg bg-slate-700 px-4 py-2 hover:bg-slate-600" data-testid="result-change-map" onclick={onchangemap}>
+    <button type="button" class="rounded-lg border border-stone-300 bg-white text-stone-900 hover:bg-stone-100 px-4 py-2" data-testid="result-change-map" onclick={onchangemap}>
       Đổi bản đồ
     </button>
-    <button type="button" class="rounded-lg bg-emerald-600 px-4 py-2 font-semibold hover:bg-emerald-500" data-testid="result-retry" onclick={onretry}>
+    <button type="button" class="rounded-lg bg-police-500 text-stone-900 hover:bg-police-400 px-4 py-2 font-semibold" data-testid="result-retry" onclick={onretry}>
       Chơi lại
     </button>
   </footer>

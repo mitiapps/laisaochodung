@@ -10,7 +10,7 @@
   <ul class="flex flex-wrap gap-1">
     {#each badges as badge (badge.id)}
       <li
-        class="rounded-full border border-amber-400/60 bg-amber-400/10 px-2 py-0.5 text-xs text-amber-200"
+        class="rounded-full border border-police-300 bg-police-50 px-2 py-0.5 text-xs text-police-800"
         title={badge.hint}
         data-testid="badge-{badge.id}"
       >

@@ -28,16 +28,16 @@
 </script>
 
 <div class={compact ? 'space-y-0.5 text-xs' : 'space-y-1 text-sm'}>
-  <p class="font-medium text-rose-300" data-testid="breach-deduction">{formatDeduction(breach.deduction)}</p>
+  <p class="font-medium text-kepi-600" data-testid="breach-deduction">{formatDeduction(breach.deduction)}</p>
   {#if breach.scoreOnly || !clause}
     {#if !(compact && breach.note)}
-      <p class="text-slate-300" data-testid="breach-score-only">Chỉ trừ điểm trò chơi, không có mức phạt theo luật.</p>
+      <p class="text-stone-700" data-testid="breach-score-only">Chỉ trừ điểm trò chơi, không có mức phạt theo luật.</p>
     {/if}
   {:else}
     {#if fine}
       <p data-testid="breach-fine">Phạt tiền: <span class="font-semibold">{fine}</span></p>
       {#if breach.fineAbsorbedBy}
-        <p class="text-xs text-amber-300" data-testid="breach-fine-absorbed">Đã tính trong mức phạt gây tai nạn</p>
+        <p class="text-xs text-police-700" data-testid="breach-fine-absorbed">Đã tính trong mức phạt gây tai nạn</p>
       {/if}
     {/if}
     <p data-testid="breach-points">{formatLicencePoints(clause.licencePoints)}</p>
@@ -46,22 +46,22 @@
     {/if}
     <p data-testid="breach-citation">
       {#if citationUrl}
-        <a class="text-sky-300 underline" href={citationUrl} target="_blank" rel="noopener noreferrer">{citation}</a>
+        <a class="text-police-700 underline hover:text-police-900" href={citationUrl} target="_blank" rel="noopener noreferrer">{citation}</a>
       {:else}
         {citation}
       {/if}
     </p>
-    <details class="text-slate-300">
-      <summary class="cursor-pointer text-xs text-slate-400">Trích dẫn văn bản</summary>
-      <blockquote class="mt-1 border-l-2 border-slate-500 pl-2 italic">“{clause.citation.quote}”</blockquote>
-      <a class="text-xs text-sky-300 underline" href={clause.citation.url} target="_blank" rel="noopener noreferrer">
+    <details class="text-stone-700">
+      <summary class="cursor-pointer text-xs text-stone-600">Trích dẫn văn bản</summary>
+      <blockquote class="mt-1 border-l-2 border-police-300 pl-2 italic">“{clause.citation.quote}”</blockquote>
+      <a class="text-xs text-police-700 underline hover:text-police-900" href={clause.citation.url} target="_blank" rel="noopener noreferrer">
         Nơi trích dẫn
       </a>
       {#each clause.amendments ?? [] as amendment, i (i)}
         <div class="mt-2" data-testid="breach-amendment">
-          <p class="text-xs text-slate-400">Sửa đổi, bổ sung ({formatCitation(amendment, amendmentNumber(amendment.sourceId))}):</p>
-          <blockquote class="border-l-2 border-slate-500 pl-2 italic">“{amendment.quote}”</blockquote>
-          <a class="text-xs text-sky-300 underline" href={amendment.url} target="_blank" rel="noopener noreferrer">
+          <p class="text-xs text-stone-600">Sửa đổi, bổ sung ({formatCitation(amendment, amendmentNumber(amendment.sourceId))}):</p>
+          <blockquote class="border-l-2 border-police-300 pl-2 italic">“{amendment.quote}”</blockquote>
+          <a class="text-xs text-police-700 underline hover:text-police-900" href={amendment.url} target="_blank" rel="noopener noreferrer">
             Xem văn bản sửa đổi
           </a>
         </div>
@@ -69,7 +69,7 @@
     </details>
   {/if}
   {#if breach.note && (!compact || breach.scoreOnly || !clause)}
-    <p class="text-slate-300" data-testid="breach-note">{breach.note.vi}</p>
+    <p class="text-stone-700" data-testid="breach-note">{breach.note.vi}</p>
   {/if}
   <BadgeList {breach} />
 </div>
