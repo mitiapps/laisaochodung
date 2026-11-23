@@ -2,7 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { checkMap } from '../../src/contracts/assert-map.js';
-import { pointInPolygon } from '../../src/geometry/index.js';
+import { pointInPolygon, projectOntoPolyline } from '../../src/geometry/index.js';
 import { MAX_OSM_ROUTE_M, buildAll, buildOne, canonical, loadSignCodes, serializeIndex } from './build.js';
 import { routeLength } from './lib/elements.js';
 import { coverageReport, overpassQuery } from './fetch.js';
@@ -83,6 +83,19 @@ describe('shipped maps', () => {
     for (const p of pts) expect(pointInPolygon([p.x, p.z], builtUp[0].polygon)).toBe(true);
     for (const p of map.route.finish.polygon) expect(pointInPolygon(p, builtUp[0].polygon)).toBe(true);
     for (const s of map.signs) expect(signCodes).toContain(s.code);
+  });
+
+  it.each(SHIPPED)('%s keeps every checkpoint off the lane lines between same-direction lanes', (id) => {
+    const map = shippedMap(id);
+    const dirOf = new Map(map.roads.flatMap((r) => r.lanes.map((l) => [l.id, l.dir])));
+    for (const cp of map.route.checkpoints) {
+      for (const road of map.roads) {
+        for (const line of road.laneLines) {
+          if (!line.left || !line.right || dirOf.get(line.left) !== dirOf.get(line.right)) continue;
+          expect(projectOntoPolyline([cp.pos.x, cp.pos.z], line.polyline).distance).toBeGreaterThan(1);
+        }
+      }
+    }
   });
 
   it('keeps the OSM corridor within the D1 constraint', () => {

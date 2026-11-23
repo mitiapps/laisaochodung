@@ -3,7 +3,7 @@
   import NavArrow from './nav-arrow.svelte';
   import SpeedLimitSign from './speed-limit-sign.svelte';
   import { formatGear, formatScore, formatSpeed } from '../lib/format.js';
-  import { indicatorLamps, rpmFraction } from '../lib/hud-view.js';
+  import { indicatorLamps, pedalBars, rpmFraction, steerPosition } from '../lib/hud-view.js';
 
   /**
    * @type {{
@@ -19,6 +19,7 @@
   const lamps = $derived(indicatorLamps(state.indicators));
   const isCar = $derived(vehicle.legalClass === 'car');
   const paused = $derived(state.runStatus === 'paused');
+  const pedals = $derived(pedalBars(state.controls, isCar));
 </script>
 
 <div class="pointer-events-none absolute inset-0 flex flex-col justify-between p-4 text-slate-100" data-testid="hud">
@@ -42,7 +43,7 @@
 
   <div class="flex items-end justify-between gap-4">
     <div class="flex items-end gap-3 rounded-lg bg-slate-900/70 p-3">
-      <SpeedLimitSign limitKmh={state.speedLimitKmh} />
+      <SpeedLimitSign limitKmh={state.speedLimitKmh} verified={state.speedLimitVerified} />
       <div>
         <p class="text-5xl font-bold tabular-nums leading-none" data-testid="hud-speed">{formatSpeed(state.speedKmh)}</p>
         <p class="text-xs text-slate-400">km/h</p>
@@ -60,6 +61,32 @@
           <p class="text-xs tabular-nums text-slate-300">{Math.round(state.rpm)} v/ph</p>
         </div>
       {/if}
+      <div class="ml-2 flex items-end gap-2" data-testid="hud-controls">
+        {#each pedals as bar (bar.id)}
+          <div class="flex flex-col items-center" data-testid="hud-{bar.id}" data-value={bar.fraction.toFixed(2)}>
+            <div class="flex h-12 w-3 flex-col justify-end overflow-hidden rounded bg-slate-700" aria-hidden="true">
+              <div class={bar.id === 'throttle' ? 'bg-emerald-400' : 'bg-red-400'} style="height: {bar.fraction * 100}%"></div>
+            </div>
+            <p class="mt-1 text-[10px] text-slate-400">{bar.label}</p>
+          </div>
+        {/each}
+        <div class="flex flex-col items-center" data-testid="hud-steer" data-value={state.controls.steer.toFixed(2)}>
+          <div class="relative h-3 w-20 rounded bg-slate-700" aria-hidden="true">
+            <div class="absolute inset-y-0 left-1/2 w-px bg-slate-500"></div>
+            <div class="absolute inset-y-0 w-1.5 -translate-x-1/2 rounded bg-sky-400" style="left: {steerPosition(state.controls.steer) * 100}%"></div>
+          </div>
+          <p class="mt-1 text-[10px] text-slate-400">Tay lái</p>
+        </div>
+        {#if isCar}
+          <p
+            class={state.controls.handbrake ? 'text-xs font-semibold text-red-400' : 'text-xs text-slate-600'}
+            data-testid="hud-handbrake"
+            data-on={state.controls.handbrake}
+          >
+            Phanh tay
+          </p>
+        {/if}
+      </div>
     </div>
 
     <ul class="flex items-center gap-3 rounded-lg bg-slate-900/70 px-3 py-2 text-sm">

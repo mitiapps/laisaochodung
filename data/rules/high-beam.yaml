@@ -1,8 +1,10 @@
-# High beam held for sustainS in a lit built-up zone, toward an oncoming car or a pedestrian ahead
-# within rangeM (and lateralM to the side), or while turning in a junction.
+# High beam held for sustainS in a lit built-up zone, toward an oncoming car or a pedestrian
+# crossing the road ahead within rangeM (and lateralM to the side), or while turning in a junction.
+# A pedestrian on the pavement does not count. On a divided road oncoming cars do not count:
+# maps do not record whether the median blocks glare, the case ND 168 excepts.
 id: high-beam
 title: { vi: "Dùng đèn chiếu xa sai quy định" }
-description: { vi: "Bật đèn chiếu xa trên đường có chiếu sáng trong khu đông dân cư, khi gặp xe ngược chiều, người đi bộ, hoặc khi rẽ tại nút giao." }
+description: { vi: "Bật đèn chiếu xa trên đường có chiếu sáng trong khu đông dân cư, khi gặp xe ngược chiều, người đi bộ qua đường, hoặc khi rẽ tại nút giao." }
 vehicleClasses: [car, motorbike]
 detection:
   type: high-beam-misuse

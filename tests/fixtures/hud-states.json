@@ -2,12 +2,20 @@
   "ready": {
     "speedKmh": 0,
     "speedLimitKmh": 50,
+    "speedLimitVerified": true,
     "gear": "N",
     "rpm": 800,
     "indicators": "off",
     "lights": "off",
     "horn": false,
     "skid": false,
+    "controls": {
+      "throttle": 0,
+      "brakeFront": 0,
+      "brakeRear": 0,
+      "steer": 0,
+      "handbrake": true
+    },
     "score": 10,
     "headingRad": 0,
     "nav": {
@@ -20,12 +28,20 @@
   "running": {
     "speedKmh": 42,
     "speedLimitKmh": 50,
+    "speedLimitVerified": true,
     "gear": 3,
     "rpm": 3200,
     "indicators": "off",
     "lights": "low",
     "horn": false,
     "skid": false,
+    "controls": {
+      "throttle": 0.6,
+      "brakeFront": 0,
+      "brakeRear": 0,
+      "steer": 0.1,
+      "handbrake": false
+    },
     "score": 10,
     "headingRad": 0,
     "nav": {
@@ -38,13 +54,21 @@
   "withToasts": {
     "speedKmh": 63,
     "speedLimitKmh": 50,
+    "speedLimitVerified": false,
     "gear": 5,
     "rpm": 4100,
     "indicators": "left",
     "lights": "low",
     "horn": false,
     "skid": true,
-    "score": 7.25,
+    "controls": {
+      "throttle": 0,
+      "brakeFront": 0.8,
+      "brakeRear": 0,
+      "steer": -0.3,
+      "handbrake": false
+    },
+    "score": 6.5,
     "headingRad": 0,
     "nav": {
       "distanceM": 12,
@@ -96,6 +120,7 @@
           "sustainS"
         ],
         "scoreOnly": false,
+        "basisVerified": true,
         "episodeId": "speeding-0",
         "kind": "new"
       },
@@ -144,6 +169,7 @@
           "sustainS"
         ],
         "scoreOnly": false,
+        "basisVerified": false,
         "episodeId": "speeding-0",
         "kind": "escalated"
       },
@@ -190,6 +216,7 @@
         "inferred": true,
         "designParams": [],
         "scoreOnly": false,
+        "basisVerified": true,
         "note": {
           "vi": "Đi thẳng qua vạch kẻ đường khi có người đi bộ: không có điểm riêng, áp dụng điểm a khoản 1 theo suy luận."
         },
@@ -257,6 +284,7 @@
           "signalLeadS"
         ],
         "scoreOnly": false,
+        "basisVerified": true,
         "episodeId": "lane-change-0",
         "kind": "new"
       },
@@ -272,14 +300,15 @@
           "x": 130,
           "z": 3.4
         },
-        "danger": 1,
-        "deduction": 0.25,
+        "danger": 3,
+        "deduction": 1,
         "clause": null,
         "source": null,
         "amendmentSources": [],
         "inferred": false,
         "designParams": [],
         "scoreOnly": true,
+        "basisVerified": true,
         "note": {
           "vi": "Va vào lề đường: chỉ trừ điểm trò chơi, không có mức phạt."
         },
@@ -292,12 +321,20 @@
   "paused": {
     "speedKmh": 0,
     "speedLimitKmh": 50,
+    "speedLimitVerified": true,
     "gear": "N",
     "rpm": 800,
     "indicators": "off",
     "lights": "off",
     "horn": false,
     "skid": false,
+    "controls": {
+      "throttle": 0,
+      "brakeFront": 0,
+      "brakeRear": 0,
+      "steer": 0,
+      "handbrake": false
+    },
     "score": 9.5,
     "headingRad": 0,
     "nav": {
@@ -310,13 +347,21 @@
   "finished": {
     "speedKmh": 0,
     "speedLimitKmh": 50,
+    "speedLimitVerified": true,
     "gear": "N",
     "rpm": 800,
     "indicators": "off",
     "lights": "off",
     "horn": false,
     "skid": false,
-    "score": 7.25,
+    "controls": {
+      "throttle": 0,
+      "brakeFront": 0,
+      "brakeRear": 0,
+      "steer": 0,
+      "handbrake": false
+    },
+    "score": 6.5,
     "headingRad": 0,
     "nav": {
       "distanceM": 55,
@@ -325,7 +370,7 @@
     "toasts": [],
     "runStatus": "finished",
     "report": {
-      "score": 7.25,
+      "score": 6.5,
       "breaches": [
         {
           "ruleId": "speeding",
@@ -372,6 +417,7 @@
             "sustainS"
           ],
           "scoreOnly": false,
+          "basisVerified": false,
           "episodeId": "speeding-0",
           "kind": "escalated"
         },
@@ -418,6 +464,7 @@
           "inferred": true,
           "designParams": [],
           "scoreOnly": false,
+          "basisVerified": true,
           "note": {
             "vi": "Đi thẳng qua vạch kẻ đường khi có người đi bộ: không có điểm riêng, áp dụng điểm a khoản 1 theo suy luận."
           },
@@ -485,6 +532,7 @@
             "signalLeadS"
           ],
           "scoreOnly": false,
+          "basisVerified": true,
           "episodeId": "lane-change-0",
           "kind": "new"
         },
@@ -500,14 +548,15 @@
             "x": 130,
             "z": 3.4
           },
-          "danger": 1,
-          "deduction": 0.25,
+          "danger": 3,
+          "deduction": 1,
           "clause": null,
           "source": null,
           "amendmentSources": [],
           "inferred": false,
           "designParams": [],
           "scoreOnly": true,
+          "basisVerified": true,
           "note": {
             "vi": "Va vào lề đường: chỉ trừ điểm trò chơi, không có mức phạt."
           },

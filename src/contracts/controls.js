@@ -18,7 +18,8 @@
 
 /**
  * @typedef {'throttle' | 'brake' | 'handbrake' | 'steerLeft' | 'steerRight' | 'gearUp' | 'gearDown'
- *   | 'signalLeft' | 'signalRight' | 'hazard' | 'lightsCycle' | 'flash' | 'horn'} ControlAction
+ *   | 'signalLeft' | 'signalRight' | 'hazard' | 'lightsCycle' | 'flash' | 'horn' | 'pause'} ControlAction
+ *   `pause` is handled by the game outside the sim step; it is not a `ControlInput` field.
  */
 
 /**
@@ -59,6 +60,7 @@ export const KEY_BINDINGS = Object.freeze([
   },
   { action: 'flash', keys: ['KeyF'], mode: 'hold', label: { vi: 'Nháy đèn chiếu xa' } },
   { action: 'horn', keys: ['KeyH'], mode: 'hold', label: { vi: 'Còi' } },
+  { action: 'pause', keys: ['Escape', 'KeyP'], mode: 'press', label: { vi: 'Tạm dừng / tiếp tục' } },
 ]);
 
 /**

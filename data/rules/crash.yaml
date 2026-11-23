@@ -1,6 +1,11 @@
 # Collisions. The clause comes from the collision policy (data/scoring/collision-policy.yaml); a
 # contact below the scoring table's contactMinEgoSpeed is ignored. A pedestrian hit ends the run
 # with score 0. Static objects, kerbs and falls deduct score only.
+#
+# Two tiers by outcome (src/scoring/detectors/collision.js): a light contact (an NPC car or a
+# static object below accidentRelSpeed) costs danger 3; a heavy one (a pedestrian, an NPC car or a
+# static object at or above accidentRelSpeed, a fall) costs danger 5. An episode escalates from the
+# light tier to the heavy one like any other rule.
 id: crash
 title: { vi: "Va chạm" }
 description: { vi: "Va chạm với người đi bộ, xe khác, vật cản hoặc ngã xe." }
@@ -16,6 +21,11 @@ obligation:
     quote: phải quan sát, giảm tốc độ hoặc dừng lại để bảo đảm an toàn
     url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
 tiers:
-  - danger: 5
+  - when: { heavy: false }
+    danger: 3
+    scoreOnly: false
+    clauseFromPolicy: true
+  - when: { heavy: true }
+    danger: 5
     scoreOnly: false
     clauseFromPolicy: true

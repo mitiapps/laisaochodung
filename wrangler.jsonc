@@ -2,9 +2,9 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "laisaochodung",
   "compatibility_date": "2026-11-23",
-  // Static assets only: no Worker script, no routes, no custom domain.
+  // Static assets only: no Worker script, no routes, no custom domain. Routing is hash-only, so a
+  // missing asset gets a real 404 instead of index.html; public/_headers sets the security headers.
   "assets": {
-    "directory": "./dist/",
-    "not_found_handling": "single-page-application"
+    "directory": "./dist/"
   }
 }

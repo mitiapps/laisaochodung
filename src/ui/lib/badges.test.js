@@ -21,7 +21,13 @@ const ids = (episodeId, tierIndex) => {
 describe('badge selection from a breach', () => {
   it('marks the unverified clause and the design threshold only where they apply', () => {
     expect(ids('speeding-0', 0)).toEqual(['unverified', 'design']);
-    expect(ids('speeding-0', 1)).toEqual(['design']);
+    expect(ids('speeding-0', 1)).toEqual(['unverified', 'design']);
+  });
+
+  it('marks a verified clause detected against unverified data', () => {
+    const breach = toasts.find((b) => b.episodeId === 'speeding-0' && b.tierIndex === 1);
+    expect(breach?.clause?.verified).toBe(true);
+    expect(breach?.basisVerified).toBe(false);
   });
 
   it('marks the inferred clause', () => {
@@ -36,7 +42,7 @@ describe('badge selection from a breach', () => {
     const all = [...toasts, ...(hudStates.finished.report?.breaches ?? [])];
     for (const b of /** @type {import('../../contracts/score.js').Breach[]} */ (/** @type {unknown} */ (all))) {
       const got = badgesFor(b).map((x) => x.id);
-      expect(got.includes('unverified')).toBe(b.clause !== null && !b.clause.verified);
+      expect(got.includes('unverified')).toBe((b.clause !== null && !b.clause.verified) || b.basisVerified === false);
       expect(got.includes('inferred')).toBe(b.inferred);
       expect(got.includes('design')).toBe(b.designParams.length > 0);
     }

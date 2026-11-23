@@ -20,6 +20,8 @@ import { headingVector, leftVector, segmentIntersection } from '../../geometry/i
  * @property {boolean} active The rule is breached this step.
  * @property {Record<string, unknown>} tierInput Values matched against `tier.when`.
  * @property {number} [severity] Episode escalation rank; defaults to the tier index.
+ * @property {boolean} [basisVerified] False when the detection used unverified legal data (an
+ *   unverified TT 38 default limit); defaults to true.
  */
 
 /**

@@ -7,7 +7,14 @@ detection:
   type: footprint-in-polygon
   params: { minSpeedMps: 0.5, sustainS: 0.5 }
   paramBasis: { minSpeedMps: design, sustainS: design }
+# The general duty (Điều 10 khoản 1) binds every driver, cars included; Điều 33 khoản 3 điểm b
+# binds only motorbike and moped riders.
 obligation:
+  - sourceId: law36-2024
+    article: Điều 10
+    clause: '1'
+    quote: đi đúng làn đường, phần đường quy định
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
   - sourceId: law36-2024
     article: Điều 33
     clause: '3'

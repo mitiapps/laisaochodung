@@ -89,9 +89,10 @@ function baseBreach(env, rule, tierIndex, frame, meta) {
  * @param {number} tierIndex Tier.
  * @param {Frame} frame Frame.
  * @param {BreachMeta} meta Episode data.
+ * @param {boolean} [basisVerified] False when the detection used unverified legal data.
  * @returns {Breach} Breach.
  */
-export function resolveBreach(env, rule, tierIndex, frame, meta) {
+export function resolveBreach(env, rule, tierIndex, frame, meta, basisVerified = true) {
   const tier = rule.tiers[tierIndex];
   const { clause, source, amendmentSources } = clauseAndSource(env, tier.scoreOnly ? null : tier.clause?.[env.group]);
   /** @type {Breach} */
@@ -103,6 +104,7 @@ export function resolveBreach(env, rule, tierIndex, frame, meta) {
     inferred: tier.inferred === true,
     designParams: designParamsOf(rule),
     scoreOnly: clause === null,
+    basisVerified,
   };
   if (tier.note) breach.note = tier.note;
   return breach;
@@ -114,19 +116,21 @@ export function resolveBreach(env, rule, tierIndex, frame, meta) {
  * @property {string} ruleId Cause rule.
  * @property {LocalText} title Its title.
  * @property {string | null} clauseId Its resolved clause, null when score only.
+ * @property {string} episodeId Its episode.
  */
 
 /**
  * Breach of the crash rule, with the clause chosen by the collision policy.
  * @param {ScorerEnv} env Static inputs.
  * @param {Rule} rule The crash rule.
+ * @param {number} tierIndex Tier chosen from the outcome (light or heavy).
  * @param {CollisionOutcome} outcome Classified collision.
  * @param {CrashCause | null} cause Cause, if any.
  * @param {Frame} frame Frame.
  * @param {BreachMeta} meta Episode data.
  * @returns {Breach} Breach.
  */
-export function resolveCrash(env, rule, outcome, cause, frame, meta) {
+export function resolveCrash(env, rule, tierIndex, outcome, cause, frame, meta) {
   const policy = env.bundle.collisionPolicy;
   const g = env.group;
   /** @type {string | null} */
@@ -135,7 +139,7 @@ export function resolveCrash(env, rule, outcome, cause, frame, meta) {
   /** @type {string | null} */
   let note = null;
   /** @type {string[]} */
-  const designParams = outcome.kind === 'pedestrian' || outcome.kind === 'static' || outcome.kind === 'fall' ? [] : ['accidentImpulse'];
+  const designParams = outcome.kind === 'pedestrian' || outcome.kind === 'fall' ? [] : ['accidentRelSpeed'];
   switch (outcome.kind) {
     case 'pedestrian':
     case 'car-accident': {
@@ -164,15 +168,19 @@ export function resolveCrash(env, rule, outcome, cause, frame, meta) {
   const { clause, source, amendmentSources } = clauseAndSource(env, clauseId);
   /** @type {Breach} */
   const breach = {
-    ...baseBreach(env, rule, 0, frame, meta),
+    ...baseBreach(env, rule, tierIndex, frame, meta),
     clause,
     source,
     amendmentSources,
     inferred,
     designParams,
     scoreOnly: clause === null,
+    basisVerified: true,
   };
   if (note) breach.note = { vi: note };
-  if (cause) breach.cause = cause.ruleId;
+  if (cause) {
+    breach.cause = cause.ruleId;
+    breach.causeEpisodeId = cause.episodeId;
+  }
   return breach;
 }

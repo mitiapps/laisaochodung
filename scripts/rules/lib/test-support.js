@@ -72,19 +72,20 @@ export function mapVariant(edit) {
 }
 
 /**
- * Scores a kinematic script with the real bundle.
- * @param {Omit<import('../../../src/testing/frame-builder.js').BuildOptions, 'vehicle'> & {vehicleId?: 'car-sedan' | 'scooter', quit?: boolean}} script
- *   Frame-builder options plus the vehicle id (default car) and the quit flag (default false).
+ * Scores a kinematic script with the real bundle, or with an edited copy of it.
+ * @param {Omit<import('../../../src/testing/frame-builder.js').BuildOptions, 'vehicle'> & {vehicleId?: 'car-sedan' | 'scooter', quit?: boolean, bundle?: import('../../../src/contracts/index.js').RulesBundle}} script
+ *   Frame-builder options plus the vehicle id (default car), the quit flag (default false) and
+ *   the bundle (default the real one).
  * @returns {Promise<{report: import('../../../src/contracts/index.js').ScoreReport, frames: import('../../../src/contracts/index.js').Frame[], live: import('../../../src/contracts/index.js').Breach[][]}>}
  *   Report, frames and the breaches of each live step.
  */
 export async function scoreScript(script) {
   const { buildFrames } = await import('../../../src/testing/index.js');
   const { createScorer } = await import('../../../src/scoring/index.js');
-  const { vehicleId = 'car-sedan', quit = false, ...options } = script;
+  const { vehicleId = 'car-sedan', quit = false, bundle, ...options } = script;
   const veh = vehicle(vehicleId);
   const frames = buildFrames({ ...options, vehicle: veh });
-  const scorer = createScorer(await realBundle(), options.map, veh);
+  const scorer = createScorer(bundle ?? (await realBundle()), options.map, veh);
   let state = scorer.initial;
   /** @type {import('../../../src/contracts/index.js').Breach[][]} */
   const live = [];

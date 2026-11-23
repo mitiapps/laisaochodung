@@ -8,9 +8,10 @@
 #   27 tháng 6 năm 2024"); in force 2025-01-01 (header of the consolidated text 55/VBHN-VPQH).
 # - Law 118: title, date 2025-12-10 and effect 2026-07-01 read from the header of 55/VBHN-VPQH;
 #   the law's own text was not fetched.
-# - TT 38: in force 2025-01-01 per the luatvietnam copy (not an official text).
+# - TT 38: issued 2024-11-15 (header of the Government portal PDF: "Hà Nội, Ngày 15 tháng 11 năm
+#   2024"); in force 2025-01-01 (its Điều 12 khoản 1).
 # - TT 09: known only from the amendment marks in the luatvietnam copy of TT 38; its title is a
-#   description, not read from the text.
+#   description, not read from the text. It amends TT 38 Điều 10, not the Điều 6 speed tables.
 
 - id: nd168-2024
   title: Nghị định quy định xử phạt vi phạm hành chính về trật tự, an toàn giao thông trong lĩnh vực giao thông đường bộ; trừ điểm, phục hồi điểm giấy phép lái xe
@@ -53,12 +54,12 @@
 - id: tt38-2024
   title: Thông tư quy định về tốc độ và khoảng cách an toàn của xe cơ giới, xe máy chuyên dùng tham gia giao thông trên đường bộ
   number: 38/2024/TT-BGTVT
-  edition: Bản luatvietnam có đánh dấu sửa đổi của Thông tư 09/2025/TT-BXD, đối chiếu với bản hoatieu.vn; chưa có bản chính thức
-  issued: null
+  edition: Bản PDF trên Cổng Thông tin điện tử Chính phủ; sửa đổi của Thông tư 09/2025/TT-BXD chỉ đọc qua bản luatvietnam
+  issued: '2024-11-15'
   effectiveFrom: '2025-01-01'
-  url: https://luatvietnam.vn/giao-thong/thong-tu-38-2024-tt-bgtvt-toc-do-khoang-cach-an-toan-cua-xe-may-chuyen-dung-tham-gia-giao-thong-375831-d1.html
+  url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/38-bgtvt.pdf
   amendedBy: [tt09-2025]
-  official: false
+  official: true
 
 - id: tt09-2025
   title: Thông tư 09/2025/TT-BXD (mô tả, chưa đọc tên văn bản; sửa khoản 3, khoản 4 Điều 10 Thông tư 38/2024/TT-BGTVT)

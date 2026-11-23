@@ -1008,7 +1008,7 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
         "heading": 0,
         "pos": {
           "x": -102.585,
-          "z": 38.918
+          "z": 40.668
         }
       }
     ],
@@ -2520,14 +2520,14 @@ exports[`fixture builds > matches the snapshot for tutorial 01 1`] = `
         "heading": 0,
         "pos": {
           "x": 370,
-          "z": 3.5
+          "z": 1.75
         }
       },
       {
         "heading": 0,
         "pos": {
           "x": 560,
-          "z": 3.5
+          "z": 1.75
         }
       }
     ],

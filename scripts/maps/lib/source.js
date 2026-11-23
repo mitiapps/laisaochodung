@@ -78,7 +78,7 @@ import { polylineLength } from '../../../src/geometry/index.js';
  * @property {Array<{id: string, kind: 'building' | 'parked-car' | 'barrier', at: WayAt, lateral: number, lengthM: number, widthM: number, heightM: number}>} obstacles Obstacles.
  * @property {Array<{id: string, way: string, side: 'left' | 'right', fromS: number, toS: number, depthM: number, heightM: number, setbackM: number}>} buildings Building rows.
  * @property {ActorSpec[]} actors Actors.
- * @property {{start: {at: WayAt, dir: Dir, lane: number}, checkpoints: Array<{at: WayAt, dir: Dir}>, finish: {at: WayAt, dir: Dir, lengthM: number}}} route Route.
+ * @property {{start: {at: WayAt, dir: Dir, lane: number}, checkpoints: Array<{at: WayAt, dir: Dir, lane: number | null}>, finish: {at: WayAt, dir: Dir, lengthM: number}}} route Route.
  * @property {boolean} lit Whole map lit by street lights.
  * @property {'tutorial' | 'override'} placedSource Source tag for placed signs and the zones they make.
  * @property {number[]} [routeOsmWays] OSM route way ids in order (OSM maps).
@@ -385,8 +385,10 @@ function parseElements(src, at, wayOf, defaultDir, file) {
   const route = {
     start: { at: start.at, dir: start.dir, lane: num(start.raw.lane ?? 0, `${file} route.start.lane`, { integer: true, min: 0 }) },
     checkpoints: list(r.checkpoints, `${file} route.checkpoints`).map((c, i) => {
-      const p = routePoint(c, `${file} route.checkpoints[${i}]`);
-      return { at: p.at, dir: p.dir };
+      const w = `${file} route.checkpoints[${i}]`;
+      const p = routePoint(c, w);
+      const lane = p.raw.lane === undefined ? null : num(p.raw.lane, `${w}.lane`, { integer: true, min: 0 });
+      return { at: p.at, dir: p.dir, lane };
     }),
     finish: { at: finish.at, dir: finish.dir, lengthM: num(finish.raw.lengthM ?? 10, `${file} route.finish.lengthM`, { min: 3 }) },
   };

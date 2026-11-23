@@ -5,11 +5,13 @@
  * first sees yellow already on the line may go on. The breach stays active until the ego leaves
  * the junction behind the line (or moves far from it); while it lasts, entering the crosswalk
  * governed by the same signal, or the junction, with the light not green escalates it from stage
- * `line` to stage `entered`.
+ * `line` to stage `entered`. The front counts as in a crosswalk or junction only once it is
+ * `entryToleranceM` or more inside along the heading, so a short overshoot past a stop line drawn
+ * right before the crosswalk stays at stage `line`.
  */
 
-import { pointInPolygon } from '../../geometry/index.js';
-import { locate, mapIndex, stopLinesForLane } from '../../map-query/index.js';
+import { headingVector, pointInPolygon } from '../../geometry/index.js';
+import { junctionById, locate, mapIndex, stopLinesForLane } from '../../map-query/index.js';
 import { distanceAlong } from './common.js';
 
 /** Distance ahead within which a yellow onset is recorded, metres. */
@@ -23,7 +25,7 @@ const CLEAR_M = 80;
  * @property {{signalId: string, stage: 'line' | 'entered', at: [number, number]} | null} violation
  *   Open violation.
  */
-/** @typedef {{yellowDecelMps2: number}} Params */
+/** @typedef {{yellowDecelMps2: number, entryToleranceM: number}} Params */
 
 /** @returns {State} Fresh state. */
 export function init() {
@@ -70,10 +72,20 @@ export function detect(state, frame, ctx, params) {
 
   if (violation.stage === 'line' && lights[violation.signalId] !== 'green') {
     const signalId = violation.signalId;
+    const [fx, fz] = headingVector(ctx.heading);
+    /** @type {[number, number]} Point entryToleranceM behind the front. */
+    const back = [ctx.front[0] - fx * params.entryToleranceM, ctx.front[1] - fz * params.entryToleranceM];
+    /**
+     * @param {[number, number][]} polygon Ring.
+     * @returns {boolean} The front and the point entryToleranceM behind it are both inside.
+     */
+    const deepIn = (polygon) => pointInPolygon(ctx.front, polygon) && pointInPolygon(back, polygon);
     const inCrosswalk = mapIndex(map)
       .crosswalks.near(ctx.front)
-      .some((cw) => cw.signalId === signalId && pointInPolygon(ctx.front, cw.polygon));
-    const inJunction = locate(map, ctx.front, ctx.heading).junctionId !== null;
+      .some((cw) => cw.signalId === signalId && deepIn(cw.polygon));
+    const junctionId = locate(map, ctx.front, ctx.heading).junctionId;
+    const junction = junctionId === null ? null : junctionById(map, junctionId);
+    const inJunction = junction !== null && deepIn(junction.polygon);
     if (inCrosswalk || inJunction) violation = { ...violation, stage: 'entered' };
   }
   const tierInput = { stage: violation.stage };

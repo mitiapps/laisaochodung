@@ -5,6 +5,7 @@
  */
 
 import vehiclesJson from '../../../data/vehicles/vehicles.json';
+import { isHttpsUrl } from '../../config/site.js';
 
 /** @typedef {import('../../contracts/catalog.js').MapIndexEntry} MapIndexEntry */
 /** @typedef {import('../../contracts/catalog.js').Credit} Credit */
@@ -77,6 +78,8 @@ export function parseCredits(json) {
     if (
       !isObject(c) ||
       !['file', 'title', 'author', 'sourceUrl', 'licence', 'licenceUrl'].every((k) => isText(c[k])) ||
+      !isHttpsUrl(c.sourceUrl) ||
+      !isHttpsUrl(c.licenceUrl) ||
       typeof c.ownWork !== 'boolean' ||
       (c.creditLine !== undefined && !isText(c.creditLine))
     ) {
@@ -148,7 +151,7 @@ export function loadCredits() {
 export function sourcesOf(bundle) {
   if (!isObject(bundle) || !Array.isArray(bundle.sources)) throw new Error('rules bundle has no sources');
   return bundle.sources.map((s, i) => {
-    if (!isObject(s) || !isText(s.id) || !isText(s.title) || !isText(s.number) || !isText(s.url)) {
+    if (!isObject(s) || !isText(s.id) || !isText(s.title) || !isText(s.number) || !isHttpsUrl(s.url)) {
       throw new Error(`source ${i} is malformed`);
     }
     return /** @type {Source} */ (/** @type {unknown} */ (s));

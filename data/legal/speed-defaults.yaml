@@ -3,8 +3,8 @@
 # P.127 sign binds the lane. `multiLane` is the first column of each table: a divided road or a
 # one-way road with two or more motor lanes.
 #
-# Read only from two commercial copies (luatvietnam, hoatieu.vn) that agree; no official text was
-# fetched, so every row is unverified. This blocks the release, not the build.
+# Every row was read from the official TT 38 text (Government portal PDF, 2024-11-15) on 2026-11-23
+# and matches the two commercial copies (luatvietnam, hoatieu.vn). TT 09/2025 does not amend Điều 6.
 # `point` names the table and the column; `quote` is the vehicle row's first cell, verbatim. The
 # value is the number printed in that row and column.
 # No moped rows: xe gắn máy is out of the MVP.
@@ -19,8 +19,8 @@
     clause: "1"
     point: "Bảng 1, cột “Đường đôi; đường một chiều có từ hai làn xe cơ giới trở lên”"
     quote: "Các loại xe cơ giới, trừ các xe được quy định tại Điều 7 và Điều 8 Thông tư này"
-    url: https://luatvietnam.vn/giao-thong/thong-tu-38-2024-tt-bgtvt-toc-do-khoang-cach-an-toan-cua-xe-may-chuyen-dung-tham-gia-giao-thong-375831-d1.html
-  verified: false
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/38-bgtvt.pdf
+  verified: true
 
 - legalClass: car
   builtUp: true
@@ -32,8 +32,8 @@
     clause: "1"
     point: "Bảng 1, cột “Đường hai chiều; đường một chiều có một làn xe cơ giới”"
     quote: "Các loại xe cơ giới, trừ các xe được quy định tại Điều 7 và Điều 8 Thông tư này"
-    url: https://luatvietnam.vn/giao-thong/thong-tu-38-2024-tt-bgtvt-toc-do-khoang-cach-an-toan-cua-xe-may-chuyen-dung-tham-gia-giao-thong-375831-d1.html
-  verified: false
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/38-bgtvt.pdf
+  verified: true
 
 - legalClass: motorbike
   builtUp: true
@@ -45,8 +45,8 @@
     clause: "1"
     point: "Bảng 1, cột “Đường đôi; đường một chiều có từ hai làn xe cơ giới trở lên”"
     quote: "Các loại xe cơ giới, trừ các xe được quy định tại Điều 7 và Điều 8 Thông tư này"
-    url: https://luatvietnam.vn/giao-thong/thong-tu-38-2024-tt-bgtvt-toc-do-khoang-cach-an-toan-cua-xe-may-chuyen-dung-tham-gia-giao-thong-375831-d1.html
-  verified: false
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/38-bgtvt.pdf
+  verified: true
 
 - legalClass: motorbike
   builtUp: true
@@ -58,8 +58,8 @@
     clause: "1"
     point: "Bảng 1, cột “Đường hai chiều; đường một chiều có một làn xe cơ giới”"
     quote: "Các loại xe cơ giới, trừ các xe được quy định tại Điều 7 và Điều 8 Thông tư này"
-    url: https://luatvietnam.vn/giao-thong/thong-tu-38-2024-tt-bgtvt-toc-do-khoang-cach-an-toan-cua-xe-may-chuyen-dung-tham-gia-giao-thong-375831-d1.html
-  verified: false
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/38-bgtvt.pdf
+  verified: true
 
 - legalClass: car
   builtUp: false
@@ -71,8 +71,8 @@
     clause: "2"
     point: "Bảng 2, cột “Đường đôi; đường một chiều có từ hai làn xe cơ giới trở lên”"
     quote: "Xe ô tô chở người đến 28 chỗ không kể chỗ của người lái xe (trừ xe buýt); ô tô tải có trọng tải không lớn hơn 3,5 tấn"
-    url: https://luatvietnam.vn/giao-thong/thong-tu-38-2024-tt-bgtvt-toc-do-khoang-cach-an-toan-cua-xe-may-chuyen-dung-tham-gia-giao-thong-375831-d1.html
-  verified: false
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/38-bgtvt.pdf
+  verified: true
 
 - legalClass: car
   builtUp: false
@@ -84,8 +84,8 @@
     clause: "2"
     point: "Bảng 2, cột “Đường hai chiều; đường một chiều có một làn xe cơ giới”"
     quote: "Xe ô tô chở người đến 28 chỗ không kể chỗ của người lái xe (trừ xe buýt); ô tô tải có trọng tải không lớn hơn 3,5 tấn"
-    url: https://luatvietnam.vn/giao-thong/thong-tu-38-2024-tt-bgtvt-toc-do-khoang-cach-an-toan-cua-xe-may-chuyen-dung-tham-gia-giao-thong-375831-d1.html
-  verified: false
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/38-bgtvt.pdf
+  verified: true
 
 - legalClass: motorbike
   builtUp: false
@@ -97,8 +97,8 @@
     clause: "2"
     point: "Bảng 2, cột “Đường đôi; đường một chiều có từ hai làn xe cơ giới trở lên”"
     quote: "Xe buýt; ô tô đầu kéo kéo sơ mi rơ moóc (trừ ô tô đầu kéo kéo sơ mi rơ moóc xi téc); xe mô tô; ô tô chuyên dùng (trừ ô tô trộn vữa, ô tô trộn bê tông lưu động)"
-    url: https://luatvietnam.vn/giao-thong/thong-tu-38-2024-tt-bgtvt-toc-do-khoang-cach-an-toan-cua-xe-may-chuyen-dung-tham-gia-giao-thong-375831-d1.html
-  verified: false
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/38-bgtvt.pdf
+  verified: true
 
 - legalClass: motorbike
   builtUp: false
@@ -110,5 +110,5 @@
     clause: "2"
     point: "Bảng 2, cột “Đường hai chiều; đường một chiều có một làn xe cơ giới”"
     quote: "Xe buýt; ô tô đầu kéo kéo sơ mi rơ moóc (trừ ô tô đầu kéo kéo sơ mi rơ moóc xi téc); xe mô tô; ô tô chuyên dùng (trừ ô tô trộn vữa, ô tô trộn bê tông lưu động)"
-    url: https://luatvietnam.vn/giao-thong/thong-tu-38-2024-tt-bgtvt-toc-do-khoang-cach-an-toan-cua-xe-may-chuyen-dung-tham-gia-giao-thong-375831-d1.html
-  verified: false
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/38-bgtvt.pdf
+  verified: true

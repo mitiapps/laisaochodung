@@ -36,6 +36,9 @@
   {:else}
     {#if fine}
       <p data-testid="breach-fine">Phạt tiền: <span class="font-semibold">{fine}</span></p>
+      {#if breach.fineAbsorbedBy}
+        <p class="text-xs text-amber-300" data-testid="breach-fine-absorbed">Đã tính trong mức phạt gây tai nạn</p>
+      {/if}
     {/if}
     <p data-testid="breach-points">{formatLicencePoints(clause.licencePoints)}</p>
     {#if suspension}

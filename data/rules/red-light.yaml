@@ -1,20 +1,27 @@
 # Red light, in two tiers. Tier 1: the front passed the stop line on red (or on a yellow it could
 # have stopped for) but the vehicle stayed out of the crosswalk and the junction; it cites the
-# sign-and-marking catch-all by inference. Tier 2: it went on into the crosswalk or the junction
-# while the light was not green. A vehicle already on or past the line when yellow comes on may
-# go on; on yellow the game also excuses a vehicle that could not stop at 3 m/s².
+# sign-and-marking catch-all by inference. Tier 2: it went on into the crosswalk or the junction,
+# by entryToleranceM or more, while the light was not green. Shipped stop lines sit about 1 m
+# before the crosswalk, so without the tolerance any overshoot would reach tier 2. A vehicle
+# already on or past the line when yellow comes on may go on; on yellow the game also excuses a
+# vehicle that could not stop at 3 m/s².
+#
+# Tier 1 is contestable: 6.1.a / 7.1.a exclude 9.b / 7.c (the signal clauses), and QCVN 41 6.3.3
+# reads red as "phải dừng lại trước vạch dừng", so crossing the line on red may already be 9.b /
+# 7.c. The tier stays `inferred` as a recorded design choice; see docs/known-issues.md.
 id: red-light
 title: { vi: "Vượt đèn đỏ" }
 description: { vi: "Đầu xe vượt qua vạch dừng khi đèn đỏ, hoặc khi đèn vàng mà vẫn kịp dừng." }
 vehicleClasses: [car, motorbike]
 detection:
   type: stop-line-on-red
-  params: { yellowDecelMps2: 3 }
-  paramBasis: { yellowDecelMps2: design }
+  params: { yellowDecelMps2: 3, entryToleranceM: 1 }
+  paramBasis: { yellowDecelMps2: design, entryToleranceM: design }
 obligation:
   - sourceId: law36-2024
     article: Điều 11
     clause: '4'
+    point: c
     quote: Tín hiệu đèn màu đỏ là cấm đi.
     url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
   - sourceId: qcvn41-2024

@@ -22,15 +22,19 @@ npm test           # Vitest (Node)
 | --- | --- |
 | `npm run build` | Builds rules and map data, then the Vite bundle into `dist/` |
 | `npm run build:rules` / `build:maps` | Compiles `data/` YAML into JSON (`src/generated/`, `public/maps/`) |
-| `npm run test:e2e` | Playwright smoke tests against `vite preview` on port 5179 |
+| `npm run test:e2e` | Builds, then runs the Playwright smoke test against a fresh `vite preview` on port 5179 (which must be free) |
 | `npm run fetch:osm` | Refreshes the raw OpenStreetMap extracts (manual) |
-| `npm run deploy` | `wrangler deploy` (manual) |
+| `npm run release:check` | Release gate: verified legal data, checked sign figures, site settings, credits, OSM licence |
+| `npm run deploy` | Builds, runs the release gate, then `wrangler deploy` (manual) |
 
-`build:rules`, `build:maps`, and with them `build` and `test:e2e`, need the data pipelines in
-`scripts/rules/` and `scripts/maps/`.
-
-More: [docs/architecture.md](docs/architecture.md). Contributor rules: [CLAUDE.md](CLAUDE.md).
+More: [docs/architecture.md](docs/architecture.md). Known limits:
+[docs/known-issues.md](docs/known-issues.md). Contributor rules: [CLAUDE.md](CLAUDE.md).
 
 ## Licence
 
-Code: [Apache-2.0](LICENSE).
+- Code: [Apache-2.0](LICENSE).
+- OpenStreetMap-derived map data (`data/maps/osm-*`, built into `public/maps/`): © OpenStreetMap
+  contributors, [ODbL 1.0](data/maps/LICENSE-ODbL.md).
+- 3D models and sign drawings: listed with their licences in
+  [data/credits/credits.json](data/credits/credits.json) (Kenney models are CC0 1.0; the sign
+  drawings are this project's own, Apache-2.0).

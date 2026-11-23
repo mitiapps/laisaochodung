@@ -36,7 +36,7 @@
       <dd class="text-lg font-semibold" data-testid="result-licence">{licenceLabel(report.licence)}</dd>
     </div>
     <p class="col-span-2 text-xs text-slate-400">
-      Tổng tiền phạt cộng khung phạt của từng lỗi, chỉ để tham khảo. {LICENCE_NOTE}
+      Tổng tiền phạt cộng khung phạt của từng lỗi, trừ lỗi đã tính trong mức phạt gây tai nạn, chỉ để tham khảo. {LICENCE_NOTE}
     </p>
   </dl>
 

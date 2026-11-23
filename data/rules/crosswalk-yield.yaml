@@ -9,7 +9,15 @@ detection:
   type: crosswalk-occupied
   params: { minSpeedMps: 0.5, turnMinDeg: 30, turnWindowS: 3 }
   paramBasis: { minSpeedMps: design, turnMinDeg: design, turnWindowS: design }
+# Điều 12 khoản 3 điểm a is the duty when going straight; Điều 15 khoản 3 applies only when
+# turning ("Khi chuyển hướng").
 obligation:
+  - sourceId: law36-2024
+    article: Điều 12
+    clause: '3'
+    point: a
+    quote: Tại nơi có vạch kẻ đường hoặc báo hiệu khác dành cho người đi bộ hoặc tại nơi mà người đi bộ, xe lăn của người khuyết tật đang qua đường;
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
   - sourceId: law36-2024
     article: Điều 15
     clause: '3'

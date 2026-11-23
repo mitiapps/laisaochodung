@@ -58,7 +58,10 @@ two builds are byte-identical.
 - Pavements run along both road edges (3 m by default). Building rows sit behind them and fail
   the build if they overlap a lane or a junction.
 - The route start may not lie in a no-stopping or junction-buffer zone. The finish counts only
-  after every checkpoint; checkpoints sit at the centre of the travel direction's lanes.
+  after every checkpoint. A checkpoint sits at the centre of the lane it names (`lane`, index 0
+  next to the kerb, as for the start); on a direction with one lane `lane` may be left out. A
+  checkpoint without `lane` on a multi-lane direction fails the build, because the nav arrow
+  points at the gate centre and the middle of two lanes is the lane line.
 
 Game values (lane width, crosswalk width 4 m, pavement width, light cycle, class lane defaults,
 cluster and stub lengths) are constants at the top of the `lib/` modules.
@@ -75,7 +78,7 @@ Everything else is placed by way and distance, so authors write no polygons:
   `[{toS: 150, type: dashed}, {type: solid}]`; a `mixed` line names its `crossable` side.
 - `signs`, `crosswalks`, `obstacles` (`lateral` offset, positive left), `buildings` (rows by side
   and range), `junctions` (`signals`), `actors` (path along lane stretches or across a crosswalk;
-  trigger at a time or over a stretch of road), `route` (start lane, checkpoints, finish),
+  trigger at a time or over a stretch of road), `route` (start lane, checkpoints with their lane, finish),
   `environment`, `timeLimitS`, `lit`.
 - `layout: <id>` reuses another tutorial's source; keys set here replace the layout's.
 

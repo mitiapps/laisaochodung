@@ -59,8 +59,14 @@ old record once nothing cites it.
 
 - **`verified`** (clauses, speed defaults, sign meanings): `true` only when the value was read
   from an official text, or from two copies of which at least one is official. Unverified data
-  ships to dev builds with the "chưa kiểm chứng" badge; the release gate (`countUnverified`)
-  requires none. At the moment the 8 TT 38 speed defaults and the P.130 meaning are unverified.
+  is built and shown with the "chưa kiểm chứng" badge; the release gate
+  (`scripts/release-check.js`, run by `npm run deploy`) blocks a deploy while any is left. Every
+  clause, speed default and sign meaning is verified at the moment. A breach detected against an
+  unverified default limit carries `basisVerified: false`, so its toast shows the badge even
+  though its clause is verified.
+- **`figureChecked`** (signs): the date the game's SVG was compared with the official QCVN 41
+  figure, `null` until then. `countUnverified` lists every null under `figures`, and the release
+  gate fails while any drawing is unchecked.
 - **`inferred`** (tier): no điểm names the behaviour exactly, and the clause applies by
   reading. The UI shows "suy luận". Examples: the sign-and-marking catch-all for a red-light
   overshoot that stops before the crosswalk, or for going straight onto an occupied zebra.
@@ -82,13 +88,18 @@ junction-turn rules fire on the junction exit.
 
 ## Collision policy
 
-A pedestrian hit, or an NPC car hit at or above `accidentImpulse`, is an accident:
+A pedestrian hit, or an NPC car hit at a closing speed of at least `accidentRelSpeed` (4.2 m/s,
+about 15 km/h, `design`), is an accident. Closing speed is used rather than impulse because
+impulse scales with the player's mass, which differs about sevenfold between the car and the
+scooter. It is measured along the contact normal, so a fast sideswipe counts as a light contact.
 
 - It cites 10.b (`accidentB`) when the cause's clause is in `accidentBList`, and 10.a
   (`accidentA`) otherwise, including when there is no cause.
 - `accidentBList` copies the lists quoted in 6.10.b and 7.10.b, and a test keeps the two
   equal.
-- The cause is the worst other breach active in the last `crashCauseWindowS`.
+- The cause is the worst other breach active in the last `crashCauseWindowS`. The crash rule is
+  evaluated after every other rule of a step, so a cause that opens or escalates on the crash's
+  own step counts, at its new tier.
 - A cause in `inferredAccidentCauses` (a clause id or a rule id) marks the accident as
   inferred. `pavement` is listed by rule id because its motorbike clause, 7.7.a, also covers
   wrong-way riding, which 7.10.a names.
@@ -98,3 +109,22 @@ Other contacts:
 - A lighter hit on the car ahead in the same lane cites 6.4.l or 7.3.i.
 - Other car contacts, static objects, kerbs and falls deduct score only.
 - Any contact while the ego is slower than `contactMinEgoSpeed` is ignored.
+
+Danger: the crash rule has two tiers. A light contact (an NPC car or a static object or kerb
+below `accidentRelSpeed`) is danger 3; a pedestrian, an accident, a static or kerb hit at or above
+`accidentRelSpeed`, and a fall are danger 5. A light contact followed by a heavy one in the same
+episode escalates; a fall does not close an open crash episode, so a contact that knocks the rider
+over is one episode at danger 5.
+
+Fine total: an accident clause names its cause as an element of the offence ("gây tai nạn giao
+thông"), so the report adds the cause's band only once. When an accident that is not inferred has
+a cause with a clause, the cause's breach gets `fineAbsorbedBy` (the accident's episode id) and
+its band is left out of `fineTotalVnd`. Score deductions and licence points are unchanged. A build
+test keeps every clause a rule cites at or below the fine of the accident clauses of its group.
+
+## Changing a quote
+
+There is no generator for `data/legal/clauses.yaml`; it is maintained by hand. When a quote
+changes, open the official URL of its source in `data/legal/sources.yaml`, compare the full điểm,
+update the record and set `checkedOn`. `scripts/rules/check-csv.test.js`, the 10.b list test and
+the validator catch a wrong value after the edit.

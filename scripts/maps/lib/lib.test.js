@@ -289,6 +289,23 @@ describe('zones and elements', () => {
     ).toThrow(/not followed by a junction/);
   });
 
+  it('centres a checkpoint on its lane and requires a lane on a multi-lane direction', () => {
+    const ways = [
+      { id: 'w1', nodes: ['a', 'j'], lanes: { forward: 2, backward: 1 } },
+      { id: 'w2', nodes: ['j', 'b'] },
+      { id: 'cross', nodes: ['n', 'j', 's'] },
+    ];
+    const route = (/** @type {Record<string, unknown>} */ cp) => ({ start: { way: 'w1', s: 20 }, checkpoints: [cp], finish: { way: 'w2', s: 100 } });
+    // Forward lanes of w1 span z 0 to 7 (+z is right of eastbound); lane 0 is next to the kerb.
+    const kerb = compileTutorial({ ways, route: route({ way: 'w1', s: 100, lane: 0 }) });
+    expect(kerb.route.checkpoints[0].pos).toEqual({ x: 100, z: 5.25 });
+    const inner = compileTutorial({ ways, route: route({ way: 'w1', s: 100, lane: 1 }) });
+    expect(inner.route.checkpoints[0].pos).toEqual({ x: 100, z: 1.75 });
+    expect(() => compileTutorial({ ways, route: route({ way: 'w1', s: 100 }) })).toThrow(/checkpoint 0 needs a lane \(2 lanes\)/);
+    expect(() => compileTutorial({ ways, route: route({ way: 'w1', s: 100, lane: 2 }) })).toThrow(/no forward lane 2/);
+    expect(compileTutorial({ route: route({ way: 'w1', s: 100 }) }).route.checkpoints[0].pos).toEqual({ x: 100, z: 1.75 });
+  });
+
   it('builds actor paths along lanes and across crosswalks, and building rows off the road', () => {
     const map = compileTutorial({
       crosswalks: [{ id: 'cw', at: { way: 'w1', s: 100 } }],

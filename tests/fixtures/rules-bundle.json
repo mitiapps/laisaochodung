@@ -232,7 +232,8 @@
         "quote": "Biển có hiệu lực cấm các loại xe cơ giới chạy với tốc độ tối đa vượt quá trị số ghi trên biển trừ các xe được ưu tiên theo quy định",
         "url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf"
       },
-      "verified": true
+      "verified": true,
+      "figureChecked": null
     },
     {
       "code": "R.420",
@@ -246,7 +247,8 @@
         "quote": "Đoạn đường qua khu vực đông dân cư được xác định bắt đầu bằng biển số R.420 “Bắt đầu khu đông dân cư” và kết thúc bằng biển số R.421 “Hết khu đông dân cư”.",
         "url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf"
       },
-      "verified": true
+      "verified": true,
+      "figureChecked": null
     }
   ],
   "scoring": {
@@ -259,7 +261,7 @@
     },
     "rearmS": 3,
     "crashCauseWindowS": 3,
-    "accidentImpulse": 2000,
+    "accidentRelSpeed": 4.2,
     "contactMinEgoSpeed": 0.5
   },
   "collisionPolicy": {

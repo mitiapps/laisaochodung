@@ -88,6 +88,22 @@ describe('validateRules', () => {
     }
   });
 
+  it('gives no cited clause a higher fine than the accident clauses of its group', async () => {
+    // An accident absorbs its cause's fine band in the report total, which is only fair when
+    // the accident band is the larger one.
+    const bundle = await realBundle();
+    const byId = new Map(bundle.clauses.map((c) => [c.id, c]));
+    const policy = bundle.collisionPolicy;
+    for (const g of /** @type {const} */ (['D6', 'D7'])) {
+      const accidentMax = Math.min(
+        ...[policy.accidentA[g], policy.accidentB[g]].map((id) => byId.get(id)?.fineVnd?.max ?? 0),
+      );
+      const cited = bundle.rules.flatMap((r) => r.tiers.map((t) => t.clause?.[g])).filter((id) => id !== undefined);
+      expect(cited.length).toBeGreaterThan(0);
+      for (const id of cited) expect(byId.get(id)?.fineVnd?.max ?? 0, id).toBeLessThanOrEqual(accidentMax);
+    }
+  });
+
   /** @type {[string, (b: RulesBundle) => void, RegExp][]} */
   const broken = [
     ['an unknown source id', (b) => { b.clauses[0].citation.sourceId = 'nd999'; }, /unknown source "nd999"/],
@@ -110,6 +126,9 @@ describe('validateRules', () => {
     ['a citation that names another điểm', (b) => { b.clauses[0].citation.point = 'z'; }, /cites D6\.1\.z/],
     ['a text split by an unquoted comma', (b) => { b.rules[0].description = /** @type {never} */ ({ vi: 'Rẽ trái', 'rẽ phải': null }); }, /unexpected key "rẽ phải"/],
     ['a duplicate rule id', (b) => { b.rules.push(clone(b.rules[0])); }, /duplicate id/],
+    ['a sign figure date that is not a date', (b) => { b.signs[0].figureChecked = 'soon'; }, /signs\[0\]\.figureChecked/],
+    ['a source URL that is not https', (b) => { b.sources[0].url = 'javascript:alert(1)'; }, /sources\[0\]\.url: expected an https URL/],
+    ['a missing accident closing speed', (b) => { delete (/** @type {Record<string, unknown>} */ (b.scoring)).accidentRelSpeed; }, /scoring\.accidentRelSpeed/],
   ];
   for (const [name, edit, pattern] of broken) {
     it(`rejects ${name}`, async () => {
@@ -128,7 +147,25 @@ describe('validateRules', () => {
 });
 
 describe('countUnverified', () => {
-  it('counts the TT 38 defaults and the unquoted P.130 meaning, and no clause', async () => {
-    expect(countUnverified(await realBundle())).toEqual({ clauses: [], speedDefaults: 8, signs: ['P.130'], total: 9 });
+  it('counts every unchecked sign figure and no clause, speed default or sign meaning', async () => {
+    const bundle = await realBundle();
+    const figures = bundle.signs.map((s) => s.code);
+    expect(figures).toHaveLength(12);
+    expect(countUnverified(bundle)).toEqual({ clauses: [], speedDefaults: 0, signs: [], figures, total: 12 });
+  });
+
+  it('counts unverified speed defaults and sign meanings', async () => {
+    const bundle = clone(await realBundle());
+    bundle.speedDefaults[0].verified = false;
+    bundle.signs[0].verified = false;
+    const counted = countUnverified(bundle);
+    expect(counted.speedDefaults).toBe(1);
+    expect(counted.signs).toEqual([bundle.signs[0].code]);
+  });
+
+  it('stops counting a sign figure once figureChecked has a date', async () => {
+    const bundle = clone(await realBundle());
+    bundle.signs[0].figureChecked = '2026-11-23';
+    expect(countUnverified(bundle).figures).not.toContain(bundle.signs[0].code);
   });
 });

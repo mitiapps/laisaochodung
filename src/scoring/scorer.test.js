@@ -94,7 +94,7 @@ describe('scorer core', () => {
     const { report, frames, live } = await scoreScript(script);
     expect(report.endedBy).toBe('crash');
     expect(report.score).toBe(0);
-    expect(summary(report)).toEqual(['crash:0:D6.10.a']);
+    expect(summary(report)).toEqual(['crash:1:D6.10.a']);
     expect(report.licence).toEqual({ start: 12, deducted: 10, remaining: 2 });
     const tick = Math.round(1 / DT);
     expect(live[tick].map((b) => b.ruleId)).toEqual(['crash']);
@@ -180,9 +180,76 @@ describe('scorer core', () => {
       speed: 5,
       events: [{ t: 1, event: { type: 'fall' } }],
     });
-    expect(summary(fall.report)).toEqual(['crash:0:-']);
+    expect(summary(fall.report)).toEqual(['crash:1:-']);
     expect(fall.report.breaches[0].scoreOnly).toBe(true);
     expect(fall.report.score).toBe(6);
+  });
+
+  it('escalates the crash episode when a contact knocks the rider over', async () => {
+    const { report, live } = await scoreScript({
+      map: emptyMap(),
+      vehicleId: 'scooter',
+      laneId: 'rw-e',
+      startS: 5,
+      durationS: 3,
+      speed: 5,
+      events: [
+        { t: 1, event: hit({ relSpeed: 2 }) },
+        { t: 1.5, event: { type: 'fall' } },
+      ],
+    });
+    expect(summary(report)).toEqual(['crash:1:-']);
+    const emitted = live.flat();
+    expect(emitted.map((b) => b.kind)).toEqual(['new', 'escalated']);
+    expect(new Set(emitted.map((b) => b.episodeId)).size).toBe(1);
+    expect(report.score).toBe(6);
+  });
+});
+
+describe('crash cause on the same step', () => {
+  /**
+   * Tick on which the fixture pedestrian's crosswalk-yield breach opens on a straight run at 15 m/s.
+   * @returns {Promise<number>} Tick index.
+   */
+  async function causeTick() {
+    const { live } = await scoreScript({ map: MAP, path: STRAIGHT, speed: 15, durationS: 8 });
+    const tick = live.findIndex((bs) => bs.some((b) => b.ruleId === 'crosswalk-yield'));
+    expect(tick).toBeGreaterThan(0);
+    return tick;
+  }
+
+  it('finds a cause that opens on the same tick as a pedestrian hit', async () => {
+    const tick = await causeTick();
+    const { report, live } = await scoreScript({
+      map: MAP,
+      path: STRAIGHT,
+      speed: 15,
+      durationS: 8,
+      events: [{ t: tick * DT, event: hit({ otherKind: 'pedestrian', otherId: 'p', relSpeed: 15, egoSpeed: 15 }) }],
+    });
+    expect(live[tick].map((b) => b.ruleId)).toEqual(['crosswalk-yield', 'crash']);
+    expect(summary(report)).toEqual(['crosswalk-yield:0:D6.1.a', 'crash:1:D6.10.b']);
+    const [cause, crash] = report.breaches;
+    expect(crash.cause).toBe('crosswalk-yield');
+    expect(crash.causeEpisodeId).toBe(cause.episodeId);
+    expect(cause.fineAbsorbedBy).toBe(crash.episodeId);
+    expect(report.fineTotalVnd).toEqual(crash.clause?.fineVnd);
+  });
+
+  it('keeps the cause when a pedestrian hit and a fall share a tick', async () => {
+    const tick = (await causeTick()) + 5;
+    const { report } = await scoreScript({
+      map: MAP,
+      path: STRAIGHT,
+      speed: 15,
+      durationS: 8,
+      events: [
+        { t: tick * DT, event: hit({ otherKind: 'pedestrian', otherId: 'p', relSpeed: 15, egoSpeed: 15 }) },
+        { t: tick * DT, event: { type: 'fall' } },
+      ],
+    });
+    expect(summary(report)).toEqual(['crosswalk-yield:0:D6.1.a', 'crash:1:D6.10.b']);
+    expect(report.breaches[1].cause).toBe('crosswalk-yield');
   });
 });
 

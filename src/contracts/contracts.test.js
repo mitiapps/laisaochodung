@@ -56,7 +56,7 @@ describe('key bindings', () => {
   it('covers every action once, with unique keys and Vietnamese labels', () => {
     const actions = KEY_BINDINGS.map((b) => b.action);
     expect(new Set(actions).size).toBe(actions.length);
-    expect(actions).toHaveLength(13);
+    expect(actions).toHaveLength(14);
     const keys = KEY_BINDINGS.flatMap((b) => b.keys);
     expect(new Set(keys).size).toBe(keys.length);
     expect(KEY_BINDINGS.every((b) => b.label.vi.length > 0)).toBe(true);
@@ -211,7 +211,10 @@ describe('catalog and HUD fixtures', () => {
     const deducted = report.breaches.reduce((/** @type {number} */ s, /** @type {UntrustedJson} */ b) => s + b.deduction, 0);
     expect(report.score).toBeCloseTo(10 - deducted);
     expect(report.licence.remaining).toBe(report.licence.start - report.licence.deducted);
-    for (const state of Object.values(hud)) expect(typeof state.headingRad).toBe('number');
+    for (const state of Object.values(hud)) {
+      expect(typeof state.headingRad).toBe('number');
+      expect(Object.keys(state.controls).sort()).toEqual(['brakeFront', 'brakeRear', 'handbrake', 'steer', 'throttle']);
+    }
     for (const b of [...toasts, ...report.breaches]) {
       const ids = (b.clause?.amendments ?? []).map((/** @type {UntrustedJson} */ a) => a.sourceId);
       expect(b.amendmentSources.map((/** @type {UntrustedJson} */ s) => s.sourceId)).toEqual([...new Set(ids)]);

@@ -168,6 +168,7 @@ export function validateRules(bundle) {
   sources.forEach((s, i) => {
     const path = `sources[${i}]`;
     for (const k of ['id', 'title', 'number', 'edition', 'url']) if (!isStr(s[k])) p.add(`${path}.${k}`, 'missing');
+    if (isStr(s.url) && !/^https:\/\//.test(s.url)) p.add(`${path}.url`, 'expected an https URL');
     for (const k of ['issued', 'effectiveFrom']) {
       if (s[k] !== null && !(typeof s[k] === 'string' && DATE.test(s[k]))) p.add(`${path}.${k}`, 'expected YYYY-MM-DD or null');
     }
@@ -206,6 +207,9 @@ export function validateRules(bundle) {
     checkText(p, s.name, `signs[${i}].name`);
     checkCitation(p, s.citation, `signs[${i}].citation`, sourceIds);
     if (typeof s.verified !== 'boolean') p.add(`signs[${i}].verified`, 'expected a boolean');
+    if (!(s.figureChecked === null || (typeof s.figureChecked === 'string' && DATE.test(s.figureChecked)))) {
+      p.add(`signs[${i}].figureChecked`, 'expected YYYY-MM-DD or null');
+    }
   });
 
   uniqueItems(p, b.speedDefaults, 'speedDefaults', (s) => `${String(s.legalClass)}/${String(s.builtUp)}/${String(s.multiLane)}`).forEach(
@@ -227,7 +231,7 @@ export function validateRules(bundle) {
     for (const k of ['1', '2', '3', '4', '5']) {
       if (!isObj(d) || !(Number.isFinite(d[k]) && /** @type {number} */ (d[k]) >= 0)) p.add(`scoring.deductionByDanger.${k}`, 'expected a number ≥ 0');
     }
-    for (const k of ['rearmS', 'crashCauseWindowS', 'accidentImpulse', 'contactMinEgoSpeed']) {
+    for (const k of ['rearmS', 'crashCauseWindowS', 'accidentRelSpeed', 'contactMinEgoSpeed']) {
       if (!(Number.isFinite(scoring[k]) && /** @type {number} */ (scoring[k]) >= 0)) p.add(`scoring.${k}`, 'expected a number ≥ 0');
     }
   }
@@ -367,12 +371,14 @@ function checkRule(p, r, path, known) {
 /**
  * Counts unverified legal data for the release gate.
  * @param {RulesBundle} bundle Bundle.
- * @returns {{clauses: string[], speedDefaults: number, signs: string[], total: number}} Unverified
- *   clause ids, speed default rows and sign codes.
+ * @returns {{clauses: string[], speedDefaults: number, signs: string[], figures: string[], total: number}}
+ *   Unverified clause ids, speed default rows, sign codes whose meaning is unverified, and sign
+ *   codes whose drawing was not yet compared with the official figure (`figureChecked: null`).
  */
 export function countUnverified(bundle) {
   const clauses = bundle.clauses.filter((c) => !c.verified).map((c) => c.id);
   const speedDefaults = bundle.speedDefaults.filter((s) => !s.verified).length;
   const signs = bundle.signs.filter((s) => !s.verified).map((s) => s.code);
-  return { clauses, speedDefaults, signs, total: clauses.length + speedDefaults + signs.length };
+  const figures = bundle.signs.filter((s) => s.figureChecked === null).map((s) => s.code);
+  return { clauses, speedDefaults, signs, figures, total: clauses.length + speedDefaults + signs.length + figures.length };
 }

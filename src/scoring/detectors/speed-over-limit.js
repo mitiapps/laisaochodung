@@ -1,7 +1,8 @@
 /**
  * `speed-over-limit`: speed above the limit in force by at least `minOverKmh`, held for
  * `sustainS`. The over-speed is rounded to 1e-6 km/h so a speed built as limit + 20 km/h lands on
- * 20, not 20.000000000004, at the band edges.
+ * 20, not 20.000000000004, at the band edges. A breach against an unverified TT 38 default limit
+ * carries `basisVerified: false`.
  */
 
 import { heldFor, holdSince } from './common.js';
@@ -29,5 +30,6 @@ export function detect(state, frame, ctx, params) {
     detectorState: { overSince },
     active: cond && heldFor(overSince, ctx.t, params.sustainS),
     tierInput: { overKmh: over },
+    basisVerified: ctx.limit ? ctx.limit.verified : true,
   };
 }

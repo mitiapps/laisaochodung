@@ -81,8 +81,8 @@ route:
     - { way: giua, s: 100 }
     - { way: uu-tien, s: 25 }
     - { way: uu-tien, s: 150 }
-    - { way: mot-chieu, s: 25 }
-    - { way: mot-chieu, s: 120 }
+    - { way: mot-chieu, s: 25, lane: 0 }
+    - { way: mot-chieu, s: 120, lane: 0 }
     - { way: cuoi, s: 25 }
     - { way: cuoi, s: 100 }
   finish: { way: cuoi, s: 200 }

@@ -2,7 +2,7 @@
 // fire, no-fire, boundaries, and the clean cases that lawful driving must pass.
 
 import { describe, expect, it } from 'vitest';
-import { mapVariant, minimalMap, scoreScript, summary } from '../../../scripts/rules/lib/test-support.js';
+import { clone, mapVariant, minimalMap, realBundle, scoreScript, summary } from '../../../scripts/rules/lib/test-support.js';
 
 /** @typedef {import('../../contracts/index.js').GameMap} GameMap */
 /** @typedef {import('../../contracts/index.js').FrameEvent} FrameEvent */
@@ -38,7 +38,7 @@ function steps(segments) {
  * @returns {FrameEvent} Event.
  */
 function hit(e) {
-  return { type: 'collision', otherKind: 'car', otherId: 'npc', impulse: 500, egoSpeed: 5, relSpeed: 5, sameLaneAhead: false, ...e };
+  return { type: 'collision', otherKind: 'car', otherId: 'npc', impulse: 500, egoSpeed: 5, relSpeed: 2, sameLaneAhead: false, ...e };
 }
 
 /**
@@ -114,6 +114,20 @@ describe('speed-over-limit', () => {
       'speeding:0:D7.2.b',
     ]);
   });
+
+  it('marks a breach against an unverified default limit, not one against a verified default or a sign', async () => {
+    const rural = quiet((m) => {
+      m.zones = [];
+    });
+    const verified = await scoreScript({ map: rural, path: STRAIGHT, speed: 85 / 3.6, durationS: 2.5 });
+    expect(verified.report.breaches.map((b) => b.basisVerified)).toEqual([true]);
+    const bundle = clone(await realBundle());
+    for (const d of bundle.speedDefaults) d.verified = false;
+    const unverified = await scoreScript({ map: rural, path: STRAIGHT, speed: 85 / 3.6, durationS: 2.5, bundle });
+    expect(unverified.report.breaches.map((b) => b.basisVerified)).toEqual([false]);
+    const signed = await scoreScript({ map: quiet(), path: STRAIGHT, speed: 60 / 3.6, durationS: 2.5 });
+    expect(signed.report.breaches.map((b) => b.basisVerified)).toEqual([true]);
+  });
 });
 
 describe('stop-line-on-red', () => {
@@ -130,6 +144,16 @@ describe('stop-line-on-red', () => {
     expect(summary(report)).toEqual(['red-light:0:D6.1.a']);
     expect(report.breaches[0].inferred).toBe(true);
     expect(report.breaches[0].note?.vi).toMatch(/vạch dừng/u);
+  });
+
+  it('stays at the line tier for a front less than entryToleranceM into the crosswalk', async () => {
+    const speed = steps([[31, 0], [12, 10]]);
+    // Front at x = 90.75: 0.75 m into the crosswalk.
+    const short = await scoreScript({ map: quiet(), path: [[5, 1.75], [88.5, 1.75]], speed, durationS: 45 });
+    expect(summary(short.report)).toEqual(['red-light:0:D6.1.a']);
+    // Front at x = 91.75: 1.75 m into it.
+    const deep = await scoreScript({ map: quiet(), path: [[5, 1.75], [89.5, 1.75]], speed, durationS: 45 });
+    expect(summary(deep.report)).toEqual(['red-light:1:D6.9.b']);
   });
 
   it('is quiet for a stop before the line and a start on green', async () => {
@@ -445,6 +469,29 @@ describe('lights', () => {
     expect(await run({ map: quiet(), path: STRAIGHT, speed: 10, durationS: 3, controls: high })).toEqual([]);
   });
 
+  it('counts a pedestrian crossing the road but not one on the pavement, and no oncoming car on a divided road', async () => {
+    const high = [{ t: 0, lights: /** @type {const} */ ('high') }];
+    /**
+     * @param {[number, number][]} path Pedestrian path.
+     * @returns {GameMap} Night map with one slow pedestrian on that path.
+     */
+    const withPed = (path) =>
+      quiet((m) => {
+        m.environment.startClockMin = 1200;
+        m.actors = [{ id: 'ped-x', kind: 'pedestrian', model: 'pedestrian', lengthM: 0.5, widthM: 0.5, path, speed: 0.3, trigger: { atS: 0 }, loop: false }];
+      });
+    expect(await run({ map: withPed([[70, 4.5], [80, 4.5]]), path: STRAIGHT, speed: 10, durationS: 3, controls: high })).toEqual([]);
+    expect(await run({ map: withPed([[70, -1], [70, 1]]), path: STRAIGHT, speed: 10, durationS: 3, controls: high })).toEqual([
+      'high-beam:0:D6.3.b',
+    ]);
+    const dividedNpc = mapVariant((m) => {
+      m.actors = m.actors.filter((a) => a.id === 'npc-1');
+      m.environment.startClockMin = 1200;
+      for (const r of m.roads) r.divided = true;
+    });
+    expect(await run({ map: dividedNpc, path: STRAIGHT, speed: 10, durationS: 5, controls: high })).toEqual([]);
+  });
+
   it('cites 6.1.đ and 7.1.i for the horn between 22:00 and 05:00 in a built-up zone only', async () => {
     const late = quiet((m) => {
       m.environment.startClockMin = 1340;
@@ -479,6 +526,17 @@ describe('crosswalk-occupied', () => {
       m.actors = m.actors.filter((a) => a.id === 'ped-1');
     });
     expect(await run({ map, path: STRAIGHT, speed: steps([[4.5, 10], [8, 0], [6, 10]]), durationS: 18.5 })).toEqual([]);
+  });
+
+  it('still fires when the car creeps onto the zebra and then drives across an occupied one', async () => {
+    // A slow pedestrian is still on the zebra when the car, having crept onto it at 0.3 m/s, goes on.
+    const map = mapVariant((m) => {
+      m.actors = m.actors.filter((a) => a.id === 'ped-1').map((a) => ({ ...a, speed: 0.5 }));
+    });
+    const creep = steps([[8.2, 10], [3, 0.3], [2, 5]]);
+    expect(await run({ map, path: STRAIGHT, speed: creep, durationS: 13.2 })).toEqual(['crosswalk-yield:0:D6.1.a']);
+    // Creeping onto it and stopping there is not an entry.
+    expect(await run({ map, path: STRAIGHT, speed: steps([[8.2, 10], [3, 0.3], [2, 0]]), durationS: 13.2 })).toEqual([]);
   });
 
   it('cites 6.5.l when turning onto an occupied zebra', async () => {
@@ -528,38 +586,91 @@ describe('collision', () => {
   it('chooses 10.a or 10.b from the cause clause for a pedestrian hit', async () => {
     const ped = { t: 2, event: hit({ otherKind: 'pedestrian', otherId: 'p' }) };
     const speeding = await scoreScript({ ...base, speed: 60 / 3.6, events: [ped] });
-    expect(summary(speeding.report)).toEqual(['speeding:1:D6.5.đ', 'crash:0:D6.10.a']);
+    expect(summary(speeding.report)).toEqual(['speeding:1:D6.5.đ', 'crash:1:D6.10.a']);
     expect(speeding.report.breaches[1].cause).toBe('speeding');
+    expect(speeding.report.breaches[1].causeEpisodeId).toBe(speeding.report.breaches[0].episodeId);
     const late = quiet((m) => {
       m.environment.startClockMin = 1340;
     });
     const horn = await scoreScript({ ...base, map: late, speed: 10, controls: [{ t: 0.5, horn: true }, { t: 1, horn: false }], events: [ped] });
-    expect(summary(horn.report)).toEqual(['night-horn:0:D6.1.đ', 'crash:0:D6.10.b']);
+    expect(summary(horn.report)).toEqual(['night-horn:0:D6.1.đ', 'crash:1:D6.10.b']);
+  });
+
+  it('counts an accident and its cause once in the fine total, and both in the score', async () => {
+    const ped = { t: 2, event: hit({ otherKind: 'pedestrian', otherId: 'p' }) };
+    const { report } = await scoreScript({ ...base, speed: 60 / 3.6, events: [ped] });
+    const [cause, accident] = report.breaches;
+    expect(cause.fineAbsorbedBy).toBe(accident.episodeId);
+    expect(accident.fineAbsorbedBy).toBeUndefined();
+    expect(report.fineTotalVnd).toEqual(accident.clause?.fineVnd);
+    const car = await scoreScript({ ...base, speed: 60 / 3.6, events: [{ t: 2, event: hit({ relSpeed: 6 }) }] });
+    expect(summary(car.report)).toEqual(['speeding:1:D6.5.đ', 'crash:1:D6.10.a']);
+    expect(car.report.fineTotalVnd).toEqual(car.report.breaches[1].clause?.fineVnd);
+    expect(car.report.score).toBe(10 - car.report.breaches[0].deduction - car.report.breaches[1].deduction);
+  });
+
+  it('keeps both bands when the accident is inferred or the contact is light', async () => {
+    const pavement = { ...base, speed: 5, offset: [{ t: 0.2, value: 0 }, { t: 0.6, value: -3 }], events: [{ t: 2.5, event: hit({ otherKind: 'pedestrian' }) }] };
+    const inferred = await scoreScript(pavement);
+    const sum = (/** @type {import('../../contracts/index.js').Breach[]} */ bs) =>
+      bs.reduce((a, b) => ({ min: a.min + (b.clause?.fineVnd?.min ?? 0), max: a.max + (b.clause?.fineVnd?.max ?? 0) }), { min: 0, max: 0 });
+    expect(inferred.report.breaches.some((b) => b.fineAbsorbedBy)).toBe(false);
+    expect(inferred.report.fineTotalVnd).toEqual(sum(inferred.report.breaches));
+    const light = await scoreScript({ ...base, speed: 60 / 3.6, events: [{ t: 2, event: hit({}) }] });
+    expect(summary(light.report)).toEqual(['speeding:1:D6.5.đ', 'crash:0:-']);
+    expect(light.report.breaches.some((b) => b.fineAbsorbedBy)).toBe(false);
+    expect(light.report.fineTotalVnd).toEqual(sum(light.report.breaches));
   });
 
   it('marks a pavement cause as inferred, for both decree groups', async () => {
     const pavement = { ...base, speed: 5, offset: [{ t: 0.2, value: 0 }, { t: 0.6, value: -3 }], events: [{ t: 2.5, event: hit({ otherKind: 'pedestrian' }) }] };
     const car = await scoreScript(pavement);
-    expect(summary(car.report)).toEqual(['pavement:0:D6.6.d', 'crash:0:D6.10.a']);
+    expect(summary(car.report)).toEqual(['pavement:0:D6.6.d', 'crash:1:D6.10.a']);
     expect(car.report.breaches[1].inferred).toBe(true);
     const moto = await scoreScript({ ...pavement, vehicleId: 'scooter' });
-    expect(summary(moto.report)).toEqual(['pavement:0:D7.7.a', 'crash:0:D7.10.a']);
+    expect(summary(moto.report)).toEqual(['pavement:0:D7.7.a', 'crash:1:D7.10.a']);
     expect(moto.report.breaches[1].inferred).toBe(true);
   });
 
-  it('splits car contacts by impulse and lane', async () => {
-    const accident = await scoreScript({ ...base, speed: 10, events: [{ t: 1, event: hit({ impulse: 2000 }) }] });
-    expect(summary(accident.report)).toEqual(['crash:0:D6.10.a']);
-    expect(accident.report.endedBy).toBe('quit');
-    expect(accident.report.score).toBe(6);
-    expect(accident.report.breaches[0].designParams).toEqual(['accidentImpulse']);
+  it('splits car contacts by closing speed and lane, the same for both vehicles', async () => {
+    for (const vehicleId of ['car-sedan', 'scooter']) {
+      const g = vehicleId === 'scooter' ? 'D7' : 'D6';
+      const accident = await scoreScript({ ...base, vehicleId, speed: 10, events: [{ t: 1, event: hit({ relSpeed: 4.2 }) }] });
+      expect(summary(accident.report)).toEqual([`crash:1:${g}.10.a`]);
+      expect(accident.report.endedBy).toBe('quit');
+      expect(accident.report.score).toBe(6);
+      expect(accident.report.breaches[0].designParams).toEqual(['accidentRelSpeed']);
+      const below = await scoreScript({ ...base, vehicleId, speed: 10, events: [{ t: 1, event: hit({ relSpeed: 4.19, impulse: 9000 }) }] });
+      expect(summary(below.report)).toEqual(['crash:0:-']);
+      expect(below.report.score).toBe(9);
+    }
     const ahead = await scoreScript({ ...base, vehicleId: 'scooter', speed: 10, events: [{ t: 1, event: hit({ sameLaneAhead: true }) }] });
     expect(summary(ahead.report)).toEqual(['crash:0:D7.3.i']);
     const side = await scoreScript({ ...base, speed: 10, events: [{ t: 1, event: hit({}) }] });
     expect(summary(side.report)).toEqual(['crash:0:-']);
     expect(side.report.breaches[0].note?.vi).toMatch(/không có lỗi luật/u);
+  });
+
+  it('splits static and kerb hits by closing speed, score only', async () => {
     const kerb = await scoreScript({ ...base, speed: 10, events: [{ t: 1, event: hit({ otherKind: 'kerb', otherId: null }) }] });
-    expect(kerb.report.breaches[0]).toMatchObject({ scoreOnly: true, clause: null, deduction: 4 });
+    expect(kerb.report.breaches[0]).toMatchObject({ tierIndex: 0, danger: 3, scoreOnly: true, clause: null, deduction: 1 });
+    const wall = await scoreScript({ ...base, speed: 10, events: [{ t: 1, event: hit({ otherKind: 'static', otherId: 'o', relSpeed: 8 }) }] });
+    expect(wall.report.breaches[0]).toMatchObject({ tierIndex: 1, danger: 5, scoreOnly: true, clause: null, deduction: 4 });
+  });
+
+  it('escalates a light contact to a heavy static hit inside one episode', async () => {
+    const { live, report } = await scoreScript({
+      ...base,
+      vehicleId: 'scooter',
+      speed: 10,
+      events: [
+        { t: 1, event: hit({}) },
+        { t: 1.5, event: hit({ otherKind: 'static', otherId: 'o', relSpeed: 6 }) },
+      ],
+    });
+    expect(live.flat().map((b) => [b.kind, b.tierIndex])).toEqual([['new', 0], ['escalated', 1]]);
+    expect(report.breaches).toHaveLength(1);
+    expect(report.score).toBe(6);
   });
 
   it('takes a cause only inside crashCauseWindowS', async () => {
@@ -579,7 +690,7 @@ describe('collision', () => {
         { t: 1.5, event: hit({ otherKind: 'pedestrian' }) },
       ],
     });
-    expect(live.flat().map((b) => [b.kind, b.clause?.id ?? null])).toEqual([['new', null], ['escalated', 'D6.10.a']]);
+    expect(live.flat().map((b) => [b.kind, b.tierIndex, b.clause?.id ?? null])).toEqual([['new', 0, null], ['escalated', 1, 'D6.10.a']]);
     expect(report.endedBy).toBe('crash');
     expect(report.breaches).toHaveLength(1);
   });

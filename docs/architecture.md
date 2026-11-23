@@ -35,7 +35,9 @@ Defined in `src/contracts/units.js` and the typedef comments:
   direction of travel. Footprints list corners front-left, front-right, rear-right, rear-left.
 - Light cycles run green → yellow → red; `offset` is the cycle position at `t = 0`.
 - `reset` and `fall` events are discontinuities: no episode, previous position or line-crossing
-  test spans them.
+  test spans them. The one exception is the crash episode, which a `fall` (not a `reset`) leaves
+  open so that a contact followed by a fall is one episode; a crash on the fall's own step may
+  still take its cause from before the fall.
 
 ## Modules
 
@@ -56,5 +58,14 @@ The purity rules are enforced by ESLint; see [CLAUDE.md](../CLAUDE.md).
 
 ## Deployment
 
-`wrangler.jsonc` deploys `dist/` as static assets (single-page fallback) with no Worker script,
-routes or custom domain.
+`wrangler.jsonc` deploys `dist/` as static assets with no Worker script, routes or custom domain.
+Routing is hash-only (`#/...`), so there is no single-page fallback: a missing asset is a real 404.
+`public/_headers` sets the Content-Security-Policy and other security headers; `vite preview`
+applies the same file, so the Playwright smoke test runs under the policy. The build also emits
+`third-party-licenses.md` (Vite `build.license`), linked from the credits page.
+
+`npm run deploy` first runs `predeploy`: `npm run build`, then `npm run release:check`
+(`scripts/release-check.js`). The gate fails on unverified legal data, unchecked sign figures,
+unset contact or donate settings (`src/config/site.js`), uncredited files in `public/models/` or
+`public/signs/`, an OSM map without attribution, or a missing `data/maps/LICENSE-ODbL.md`. It is
+not part of CI; `npx wrangler deploy --dry-run` skips it.

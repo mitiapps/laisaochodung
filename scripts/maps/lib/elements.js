@@ -452,7 +452,11 @@ export function compileMap(spec) {
   const start = { pos: pos2(stAt.point), heading: travelHeading(stAt.heading, st.dir) };
   const checkpoints = spec.route.checkpoints.map((c, i) => {
     const p = place(c.at, c.dir, `route checkpoint ${i}`);
-    const span = directionSpan(p.road.way, p.dir, LANE_WIDTH_M);
+    // The nav arrow points at the gate centre, so on a multi-lane direction it must name a lane:
+    // mid-direction would be a lane line and would steer a player along it.
+    const count = p.dir === 'forward' ? p.road.way.forward : p.road.way.backward;
+    if (c.lane === null && count > 1) throw new Error(`${spec.id}: route checkpoint ${i} needs a lane (${count} lanes)`);
+    const span = laneSpan(p.road.way, p.dir, c.lane ?? 0, LANE_WIDTH_M);
     const at = pointOnRoad(p.road, p.s, (span.lo + span.hi) / 2);
     return { pos: pos2(at.point), heading: travelHeading(at.heading, p.dir) };
   });

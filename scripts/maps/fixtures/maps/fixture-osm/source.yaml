@@ -6,5 +6,5 @@ route:
   ways: [1, 2]
   start: { at: { way: 1, s: 20 }, lane: 0 }
   checkpoints:
-    - { way: 1, s: 100 }
+    - { way: 1, s: 100, lane: 0 }
   finish: { way: 2, s: 120 }

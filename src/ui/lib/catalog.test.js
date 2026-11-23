@@ -14,6 +14,8 @@ describe('catalog validation', () => {
   it('accepts the fixture credits and rejects missing fields', () => {
     expect(parseCredits(credits)).toHaveLength(2);
     expect(() => parseCredits([{ file: 'a' }])).toThrow(/credit 0/u);
+    // Links go straight into href: only https is accepted.
+    expect(() => parseCredits([{ ...credits[0], licenceUrl: 'javascript:alert(1)' }])).toThrow(/credit 0/u);
   });
 
   it('loads the shipped vehicle catalog', () => {
@@ -24,6 +26,7 @@ describe('catalog validation', () => {
   it('reads legal sources from a rules bundle', () => {
     expect(sourcesOf(bundle).map((s) => s.id)).toContain('nd168-2024');
     expect(() => sourcesOf({})).toThrow();
+    expect(() => sourcesOf({ sources: [{ ...bundle.sources[0], url: 'javascript:alert(1)' }] })).toThrow(/source 0/u);
   });
 
   it('fetches the map index and surfaces HTTP errors', async () => {

@@ -29,3 +29,45 @@ export function indicatorLamps(indicators) {
   const hazard = indicators === 'hazard';
   return { left: hazard || indicators === 'left', right: hazard || indicators === 'right', hazard };
 }
+
+/**
+ * @typedef {object} PedalBar
+ * @property {'throttle' | 'brake-front' | 'brake-rear'} id Test id suffix.
+ * @property {string} label Vietnamese label.
+ * @property {number} fraction 0..1.
+ */
+
+/**
+ * Clamps a control value to 0..1; anything not finite reads as 0.
+ * @param {number} v Value.
+ * @returns {number} 0..1.
+ */
+function unit(v) {
+  return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0;
+}
+
+/**
+ * Pedal and lever bars for the HUD, labelled for the vehicle: the car has a foot brake (its
+ * handbrake is a lamp), the motorbike front and rear brakes.
+ * @param {import('../../contracts/hud.js').HudControls} controls Applied controls.
+ * @param {boolean} isCar Car or motorbike.
+ * @returns {PedalBar[]} Bars in display order.
+ */
+export function pedalBars(controls, isCar) {
+  /** @type {PedalBar[]} */
+  const bars = [
+    { id: 'throttle', label: 'Ga', fraction: unit(controls.throttle) },
+    { id: 'brake-front', label: isCar ? 'Phanh chân' : 'Phanh trước', fraction: unit(controls.brakeFront) },
+  ];
+  if (!isCar) bars.push({ id: 'brake-rear', label: 'Phanh sau', fraction: unit(controls.brakeRear) });
+  return bars;
+}
+
+/**
+ * Steering as a 0..1 position across the HUD gauge: 0 full left, 0.5 centred, 1 full right.
+ * @param {number} steer −1..1, + to the right.
+ * @returns {number} 0..1.
+ */
+export function steerPosition(steer) {
+  return unit(((Number.isFinite(steer) ? steer : 0) + 1) / 2);
+}

@@ -4,16 +4,18 @@
  *
  * Per step:
  * 1. A `reset` or `fall` event is a discontinuity: every open episode closes, detector states
- *    start over, and no line-crossing test spans it.
+ *    start over, and no line-crossing test spans it. A `fall` alone leaves the crash episode open,
+ *    so a contact that knocks the rider over escalates one episode instead of opening a second.
  * 2. The step context is derived once (location, zones, limit, crossings, junction pass).
- * 3. Each applicable rule's detector runs; superseding rules run first. An active rule whose
- *    superseding rule is active this step, or still has an open episode, is dropped.
+ * 3. Each applicable rule's detector runs; superseding rules run first and the collision rule
+ *    last, so a crash sees every cause that opens or escalates on the same step. An active rule
+ *    whose superseding rule is active this step, or still has an open episode, is dropped.
  * 4. Episodes: a rule turning active opens an episode (a `new` breach); a worse severity inside it
  *    emits an `escalated` breach with the same episode id; it closes after `rearmS` inactive. The
  *    report deducts once per episode, at its worst tier.
  * 5. Collisions take as cause the worst other episode active within `crashCauseWindowS` (not
- *    across a discontinuity) and resolve their clause through the collision policy. A pedestrian
- *    hit ends the run with score 0.
+ *    across a reset, nor across a fall before this step) and resolve their clause through the
+ *    collision policy. A pedestrian hit ends the run with score 0.
  * 6. `finish`, `timeout` and a pedestrian crash end the run; later frames are ignored.
  */
 
@@ -69,8 +71,16 @@ const EMPTY_CONTEXT = Object.freeze({
 });
 
 /**
+ * Whether a rule is a collision rule, whose breach takes its cause from the other episodes.
+ * @param {Rule} rule Rule.
+ * @returns {boolean} True for the collision detector.
+ */
+const isCollisionRule = (rule) => rule.detection.type === 'collision';
+
+/**
  * Applicable rules in evaluation order: rules that supersede others first, then the rest, each
- * group in bundle order.
+ * group in bundle order; collision rules come last so their cause lookup sees every other episode
+ * of the step.
  * @param {RulesBundle} bundle Bundle.
  * @param {VehicleInfo} vehicle Vehicle.
  * @returns {Rule[]} Rules.
@@ -78,7 +88,8 @@ const EMPTY_CONTEXT = Object.freeze({
 function orderedRules(bundle, vehicle) {
   const applicable = bundle.rules.filter((r) => /** @type {string[]} */ (r.vehicleClasses).includes(vehicle.legalClass));
   const superseding = applicable.filter((r) => (r.supersedes ?? []).length > 0);
-  return [...superseding, ...applicable.filter((r) => !superseding.includes(r))];
+  const ordered = [...superseding, ...applicable.filter((r) => !superseding.includes(r))];
+  return [...ordered.filter((r) => !isCollisionRule(r)), ...ordered.filter(isCollisionRule)];
 }
 
 /**
@@ -112,6 +123,10 @@ export function createScorer(bundle, map, vehicleInfo) {
       supersededBy.set(s.ruleId, [...(supersededBy.get(s.ruleId) ?? []), r.id]);
     }
   }
+  const policy = bundle.collisionPolicy;
+  /** Clause ids of the accident clauses (10.a and 10.b of both groups). */
+  const accidentClauses = new Set([...Object.values(policy.accidentA), ...Object.values(policy.accidentB)]);
+  const collisionRuleIds = new Set(rules.filter(isCollisionRule).map((r) => r.id));
   const freshDetectors = () => Object.fromEntries(rules.map((r) => [r.id, DETECTORS[r.detection.type].init()]));
 
   /** @type {ScorerState} */
@@ -142,17 +157,27 @@ export function createScorer(bundle, map, vehicleInfo) {
     let openIndex = state.openIndex;
     let detectors = state.detectors;
     let causeFloorT = state.causeFloorT;
+    // A crash on this step may take a cause from before a fall on the same step, not before a reset.
+    let stepCauseFloorT = causeFloorT;
 
     if (ctx.discontinuity) {
-      episodes = episodes.map((e) => (e.open ? { ...e, open: false } : e));
-      openIndex = {};
+      const reset = frame.events.some((e) => e.type === 'reset');
+      /** @type {Record<string, number>} */
+      const kept = {};
+      if (!reset) {
+        for (const id of collisionRuleIds) if (openIndex[id] !== undefined) kept[id] = openIndex[id];
+      }
+      const keptIdx = new Set(Object.values(kept));
+      episodes = episodes.map((e, i) => (e.open && !keptIdx.has(i) ? { ...e, open: false } : e));
+      openIndex = kept;
       detectors = freshDetectors();
       causeFloorT = frame.t;
+      if (reset) stepCauseFloorT = frame.t;
     }
 
     /** @type {Record<string, unknown>} */
     const nextDetectors = {};
-    /** @type {{rule: Rule, tierIndex: number, severity: number, input: Record<string, unknown>}[]} */
+    /** @type {{rule: Rule, tierIndex: number, severity: number, input: Record<string, unknown>, basisVerified: boolean}[]} */
     const active = [];
     for (const rule of rules) {
       const det = DETECTORS[rule.detection.type];
@@ -164,9 +189,9 @@ export function createScorer(bundle, map, vehicleInfo) {
       );
       nextDetectors[rule.id] = res.detectorState;
       if (!res.active) continue;
-      const tierIndex = rule.detection.type === 'collision' ? 0 : selectTier(rule, res.tierInput, group);
+      const tierIndex = selectTier(rule, res.tierInput, group);
       if (tierIndex < 0) continue;
-      active.push({ rule, tierIndex, severity: res.severity ?? tierIndex, input: res.tierInput });
+      active.push({ rule, tierIndex, severity: res.severity ?? tierIndex, input: res.tierInput, basisVerified: res.basisVerified ?? true });
     }
     const activeIds = new Set(active.map((a) => a.rule.id));
     const kept = active.filter(
@@ -194,13 +219,13 @@ export function createScorer(bundle, map, vehicleInfo) {
       let breach;
       if (a.rule.detection.type === 'collision') {
         const outcome = /** @type {import('./detectors/collision.js').CollisionOutcome} */ (a.input.collision);
-        breach = resolveCrash(env, a.rule, outcome, findCause(episodes, a.rule.id, frame.t - crashCauseWindowS, causeFloorT, group), frame, meta);
+        breach = resolveCrash(env, a.rule, a.tierIndex, outcome, findCause(episodes, a.rule.id, frame.t - crashCauseWindowS, stepCauseFloorT, group), frame, meta);
         if (outcome.kind === 'pedestrian') {
           pedestrianHit = true;
           ended = 'crash';
         }
       } else {
-        breach = resolveBreach(env, a.rule, a.tierIndex, frame, meta);
+        breach = resolveBreach(env, a.rule, a.tierIndex, frame, meta, a.basisVerified);
       }
       breaches.push(breach);
       /** @type {Episode} */
@@ -250,7 +275,7 @@ export function createScorer(bundle, map, vehicleInfo) {
    */
   function report(rawState, options) {
     const state = /** @type {ScorerState} */ (rawState);
-    return buildReport(state, options);
+    return buildReport(state, options, accidentClauses);
   }
 
   return { initial, step, report };
@@ -276,23 +301,58 @@ function findCause(episodes, crashRuleId, fromT, floorT, group) {
   }
   if (!best) return null;
   const clauseId = best.breach.clause ? best.breach.clause.id : null;
-  return { ruleId: best.ruleId, title: best.breach.title, clauseId: clauseId && clauseId.startsWith(`${group}.`) ? clauseId : null };
+  return {
+    ruleId: best.ruleId,
+    title: best.breach.title,
+    clauseId: clauseId && clauseId.startsWith(`${group}.`) ? clauseId : null,
+    episodeId: best.episodeId,
+  };
+}
+
+/**
+ * Marks the cause of each accident as absorbed: the accident clause (10.a or 10.b) names its cause
+ * as an element of the offence, so the cause's band is not added to the total a second time. An
+ * inferred accident (a cause named in neither list) and a score-only cause absorb nothing; a cause
+ * is absorbed by its first accident only. Score deductions are not changed.
+ * @param {Breach[]} breaches Breaches, one per episode.
+ * @param {Set<string>} accidentClauses Accident clause ids.
+ * @returns {Breach[]} Breaches, with `fineAbsorbedBy` on absorbed causes (copies, not the inputs).
+ */
+export function absorbAccidentCauses(breaches, accidentClauses) {
+  /** @type {Map<string, string>} */
+  const absorbedBy = new Map();
+  for (const b of breaches) {
+    if (!b.causeEpisodeId || b.inferred || !b.clause || !accidentClauses.has(b.clause.id)) continue;
+    if (absorbedBy.has(b.causeEpisodeId)) continue;
+    const cause = breaches.find((c) => c.episodeId === b.causeEpisodeId);
+    if (!cause?.clause?.fineVnd) continue;
+    absorbedBy.set(cause.episodeId, b.episodeId);
+  }
+  if (absorbedBy.size === 0) return breaches;
+  return breaches.map((b) => {
+    const by = absorbedBy.get(b.episodeId);
+    return by ? { ...b, fineAbsorbedBy: by } : b;
+  });
 }
 
 /**
  * Final (or running) report of a scorer state.
  * @param {ScorerState} state State.
  * @param {{quit: boolean}} options Whether the player quit.
+ * @param {Set<string>} accidentClauses Accident clause ids.
  * @returns {ScoreReport} Report.
  */
-function buildReport(state, options) {
-  const breaches = state.episodes.map((e) => e.breach);
+function buildReport(state, options, accidentClauses) {
+  const breaches = absorbAccidentCauses(
+    state.episodes.map((e) => e.breach),
+    accidentClauses,
+  );
   const deducted = breaches.reduce((sum, b) => sum + b.deduction, 0);
   const score = state.pedestrianHit ? 0 : Math.max(0, Math.round((10 - deducted) * 100) / 100);
   const maxPoints = breaches.reduce((m, b) => Math.max(m, b.clause ? b.clause.licencePoints : 0), 0);
   const licenceDeducted = Math.min(12, maxPoints);
   const fineTotalVnd = breaches.reduce(
-    (acc, b) => (b.clause?.fineVnd ? { min: acc.min + b.clause.fineVnd.min, max: acc.max + b.clause.fineVnd.max } : acc),
+    (acc, b) => (b.clause?.fineVnd && !b.fineAbsorbedBy ? { min: acc.min + b.clause.fineVnd.min, max: acc.max + b.clause.fineVnd.max } : acc),
     { min: 0, max: 0 },
   );
   // A run that has not ended by finish, timeout or crash was stopped by the player: quit. A

@@ -66,6 +66,6 @@ route:
   start: { way: hep, s: 12, lane: 0 }
   checkpoints:
     - { way: hep, s: 160 }
-    - { way: rong, s: 150 }
-    - { way: cuoi, s: 40 }
+    - { way: rong, s: 150, lane: 1 }
+    - { way: cuoi, s: 40, lane: 1 }
   finish: { way: cuoi, s: 90 }

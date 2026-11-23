@@ -24,6 +24,12 @@
  * @property {boolean} scoreOnly No legal penalty.
  * @property {LocalText} [note] Tier note.
  * @property {string} [cause] Rule id of the cause (crash breaches).
+ * @property {string} [causeEpisodeId] Episode id of the cause (crash breaches with a cause).
+ * @property {string} [fineAbsorbedBy] Set in the report only: episode id of the accident whose fine
+ *   band includes this breach's band, so it does not add to `fineTotalVnd` (the accident clause
+ *   names the cause as an element of the offence).
+ * @property {boolean} basisVerified False when the detection used unverified legal data (today a
+ *   TT 38 default speed limit); the UI then shows "chưa kiểm chứng".
  * @property {string} episodeId Episode id; escalations reuse it.
  * @property {'new' | 'escalated'} kind A new episode, or a worse tier of an open one.
  */
@@ -47,7 +53,8 @@
  * @property {Breach[]} breaches One entry per episode at its worst tier.
  * @property {{start: 12, deducted: number, remaining: number}} licence Only the largest point value
  *   is deducted, once, floor 0 (ND 168 Điều 50 khoản 1 điểm b, c).
- * @property {{min: number, max: number}} fineTotalVnd Sum of the episodes' fine bands ("ước tính").
+ * @property {{min: number, max: number}} fineTotalVnd Sum of the fine bands of every episode not
+ *   absorbed by an accident (`fineAbsorbedBy`), labelled "ước tính".
  * @property {boolean} finished Reached the finish.
  * @property {'finish' | 'crash' | 'timeout' | 'quit'} endedBy How the run ended.
  */

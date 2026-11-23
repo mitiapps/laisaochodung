@@ -1,6 +1,8 @@
 /**
  * `crosswalk-occupied`: the footprint enters a crosswalk, moving at `minSpeedMps` or more, while
- * an active pedestrian's centre is on it. `turning` is true inside a junction with the heading
+ * an active pedestrian's centre is on it. A crosswalk counts as entered only once the footprint is
+ * on it at that speed: creeping onto it below `minSpeedMps` and then driving across while a
+ * pedestrian is on it is still an entry. `turning` is true inside a junction with the heading
  * `turnMinDeg` or more off the entry heading, or within `turnWindowS` after a junction pass that
  * turned that much.
  */
@@ -9,7 +11,7 @@ import { angleDiff, pointInPolygon } from '../../geometry/index.js';
 import { crosswalksOverlapping } from '../../map-query/index.js';
 import { DEG } from './common.js';
 
-/** @typedef {{onIds: string[]}} State */
+/** @typedef {{onIds: string[]}} State Crosswalks the footprint is on and entered at speed. */
 /** @typedef {{minSpeedMps: number, turnMinDeg: number, turnWindowS: number}} Params */
 
 /** @returns {State} Fresh state. */
@@ -26,10 +28,14 @@ export function init() {
  */
 export function detect(state, frame, ctx, params) {
   const on = crosswalksOverlapping(ctx.env.map, frame.ego.footprint);
-  const onIds = on.map((c) => c.id);
-  const entered = ctx.prev === null ? [] : on.filter((c) => !state.onIds.includes(c.id));
+  const moving = ctx.speed >= params.minSpeedMps;
+  // A crosswalk the footprint reached below minSpeedMps is not yet entered; it is entered on the
+  // first step on it at speed. The first step after a discontinuity enters nothing and counts the
+  // crosswalks it starts on as already entered.
+  const onIds = on.filter((c) => state.onIds.includes(c.id) || moving || ctx.prev === null).map((c) => c.id);
+  const entered = ctx.prev === null ? [] : on.filter((c) => !state.onIds.includes(c.id) && onIds.includes(c.id));
   const occupied =
-    ctx.speed >= params.minSpeedMps &&
+    moving &&
     entered.some((c) =>
       frame.actors.some((a) => a.kind === 'pedestrian' && a.active && pointInPolygon([a.pos.x, a.pos.z], c.polygon)),
     );

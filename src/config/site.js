@@ -1,7 +1,7 @@
 /**
  * Site settings the maintainer fills in. Both stay `null` until the owner supplies them; the
- * contact and donate pages then say "chưa thiết lập". The release check blocks a deploy, not the
- * build, while either is `null`.
+ * contact and donate pages then say "chưa thiết lập". `scripts/release-check.js`, which
+ * `npm run deploy` runs first, blocks a deploy (not the build) while either is `null`.
  */
 
 /**

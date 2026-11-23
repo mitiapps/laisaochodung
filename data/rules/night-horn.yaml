@@ -10,6 +10,7 @@ detection:
 obligation:
   - sourceId: law36-2024
     article: Điều 21
+    clause: '2'
     quote: không sử dụng còi trong thời gian từ 22 giờ ngày hôm trước đến 05 giờ ngày hôm sau trong khu đông dân cư, khu vực cơ sở khám bệnh, chữa bệnh, trừ xe ưu tiên.
     url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
 tiers:

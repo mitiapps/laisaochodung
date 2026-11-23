@@ -11,6 +11,15 @@
       return { credits: null, failed: true };
     }
   })();
+
+  // Third-party code shipped in the bundle. The full licence texts are emitted at build time
+  // (build.license in vite.config.js); the production build only, not the dev server.
+  const LIBRARIES = Object.freeze([
+    { name: 'three.js', licence: 'MIT', url: 'https://github.com/mrdoob/three.js' },
+    { name: 'Svelte', licence: 'MIT', url: 'https://github.com/sveltejs/svelte' },
+    { name: 'clsx', licence: 'MIT', url: 'https://github.com/lukeed/clsx' },
+    { name: 'Rapier (@dimforge/rapier3d-compat)', licence: 'Apache-2.0', url: 'https://github.com/dimforge/rapier.js' },
+  ]);
 </script>
 
 <PageShell title="Ghi công">
@@ -22,6 +31,11 @@
         <a class="text-sky-300 underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
           © OpenStreetMap contributors
         </a>, cung cấp theo giấy phép Open Database License (ODbL).
+      </p>
+      <p class="mt-2 text-sm text-slate-400">
+        Các tệp dữ liệu bản đồ dựng từ OpenStreetMap mà trò chơi tải về (thư mục <code>maps/</code>) là cơ sở dữ liệu phái sinh,
+        phát hành theo
+        <a class="text-sky-300 underline" href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener noreferrer">ODbL 1.0</a>.
       </p>
     </section>
 
@@ -49,6 +63,21 @@
           {/each}
         </ul>
       {/if}
+    </section>
+
+    <section>
+      <h2 class="mb-2 text-xl font-semibold">Thư viện</h2>
+      <ul class="list-disc space-y-1 pl-5" data-testid="credits-libraries">
+        {#each LIBRARIES as lib (lib.name)}
+          <li>
+            <a class="text-sky-300 underline" href={lib.url} target="_blank" rel="noopener noreferrer">{lib.name}</a> — {lib.licence}
+          </li>
+        {/each}
+      </ul>
+      <p class="mt-2 text-sm text-slate-400">
+        Toàn văn giấy phép của các thư viện đi kèm bản dựng:
+        <a class="text-sky-300 underline" href={`${import.meta.env.BASE_URL}third-party-licenses.md`} target="_blank" rel="noopener">third-party-licenses.md</a>.
+      </p>
     </section>
 
     <section>

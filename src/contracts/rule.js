@@ -90,6 +90,8 @@
  * @property {LocalText} name Official name.
  * @property {Citation} citation Quote from QCVN 41:2024/BGTVT.
  * @property {boolean} verified Quote checked against the official text.
+ * @property {string | null} figureChecked Date (YYYY-MM-DD) the game's drawing was compared with the
+ *   official QCVN 41 figure, null until then; a null blocks the release.
  */
 
 /**
@@ -108,7 +110,9 @@
  * @property {Record<'1' | '2' | '3' | '4' | '5', number>} deductionByDanger Score deduction per danger level.
  * @property {number} rearmS Seconds clear before a rule can open a new episode.
  * @property {number} crashCauseWindowS Look-back window for a crash cause.
- * @property {number} accidentImpulse Impulse (N·s) from which a car contact is an accident (`design`).
+ * @property {number} accidentRelSpeed Closing speed (m/s) from which an NPC car contact is an accident,
+ *   and a static or kerb hit is heavy (`design`). Closing speed, unlike impulse, does not scale with
+ *   the player's mass, so one value fits both vehicles.
  * @property {number} contactMinEgoSpeed Below this ego speed (m/s) a contact is never a breach.
  */
 
