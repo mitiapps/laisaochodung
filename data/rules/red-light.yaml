@@ -1,0 +1,35 @@
+# Red light, in two tiers. Tier 1: the front passed the stop line on red (or on a yellow it could
+# have stopped for) but the vehicle stayed out of the crosswalk and the junction; it cites the
+# sign-and-marking catch-all by inference. Tier 2: it went on into the crosswalk or the junction
+# while the light was not green. A vehicle already on or past the line when yellow comes on may
+# go on; on yellow the game also excuses a vehicle that could not stop at 3 m/s².
+id: red-light
+title: { vi: "Vượt đèn đỏ" }
+description: { vi: "Đầu xe vượt qua vạch dừng khi đèn đỏ, hoặc khi đèn vàng mà vẫn kịp dừng." }
+vehicleClasses: [car, motorbike]
+detection:
+  type: stop-line-on-red
+  params: { yellowDecelMps2: 3 }
+  paramBasis: { yellowDecelMps2: design }
+obligation:
+  - sourceId: law36-2024
+    article: Điều 11
+    clause: '4'
+    quote: Tín hiệu đèn màu đỏ là cấm đi.
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+  - sourceId: qcvn41-2024
+    article: Điều 6
+    clause: '6.3.2'
+    quote: Tín hiệu đèn màu vàng phải dừng lại trước vạch dừng; trường hợp đang đi trên vạch dừng hoặc đã đi qua vạch dừng mà tín hiệu đèn màu vàng thì được đi tiếp.
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
+tiers:
+  - when: { stage: line }
+    danger: 2
+    scoreOnly: false
+    clause: { D6: D6.1.a, D7: D7.1.a }
+    inferred: true
+    note: { vi: "Đầu xe đã qua vạch dừng nhưng chưa vào phần đường dành cho người đi bộ hay nút giao; áp dụng lỗi không chấp hành vạch kẻ đường." }
+  - when: { stage: entered }
+    danger: 4
+    scoreOnly: false
+    clause: { D6: D6.9.b, D7: D7.7.c }

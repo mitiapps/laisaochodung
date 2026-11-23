@@ -1,0 +1,48 @@
+{
+  "name": "laisaochodung",
+  "private": true,
+  "version": "0.0.0",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24.15"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run build:data && vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "build:rules": "node scripts/rules/build.js",
+    "build:maps": "node scripts/maps/build.js",
+    "build:data": "npm run build:rules && npm run build:maps",
+    "fetch:osm": "node scripts/maps/fetch.js",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.21.0",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.1",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@tailwindcss/vite": "^4.3.5",
+    "@vitest/coverage-v8": "^5.1.1",
+    "eslint": "^10.15.0",
+    "eslint-plugin-jsdoc": "^65.5.2",
+    "eslint-plugin-svelte": "^3.24.1",
+    "globals": "^17.14.0",
+    "svelte": "^5.59.1",
+    "tailwindcss": "^4.3.5",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1",
+    "wrangler": "^4.166.0",
+    "yaml": "^2.9.1"
+  },
+  "allowScripts": {
+    "esbuild": true,
+    "workerd": true
+  }
+}

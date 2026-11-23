@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 600 600">
+<!-- I.407a Đường một chiều — drawn for laisaochodung (Apache-2.0) from QCVN 41:2024/BGTVT, Điều 12 Bảng 1 sizes. Figure not yet compared with the official annex. -->
+  <rect width="600" height="600" fill="#1f5aa6"/>
+  <rect x="250" y="230" width="100" height="300" fill="#ffffff"/>
+  <polygon points="300,70 450,250 150,250" fill="#ffffff"/>
+</svg>

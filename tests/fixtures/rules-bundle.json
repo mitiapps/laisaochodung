@@ -1,0 +1,340 @@
+{
+  "rules": [
+    {
+      "id": "speeding",
+      "title": {
+        "vi": "Chạy quá tốc độ quy định"
+      },
+      "description": {
+        "vi": "Tốc độ vượt giới hạn đang áp dụng cho làn đường từ 5 km/h trở lên."
+      },
+      "vehicleClasses": [
+        "car"
+      ],
+      "detection": {
+        "type": "speed-over-limit",
+        "params": {
+          "minOverKmh": 5,
+          "sustainS": 1
+        },
+        "paramBasis": {
+          "minOverKmh": "legal",
+          "sustainS": "design"
+        }
+      },
+      "obligation": [
+        {
+          "sourceId": "law36-2024",
+          "article": "Điều 12",
+          "clause": "1",
+          "quote": "phải chấp hành quy định về tốc độ, khoảng cách an toàn tối thiểu với xe phía trước cùng làn đường hoặc phần đường.",
+          "url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf"
+        }
+      ],
+      "tiers": [
+        {
+          "when": {
+            "overKmh": {
+              "min": 5,
+              "max": 10,
+              "maxInclusive": false
+            }
+          },
+          "danger": 2,
+          "scoreOnly": false,
+          "clause": {
+            "D6": "D6.3.a"
+          }
+        },
+        {
+          "when": {
+            "overKmh": {
+              "min": 10,
+              "max": 20,
+              "maxInclusive": true
+            }
+          },
+          "danger": 3,
+          "scoreOnly": false,
+          "clause": {
+            "D6": "D6.5.đ"
+          }
+        }
+      ]
+    }
+  ],
+  "clauses": [
+    {
+      "id": "D6.3.a",
+      "fineVnd": {
+        "min": 800000,
+        "max": 1000000
+      },
+      "licencePoints": 0,
+      "suspensionMonths": null,
+      "citation": {
+        "sourceId": "nd168-2024",
+        "article": "Điều 6",
+        "clause": "3",
+        "point": "a",
+        "quote": "Điều khiển xe chạy quá tốc độ quy định từ 05 km/h đến dưới 10 km/h;",
+        "url": "https://luatvietnam.vn/an-ninh-trat-tu/nghi-dinh-168-2024-nd-cp-xu-phat-vi-pham-hanh-chinh-giao-thong-duong-bo-tru-diem-phuc-hoi-diem-giay-phep-lai-xe-382883-d1.html"
+      },
+      "effectiveFrom": "2025-01-01",
+      "verified": true,
+      "checkedOn": "2026-11-23"
+    },
+    {
+      "id": "D6.5.đ",
+      "fineVnd": {
+        "min": 4000000,
+        "max": 6000000
+      },
+      "licencePoints": 2,
+      "suspensionMonths": null,
+      "citation": {
+        "sourceId": "nd168-2024",
+        "article": "Điều 6",
+        "clause": "5",
+        "point": "đ",
+        "quote": "Điều khiển xe chạy quá tốc độ quy định từ 10 km/h đến 20 km/h;",
+        "url": "https://luatvietnam.vn/an-ninh-trat-tu/nghi-dinh-168-2024-nd-cp-xu-phat-vi-pham-hanh-chinh-giao-thong-duong-bo-tru-diem-phuc-hoi-diem-giay-phep-lai-xe-382883-d1.html"
+      },
+      "effectiveFrom": "2025-01-01",
+      "verified": true,
+      "checkedOn": "2026-11-23"
+    },
+    {
+      "id": "D6.2.a",
+      "fineVnd": {
+        "min": 600000,
+        "max": 800000
+      },
+      "licencePoints": 0,
+      "suspensionMonths": null,
+      "citation": {
+        "sourceId": "nd168-2024",
+        "article": "Điều 6",
+        "clause": "2",
+        "point": "a",
+        "quote": "Chuyển làn đường không đúng nơi cho phép hoặc không có tín hiệu báo trước hoặc chuyển làn đường không đúng quy định “mỗi lần chuyển làn đường chỉ được phép chuyển sang một làn đường liền kề”, trừ các hành vi vi phạm quy định tại điểm g khoản 5 Điều này;",
+        "url": "https://luatvietnam.vn/an-ninh-trat-tu/nghi-dinh-168-2024-nd-cp-xu-phat-vi-pham-hanh-chinh-giao-thong-duong-bo-tru-diem-phuc-hoi-diem-giay-phep-lai-xe-382883-d1.html"
+      },
+      "amendments": [
+        {
+          "sourceId": "nd238-2026",
+          "article": "Điều 19",
+          "clause": "2",
+          "quote": "hoặc chuyển làn đường không bảo đảm khoảng cách an toàn với xe phía trước, xe phía sau, xe hai bên",
+          "url": "https://congbaocdn.chinhphu.vn/180507251028987904/2026/7/13/469913-1783914973_v1_1783915444_signed.pdf"
+        }
+      ],
+      "effectiveFrom": "2026-08-15",
+      "verified": true,
+      "checkedOn": "2026-11-23"
+    }
+  ],
+  "sources": [
+    {
+      "id": "nd168-2024",
+      "title": "Nghị định quy định xử phạt vi phạm hành chính về trật tự, an toàn giao thông trong lĩnh vực giao thông đường bộ; trừ điểm, phục hồi điểm giấy phép lái xe",
+      "number": "168/2024/NĐ-CP",
+      "edition": "Bản ký số do Văn phòng Chính phủ phát hành, đối chiếu với bản hợp nhất có ghi chú Nghị định 238/2026/NĐ-CP",
+      "issued": null,
+      "effectiveFrom": "2025-01-01",
+      "url": "https://storage-vnportal.vnpt.vn/gov-tha/6443/FileQuanTriTinTuc/NĐ%20So%20168_2024%20XU%20PHAT%20VPHC%20GTĐB638714994106201900.pdf",
+      "amendedBy": [
+        "nd238-2026"
+      ],
+      "official": true
+    },
+    {
+      "id": "nd238-2026",
+      "title": "Nghị định sửa đổi, bổ sung Nghị định 168/2024/NĐ-CP",
+      "number": "238/2026/NĐ-CP",
+      "edition": "Công báo số 391 (2026-07-13)",
+      "issued": "2026-06-26",
+      "effectiveFrom": "2026-08-15",
+      "url": "https://congbaocdn.chinhphu.vn/180507251028987904/2026/7/13/469913-1783914973_v1_1783915444_signed.pdf",
+      "official": true
+    },
+    {
+      "id": "law36-2024",
+      "title": "Luật Trật tự, an toàn giao thông đường bộ",
+      "number": "36/2024/QH15",
+      "edition": "Văn bản hợp nhất 55/VBHN-VPQH (2026-03-23), gồm Luật 118/2025/QH15",
+      "issued": null,
+      "effectiveFrom": null,
+      "url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf",
+      "official": true
+    },
+    {
+      "id": "tt38-2024",
+      "title": "Thông tư quy định về tốc độ và khoảng cách an toàn của xe cơ giới, xe máy chuyên dùng tham gia giao thông trên đường bộ",
+      "number": "38/2024/TT-BGTVT",
+      "edition": "Bản luatvietnam có đánh dấu sửa đổi của Thông tư 09/2025/TT-BXD",
+      "issued": null,
+      "effectiveFrom": null,
+      "url": "https://luatvietnam.vn/giao-thong/thong-tu-38-2024-tt-bgtvt-toc-do-khoang-cach-an-toan-cua-xe-may-chuyen-dung-tham-gia-giao-thong-375831-d1.html",
+      "official": false
+    },
+    {
+      "id": "qcvn41-2024",
+      "title": "Quy chuẩn kỹ thuật quốc gia về báo hiệu đường bộ",
+      "number": "QCVN 41:2024/BGTVT",
+      "edition": "Ban hành kèm Thông tư 51/2024/TT-BGTVT",
+      "issued": "2024-11-15",
+      "effectiveFrom": "2025-01-01",
+      "url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf",
+      "official": true
+    }
+  ],
+  "speedDefaults": [
+    {
+      "legalClass": "car",
+      "builtUp": true,
+      "multiLane": true,
+      "maxKmh": 60,
+      "citation": {
+        "sourceId": "tt38-2024",
+        "article": "Điều 6",
+        "clause": "1",
+        "quote": "Tốc độ khai thác tối đa cho phép xe cơ giới tham gia giao thông trên đường bộ trong khu vực đông dân cư",
+        "url": "https://luatvietnam.vn/giao-thong/thong-tu-38-2024-tt-bgtvt-toc-do-khoang-cach-an-toan-cua-xe-may-chuyen-dung-tham-gia-giao-thong-375831-d1.html"
+      },
+      "verified": false
+    },
+    {
+      "legalClass": "car",
+      "builtUp": true,
+      "multiLane": false,
+      "maxKmh": 50,
+      "citation": {
+        "sourceId": "tt38-2024",
+        "article": "Điều 6",
+        "clause": "1",
+        "quote": "Tốc độ khai thác tối đa cho phép xe cơ giới tham gia giao thông trên đường bộ trong khu vực đông dân cư",
+        "url": "https://luatvietnam.vn/giao-thong/thong-tu-38-2024-tt-bgtvt-toc-do-khoang-cach-an-toan-cua-xe-may-chuyen-dung-tham-gia-giao-thong-375831-d1.html"
+      },
+      "verified": false
+    }
+  ],
+  "signs": [
+    {
+      "code": "P.127",
+      "name": {
+        "vi": "Tốc độ tối đa cho phép"
+      },
+      "citation": {
+        "sourceId": "qcvn41-2024",
+        "article": "Phụ lục B",
+        "point": "B.27 b)",
+        "quote": "Biển có hiệu lực cấm các loại xe cơ giới chạy với tốc độ tối đa vượt quá trị số ghi trên biển trừ các xe được ưu tiên theo quy định",
+        "url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf"
+      },
+      "verified": true
+    },
+    {
+      "code": "R.420",
+      "name": {
+        "vi": "Bắt đầu khu đông dân cư"
+      },
+      "citation": {
+        "sourceId": "qcvn41-2024",
+        "article": "Phụ lục D",
+        "point": "D.17 c)",
+        "quote": "Đoạn đường qua khu vực đông dân cư được xác định bắt đầu bằng biển số R.420 “Bắt đầu khu đông dân cư” và kết thúc bằng biển số R.421 “Hết khu đông dân cư”.",
+        "url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf"
+      },
+      "verified": true
+    }
+  ],
+  "scoring": {
+    "deductionByDanger": {
+      "1": 0.25,
+      "2": 0.5,
+      "3": 1,
+      "4": 2,
+      "5": 4
+    },
+    "rearmS": 3,
+    "crashCauseWindowS": 3,
+    "accidentImpulse": 2000,
+    "contactMinEgoSpeed": 0.5
+  },
+  "collisionPolicy": {
+    "accidentA": {
+      "D6": "D6.10.a",
+      "D7": "D7.10.a"
+    },
+    "accidentB": {
+      "D6": "D6.10.b",
+      "D7": "D7.10.b"
+    },
+    "accidentBList": {
+      "D6": [
+        "D6.1.a",
+        "D6.1.b",
+        "D6.1.c",
+        "D6.1.d",
+        "D6.1.đ",
+        "D6.2.c",
+        "D6.3.b",
+        "D6.3.g",
+        "D6.3.h",
+        "D6.3.n",
+        "D6.3.o",
+        "D6.3.p",
+        "D6.4.a",
+        "D6.4.c",
+        "D6.4.d",
+        "D6.5.c",
+        "D6.5.d",
+        "D6.5.e",
+        "D6.5.h",
+        "D6.5.n",
+        "D6.5.o",
+        "D6.5.q",
+        "D6.7.b",
+        "D6.9.b",
+        "D6.9.c",
+        "D6.9.d"
+      ],
+      "D7": [
+        "D7.1.a",
+        "D7.1.d",
+        "D7.1.đ",
+        "D7.1.g",
+        "D7.1.h",
+        "D7.1.i",
+        "D7.1.k",
+        "D7.2.c",
+        "D7.2.đ",
+        "D7.2.g",
+        "D7.3.b",
+        "D7.3.e",
+        "D7.3.g",
+        "D7.3.h",
+        "D7.3.k",
+        "D7.4.đ",
+        "D7.6.c",
+        "D7.6.d",
+        "D7.7.c",
+        "D7.7.d",
+        "D7.7.đ",
+        "D7.9.a",
+        "D7.9.b",
+        "D7.9.h",
+        "D7.9.k"
+      ]
+    },
+    "inferredAccidentCauses": [
+      "D6.6.d"
+    ],
+    "sameLaneAhead": {
+      "D6": "D6.4.l",
+      "D7": "D7.3.i"
+    },
+    "staticAndFall": "scoreOnly"
+  }
+}

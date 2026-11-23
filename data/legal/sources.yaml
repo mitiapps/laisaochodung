@@ -1,0 +1,79 @@
+# Legal sources (Source records, src/contracts/rule.js). Every citation's sourceId must name one
+# of these ids. `issued` and `effectiveFrom` are null until read from a fetched text.
+#
+# Titles and dates read on 2026-11-23 from the fetched texts, except where noted:
+# - ND 168: issued 2024-12-26 (header of the signed scan); in force 2025-01-01 (its Điều 53 khoản 1).
+# - ND 238: issued 2026-06-26 (header of the gazette PDF); in force 2026-08-15 (its Điều 20 khoản 1).
+# - Law 36: passed 2024-06-27 (ND 168 preamble: "Luật Trật tự, an toàn giao thông đường bộ ngày
+#   27 tháng 6 năm 2024"); in force 2025-01-01 (header of the consolidated text 55/VBHN-VPQH).
+# - Law 118: title, date 2025-12-10 and effect 2026-07-01 read from the header of 55/VBHN-VPQH;
+#   the law's own text was not fetched.
+# - TT 38: in force 2025-01-01 per the luatvietnam copy (not an official text).
+# - TT 09: known only from the amendment marks in the luatvietnam copy of TT 38; its title is a
+#   description, not read from the text.
+
+- id: nd168-2024
+  title: Nghị định quy định xử phạt vi phạm hành chính về trật tự, an toàn giao thông trong lĩnh vực giao thông đường bộ; trừ điểm, phục hồi điểm giấy phép lái xe
+  number: 168/2024/NĐ-CP
+  edition: Bản ký số do Văn phòng Chính phủ phát hành, đối chiếu với bản hợp nhất có ghi chú Nghị định 238/2026/NĐ-CP
+  issued: '2024-12-26'
+  effectiveFrom: '2025-01-01'
+  url: https://storage-vnportal.vnpt.vn/gov-tha/6443/FileQuanTriTinTuc/NĐ%20So%20168_2024%20XU%20PHAT%20VPHC%20GTĐB638714994106201900.pdf
+  amendedBy: [nd238-2026]
+  official: true
+
+- id: nd238-2026
+  title: Nghị định sửa đổi, bổ sung một số điều của Nghị định số 168/2024/NĐ-CP ngày 26 tháng 12 năm 2024 của Chính phủ quy định xử phạt vi phạm hành chính về trật tự, an toàn giao thông trong lĩnh vực giao thông đường bộ; trừ điểm, phục hồi điểm giấy phép lái xe
+  number: 238/2026/NĐ-CP
+  edition: Công báo số 391 (2026-07-13), bản ký số
+  issued: '2026-06-26'
+  effectiveFrom: '2026-08-15'
+  url: https://congbaocdn.chinhphu.vn/180507251028987904/2026/7/13/469913-1783914973_v1_1783915444_signed.pdf
+  official: true
+
+- id: law36-2024
+  title: Luật Trật tự, an toàn giao thông đường bộ
+  number: 36/2024/QH15
+  edition: Văn bản hợp nhất 55/VBHN-VPQH (2026-03-23), gồm Luật 118/2025/QH15
+  issued: '2024-06-27'
+  effectiveFrom: '2025-01-01'
+  url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+  amendedBy: [law118-2025]
+  official: true
+
+- id: law118-2025
+  title: Luật sửa đổi, bổ sung một số điều của 10 luật có liên quan đến an ninh, trật tự
+  number: 118/2025/QH15
+  edition: Đọc qua văn bản hợp nhất 55/VBHN-VPQH; chưa đọc bản luật riêng
+  issued: '2025-12-10'
+  effectiveFrom: '2026-07-01'
+  url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+  official: true
+
+- id: tt38-2024
+  title: Thông tư quy định về tốc độ và khoảng cách an toàn của xe cơ giới, xe máy chuyên dùng tham gia giao thông trên đường bộ
+  number: 38/2024/TT-BGTVT
+  edition: Bản luatvietnam có đánh dấu sửa đổi của Thông tư 09/2025/TT-BXD, đối chiếu với bản hoatieu.vn; chưa có bản chính thức
+  issued: null
+  effectiveFrom: '2025-01-01'
+  url: https://luatvietnam.vn/giao-thong/thong-tu-38-2024-tt-bgtvt-toc-do-khoang-cach-an-toan-cua-xe-may-chuyen-dung-tham-gia-giao-thong-375831-d1.html
+  amendedBy: [tt09-2025]
+  official: false
+
+- id: tt09-2025
+  title: Thông tư 09/2025/TT-BXD (mô tả, chưa đọc tên văn bản; sửa khoản 3, khoản 4 Điều 10 Thông tư 38/2024/TT-BGTVT)
+  number: 09/2025/TT-BXD
+  edition: Chỉ đọc qua các đánh dấu sửa đổi trong bản luatvietnam của Thông tư 38/2024/TT-BGTVT
+  issued: null
+  effectiveFrom: null
+  url: https://luatvietnam.vn/giao-thong/thong-tu-38-2024-tt-bgtvt-toc-do-khoang-cach-an-toan-cua-xe-may-chuyen-dung-tham-gia-giao-thong-375831-d1.html
+  official: false
+
+- id: qcvn41-2024
+  title: Quy chuẩn kỹ thuật quốc gia về báo hiệu đường bộ
+  number: QCVN 41:2024/BGTVT
+  edition: Ban hành kèm Thông tư 51/2024/TT-BGTVT
+  issued: '2024-11-15'
+  effectiveFrom: '2025-01-01'
+  url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
+  official: true

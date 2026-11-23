@@ -1,0 +1,7135 @@
+{
+ "version": 0.6,
+ "generator": "Overpass API 0.7.62.11 87bfad18",
+ "osm3s": {
+  "timestamp_osm_base": "2026-11-23T04:40:13Z",
+  "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+ },
+ "elements": [
+  {
+   "type": "node",
+   "id": 411918773,
+   "lat": 10.7802608,
+   "lon": 106.6988815,
+   "tags": {
+    "highway": "traffic_signals",
+    "traffic_signals": "signal",
+    "traffic_signals:direction": "forward"
+   }
+  },
+  {
+   "type": "node",
+   "id": 411919193,
+   "lat": 10.7768018,
+   "lon": 106.6999227,
+   "tags": {
+    "highway": "traffic_signals",
+    "traffic_signals:direction": "forward"
+   }
+  },
+  {
+   "type": "node",
+   "id": 411926380,
+   "lat": 10.7779378,
+   "lon": 106.7010212,
+   "tags": {
+    "highway": "traffic_signals"
+   }
+  },
+  {
+   "type": "node",
+   "id": 411926624,
+   "lat": 10.7801873,
+   "lon": 106.7010602,
+   "tags": {
+    "highway": "traffic_signals"
+   }
+  },
+  {
+   "type": "node",
+   "id": 411926694,
+   "lat": 10.7763635,
+   "lon": 106.6984594,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 411926696,
+   "lat": 10.7767991,
+   "lon": 106.6979831,
+   "tags": {
+    "highway": "traffic_signals",
+    "traffic_signals": "signal",
+    "traffic_signals:direction": "forward"
+   }
+  },
+  {
+   "type": "node",
+   "id": 1771302992,
+   "lat": 10.7794089,
+   "lon": 106.6998156,
+   "tags": {
+    "crossing": "zebra",
+    "crossing_ref": "zebra",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2303320812,
+   "lat": 10.7762559,
+   "lon": 106.6985782,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2907860298,
+   "lat": 10.779021,
+   "lon": 106.6994538,
+   "tags": {
+    "crossing": "zebra",
+    "crossing_ref": "zebra",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 5467207464,
+   "lat": 10.7804272,
+   "lon": 106.6983078,
+   "tags": {
+    "highway": "traffic_signals",
+    "traffic_signals": "signal",
+    "traffic_signals:direction": "backward"
+   }
+  },
+  {
+   "type": "node",
+   "id": 5743072751,
+   "lat": 10.7758208,
+   "lon": 106.6990461,
+   "tags": {
+    "highway": "traffic_signals",
+    "traffic_signals": "signal",
+    "traffic_signals:direction": "forward"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6315539756,
+   "lat": 10.7786053,
+   "lon": 106.6979547,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6534620997,
+   "lat": 10.7761307,
+   "lon": 106.7011579,
+   "tags": {
+    "crossing": "uncontrolled",
+    "crossing_ref": "zebra",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6751186745,
+   "lat": 10.7787234,
+   "lon": 106.6960263,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6753737923,
+   "lat": 10.7782875,
+   "lon": 106.6963888,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6753737924,
+   "lat": 10.7787796,
+   "lon": 106.6958547,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6753854476,
+   "lat": 10.7768684,
+   "lon": 106.6980461,
+   "tags": {
+    "crossing": "uncontrolled",
+    "crossing:markings": "yes",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6753854483,
+   "lat": 10.7776361,
+   "lon": 106.6970958,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6789205999,
+   "lat": 10.7757371,
+   "lon": 106.7003981,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6789206000,
+   "lat": 10.7755606,
+   "lon": 106.7003388,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6789206001,
+   "lat": 10.7757836,
+   "lon": 106.7005335,
+   "tags": {
+    "crossing": "traffic_signals",
+    "highway": "traffic_signals"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6789206002,
+   "lat": 10.7755241,
+   "lon": 106.7004881,
+   "tags": {
+    "crossing": "traffic_signals",
+    "highway": "traffic_signals"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6858588490,
+   "lat": 10.7799833,
+   "lon": 106.6981983,
+   "tags": {
+    "highway": "traffic_signals",
+    "traffic_signals": "signal",
+    "traffic_signals:direction": "backward"
+   }
+  },
+  {
+   "type": "node",
+   "id": 7501051262,
+   "lat": 10.7796446,
+   "lon": 106.6968135,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 7501051280,
+   "lat": 10.7804795,
+   "lon": 106.6987452,
+   "tags": {
+    "crossing": "marked",
+    "crossing:markings": "zebra",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 7502330652,
+   "lat": 10.7785348,
+   "lon": 106.6978151,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 7502330658,
+   "lat": 10.779002,
+   "lon": 106.6972737,
+   "tags": {
+    "crossing": "traffic_signals",
+    "crossing:island": "no",
+    "crossing:markings": "yes",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 7502330663,
+   "lat": 10.7792251,
+   "lon": 106.6972731,
+   "tags": {
+    "crossing": "marked",
+    "crossing:island": "no",
+    "crossing:markings": "yes",
+    "highway": "crossing",
+    "tactile_paving": "no"
+   }
+  },
+  {
+   "type": "node",
+   "id": 7502330666,
+   "lat": 10.7787226,
+   "lon": 106.6978257,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 7502330679,
+   "lat": 10.778238,
+   "lon": 106.696554,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 7502330708,
+   "lat": 10.7798614,
+   "lon": 106.6982283,
+   "tags": {
+    "crossing": "marked",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11313988766,
+   "lat": 10.775904,
+   "lon": 106.6989594,
+   "tags": {
+    "crossing": "uncontrolled",
+    "crossing:markings": "yes",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11313988767,
+   "lat": 10.7757513,
+   "lon": 106.6990941,
+   "tags": {
+    "crossing": "uncontrolled",
+    "crossing:markings": "yes",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11313988768,
+   "lat": 10.7758902,
+   "lon": 106.6991081,
+   "tags": {
+    "crossing": "uncontrolled",
+    "crossing:markings": "yes",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11314016769,
+   "lat": 10.7757213,
+   "lon": 106.698955,
+   "tags": {
+    "crossing": "uncontrolled",
+    "crossing:markings": "yes",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11494677862,
+   "lat": 10.7757171,
+   "lon": 106.6991093,
+   "tags": {
+    "highway": "traffic_signals",
+    "traffic_signals": "signal"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11537242378,
+   "lat": 10.7768497,
+   "lon": 106.699968,
+   "tags": {
+    "crossing": "uncontrolled",
+    "crossing:markings": "yes",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11537242383,
+   "lat": 10.7778836,
+   "lon": 106.7009668,
+   "tags": {
+    "crossing:signals": "yes",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11537242387,
+   "lat": 10.7780178,
+   "lon": 106.7009342,
+   "tags": {
+    "crossing:signals": "yes",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11537242391,
+   "lat": 10.7786504,
+   "lon": 106.6996656,
+   "tags": {
+    "crossing": "uncontrolled",
+    "crossing:markings": "yes",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11540373964,
+   "lat": 10.7768402,
+   "lon": 106.6998817,
+   "tags": {
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12181641731,
+   "lat": 10.7800349,
+   "lon": 106.6982468,
+   "tags": {
+    "crossing": "traffic_signals",
+    "crossing:markings": "zebra",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12721904605,
+   "lat": 10.7804267,
+   "lon": 106.6985494,
+   "tags": {
+    "crossing": "traffic_signals",
+    "crossing:markings": "zebra",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12721904607,
+   "lat": 10.7803133,
+   "lon": 106.6988128,
+   "tags": {
+    "crossing": "marked",
+    "crossing:markings": "zebra",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12920957281,
+   "lat": 10.7804455,
+   "lon": 106.6988802,
+   "tags": {
+    "crossing": "marked",
+    "crossing:markings": "zebra",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14118646213,
+   "lat": 10.7795234,
+   "lon": 106.696945,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14118646215,
+   "lat": 10.7795285,
+   "lon": 106.6967816,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14118646216,
+   "lat": 10.7796704,
+   "lon": 106.6969147,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14118646217,
+   "lat": 10.7806756,
+   "lon": 106.6978576,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14118646218,
+   "lat": 10.7807056,
+   "lon": 106.6980054,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14118646219,
+   "lat": 10.7795116,
+   "lon": 106.698732,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14118646220,
+   "lat": 10.7803608,
+   "lon": 106.6983799,
+   "tags": {
+    "crossing": "traffic_signals",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14118646222,
+   "lat": 10.7799319,
+   "lon": 106.6984555,
+   "tags": {
+    "crossing": "marked",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14118646224,
+   "lat": 10.7798647,
+   "lon": 106.6984273,
+   "tags": {
+    "crossing": "marked",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14118646226,
+   "lat": 10.7792461,
+   "lon": 106.6975037,
+   "tags": {
+    "crossing": "traffic_signals",
+    "crossing:island": "no",
+    "crossing:markings": "yes",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14118646229,
+   "lat": 10.7789745,
+   "lon": 106.6975487,
+   "tags": {
+    "crossing": "traffic_signals",
+    "crossing:island": "no",
+    "crossing:markings": "yes",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14118873173,
+   "lat": 10.7767072,
+   "lon": 106.6978962,
+   "tags": {
+    "crossing": "marked",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14119365543,
+   "lat": 10.7777537,
+   "lon": 106.6969684,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14119365545,
+   "lat": 10.7777534,
+   "lon": 106.6970816,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14119388427,
+   "lat": 10.778002,
+   "lon": 106.7010821,
+   "tags": {
+    "crossing": "marked",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14119517304,
+   "lat": 10.7780696,
+   "lon": 106.6966253,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14119517306,
+   "lat": 10.7786091,
+   "lon": 106.6960397,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14119542964,
+   "lat": 10.7766844,
+   "lon": 106.6998177,
+   "tags": {
+    "crossing": "traffic_signals",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14203479320,
+   "lat": 10.778949,
+   "lon": 106.6975767,
+   "tags": {
+    "highway": "traffic_signals",
+    "traffic_signals": "signal",
+    "traffic_signals:direction": "forward"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14203479321,
+   "lat": 10.7792971,
+   "lon": 106.6975518,
+   "tags": {
+    "highway": "traffic_signals",
+    "traffic_signals": "signal",
+    "traffic_signals:direction": "forward"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14203479322,
+   "lat": 10.7789234,
+   "lon": 106.6971996,
+   "tags": {
+    "highway": "traffic_signals",
+    "traffic_signals": "signal",
+    "traffic_signals:direction": "backward"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14224896649,
+   "lat": 10.7804749,
+   "lon": 106.6985951,
+   "tags": {
+    "highway": "traffic_signals",
+    "traffic_signals": "signal",
+    "traffic_signals:direction": "forward"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14247137061,
+   "lat": 10.7803945,
+   "lon": 106.6957785,
+   "tags": {
+    "highway": "traffic_signals",
+    "traffic_signals": "signal",
+    "traffic_signals:direction": "forward"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14247137062,
+   "lat": 10.7804172,
+   "lon": 106.6959852,
+   "tags": {
+    "highway": "traffic_signals",
+    "traffic_signals": "signal",
+    "traffic_signals:direction": "forward"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14302512239,
+   "lat": 10.7790621,
+   "lon": 106.6994087,
+   "tags": {
+    "button_operated": "yes",
+    "crossing": "traffic_signals",
+    "crossing:island": "no",
+    "crossing:markings": "zebra",
+    "highway": "crossing",
+    "tactile_paving": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14357970341,
+   "lat": 10.7787253,
+   "lon": 106.6959136,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14357970345,
+   "lat": 10.7787201,
+   "lon": 106.6979891,
+   "tags": {
+    "crossing": "uncontrolled",
+    "highway": "crossing"
+   }
+  },
+  {
+   "type": "way",
+   "id": 35112888,
+   "bounds": {
+    "minlat": 10.779606,
+    "minlon": 106.6968542,
+    "maxlat": 10.7807647,
+    "maxlon": 106.6979413
+   },
+   "nodes": [
+    1769456941,
+    14118646217,
+    12884031133,
+    14119511498,
+    14118646216,
+    411918866
+   ],
+   "geometry": [
+    {
+     "lat": 10.7807647,
+     "lon": 106.6979413
+    },
+    {
+     "lat": 10.7806756,
+     "lon": 106.6978576
+    },
+    {
+     "lat": 10.7804602,
+     "lon": 106.6976556
+    },
+    {
+     "lat": 10.7800896,
+     "lon": 106.6973079
+    },
+    {
+     "lat": 10.7796704,
+     "lon": 106.6969147
+    },
+    {
+     "lat": 10.779606,
+     "lon": 106.6968542
+    }
+   ],
+   "tags": {
+    "highway": "residential",
+    "lanes": "2",
+    "maxspeed": "50",
+    "name": "Alexandre de Rhodes",
+    "name:en": "Alexandre de Rhodes Street",
+    "name:vi": "Đường Alexandre de Rhodes",
+    "name:vi-Hani": "塘阿歷山得路",
+    "name:zh": "亚历山德罗路",
+    "old_name:1871-1897": "Rue de l'Évêché",
+    "old_name:1897-1955": "Rue Colombert",
+    "old_name:1985-1995": "Đường Thái Văn Lung",
+    "sidewalk": "right",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 35113215,
+   "bounds": {
+    "minlat": 10.7756652,
+    "minlon": 106.6946308,
+    "maxlat": 10.7778202,
+    "maxlon": 106.6970102
+   },
+   "nodes": [
+    11845290144,
+    11845290199,
+    11845290198,
+    11845290201,
+    2692556913,
+    11845810626,
+    11845290200,
+    11845290195,
+    11845290197,
+    11845290194,
+    11845290193,
+    11845290191,
+    11845290196,
+    11845290190,
+    11845290189,
+    11845290192,
+    11845290188,
+    11845290185,
+    11845290187,
+    11845290184,
+    11845290186,
+    11845290183,
+    11845290180,
+    11845290179,
+    11845290182,
+    11845290178,
+    11845290181,
+    11845290176,
+    11845234639,
+    11845290175,
+    11845290177,
+    11845290172,
+    11845290174,
+    11845290171,
+    11845290170,
+    11845290173,
+    11845290169,
+    11845290168,
+    11845234652,
+    11845290167,
+    11845290165,
+    11845290164,
+    411923736,
+    11845290163,
+    11845290166,
+    11845290237
+   ],
+   "geometry": [
+    {
+     "lat": 10.7778202,
+     "lon": 106.6963588
+    },
+    {
+     "lat": 10.7777795,
+     "lon": 106.6964409
+    },
+    {
+     "lat": 10.7777509,
+     "lon": 106.6964866
+    },
+    {
+     "lat": 10.7777188,
+     "lon": 106.6965298
+    },
+    {
+     "lat": 10.7776672,
+     "lon": 106.6965867
+    },
+    {
+     "lat": 10.7776421,
+     "lon": 106.6966086
+    },
+    {
+     "lat": 10.7776094,
+     "lon": 106.6966371
+    },
+    {
+     "lat": 10.7775195,
+     "lon": 106.6967038
+    },
+    {
+     "lat": 10.7774243,
+     "lon": 106.6967625
+    },
+    {
+     "lat": 10.7773299,
+     "lon": 106.6968106
+    },
+    {
+     "lat": 10.777232,
+     "lon": 106.6968509
+    },
+    {
+     "lat": 10.777182,
+     "lon": 106.6968684
+    },
+    {
+     "lat": 10.7771312,
+     "lon": 106.6968832
+    },
+    {
+     "lat": 10.7770604,
+     "lon": 106.6968994
+    },
+    {
+     "lat": 10.7769887,
+     "lon": 106.6969106
+    },
+    {
+     "lat": 10.7769165,
+     "lon": 106.6969167
+    },
+    {
+     "lat": 10.7765647,
+     "lon": 106.6969355
+    },
+    {
+     "lat": 10.7765221,
+     "lon": 106.6969543
+    },
+    {
+     "lat": 10.7764778,
+     "lon": 106.6969684
+    },
+    {
+     "lat": 10.7764424,
+     "lon": 106.6969759
+    },
+    {
+     "lat": 10.7764066,
+     "lon": 106.6969804
+    },
+    {
+     "lat": 10.7761102,
+     "lon": 106.6970086
+    },
+    {
+     "lat": 10.7760598,
+     "lon": 106.6970102
+    },
+    {
+     "lat": 10.7760095,
+     "lon": 106.6970061
+    },
+    {
+     "lat": 10.77596,
+     "lon": 106.6969965
+    },
+    {
+     "lat": 10.7759123,
+     "lon": 106.6969817
+    },
+    {
+     "lat": 10.7758665,
+     "lon": 106.6969617
+    },
+    {
+     "lat": 10.7758314,
+     "lon": 106.696941
+    },
+    {
+     "lat": 10.7757981,
+     "lon": 106.6969149
+    },
+    {
+     "lat": 10.7757656,
+     "lon": 106.6968815
+    },
+    {
+     "lat": 10.7757373,
+     "lon": 106.6968423
+    },
+    {
+     "lat": 10.7757129,
+     "lon": 106.6967864
+    },
+    {
+     "lat": 10.7756939,
+     "lon": 106.6967283
+    },
+    {
+     "lat": 10.7756815,
+     "lon": 106.6966752
+    },
+    {
+     "lat": 10.7756736,
+     "lon": 106.6966212
+    },
+    {
+     "lat": 10.7756702,
+     "lon": 106.6965667
+    },
+    {
+     "lat": 10.7756652,
+     "lon": 106.6963934
+    },
+    {
+     "lat": 10.7756691,
+     "lon": 106.69622
+    },
+    {
+     "lat": 10.7756793,
+     "lon": 106.6960831
+    },
+    {
+     "lat": 10.7757373,
+     "lon": 106.6956232
+    },
+    {
+     "lat": 10.7757537,
+     "lon": 106.6955449
+    },
+    {
+     "lat": 10.7757746,
+     "lon": 106.6954678
+    },
+    {
+     "lat": 10.7758,
+     "lon": 106.695392
+    },
+    {
+     "lat": 10.7758435,
+     "lon": 106.6952876
+    },
+    {
+     "lat": 10.7758954,
+     "lon": 106.6951874
+    },
+    {
+     "lat": 10.7762116,
+     "lon": 106.6946308
+    }
+   ],
+   "tags": {
+    "access": "permit",
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 35113223,
+   "bounds": {
+    "minlat": 10.7765647,
+    "minlon": 106.6959147,
+    "maxlat": 10.7768106,
+    "maxlon": 106.6969355
+   },
+   "nodes": [
+    11845290072,
+    11845234648,
+    11845234650,
+    11845234647,
+    11845234649,
+    11845234646,
+    11845234643,
+    11845234642,
+    11845234645,
+    11845234641,
+    11845234640,
+    11845234644,
+    11845290188
+   ],
+   "geometry": [
+    {
+     "lat": 10.7768106,
+     "lon": 106.6959147
+    },
+    {
+     "lat": 10.7767995,
+     "lon": 106.695992
+    },
+    {
+     "lat": 10.7767926,
+     "lon": 106.6960698
+    },
+    {
+     "lat": 10.77679,
+     "lon": 106.696161
+    },
+    {
+     "lat": 10.7767933,
+     "lon": 106.6962522
+    },
+    {
+     "lat": 10.7768045,
+     "lon": 106.6964521
+    },
+    {
+     "lat": 10.7768038,
+     "lon": 106.6964995
+    },
+    {
+     "lat": 10.7767981,
+     "lon": 106.6965466
+    },
+    {
+     "lat": 10.7767874,
+     "lon": 106.6965929
+    },
+    {
+     "lat": 10.77677,
+     "lon": 106.696642
+    },
+    {
+     "lat": 10.7767471,
+     "lon": 106.6966887
+    },
+    {
+     "lat": 10.7767189,
+     "lon": 106.6967323
+    },
+    {
+     "lat": 10.7765647,
+     "lon": 106.6969355
+    }
+   ],
+   "tags": {
+    "access": "permit",
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 35113229,
+   "bounds": {
+    "minlat": 10.7756793,
+    "minlon": 106.6957669,
+    "maxlat": 10.776627,
+    "maxlon": 106.6960831
+   },
+   "nodes": [
+    11845290077,
+    11845234660,
+    11845234662,
+    11845234659,
+    11845234658,
+    11845234661,
+    11845234657,
+    11845234654,
+    11845234656,
+    11845234653,
+    11845234655,
+    11845234651,
+    11845234652
+   ],
+   "geometry": [
+    {
+     "lat": 10.776627,
+     "lon": 106.6957669
+    },
+    {
+     "lat": 10.7765651,
+     "lon": 106.695791
+    },
+    {
+     "lat": 10.7765015,
+     "lon": 106.6958103
+    },
+    {
+     "lat": 10.7764357,
+     "lon": 106.6958249
+    },
+    {
+     "lat": 10.776369,
+     "lon": 106.6958343
+    },
+    {
+     "lat": 10.7763019,
+     "lon": 106.6958385
+    },
+    {
+     "lat": 10.7761616,
+     "lon": 106.6958506
+    },
+    {
+     "lat": 10.776099,
+     "lon": 106.6958624
+    },
+    {
+     "lat": 10.7760377,
+     "lon": 106.6958801
+    },
+    {
+     "lat": 10.7759746,
+     "lon": 106.695905
+    },
+    {
+     "lat": 10.7759142,
+     "lon": 106.6959361
+    },
+    {
+     "lat": 10.7757943,
+     "lon": 106.6960056
+    },
+    {
+     "lat": 10.7756793,
+     "lon": 106.6960831
+    }
+   ],
+   "tags": {
+    "access": "permit",
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 35113232,
+   "bounds": {
+    "minlat": 10.7762116,
+    "minlon": 106.6939336,
+    "maxlat": 10.778633,
+    "maxlon": 106.6961394
+   },
+   "nodes": [
+    11845290237,
+    11845290092,
+    11845290235,
+    11845290236,
+    11845290234,
+    11845290233,
+    411922243,
+    11845290230,
+    11845290229,
+    11845290232,
+    11845290228,
+    11845290231,
+    11845290226,
+    11845290225,
+    11845290224,
+    411922254,
+    11845290223,
+    11845290222,
+    11845290221,
+    11845290227,
+    11845290220,
+    11845290217,
+    11845290216,
+    11845290219,
+    11845290215,
+    11845290214,
+    11845290213,
+    11845290212,
+    11845290218,
+    11845290209,
+    11845290208,
+    11845290211,
+    11845290207,
+    11845290206,
+    11845290205,
+    11845290210,
+    11845290204,
+    11845290203,
+    11845290202,
+    411920511
+   ],
+   "geometry": [
+    {
+     "lat": 10.7762116,
+     "lon": 106.6946308
+    },
+    {
+     "lat": 10.7767266,
+     "lon": 106.694295
+    },
+    {
+     "lat": 10.7769006,
+     "lon": 106.6942088
+    },
+    {
+     "lat": 10.7770614,
+     "lon": 106.6941413
+    },
+    {
+     "lat": 10.7772332,
+     "lon": 106.6940791
+    },
+    {
+     "lat": 10.7774079,
+     "lon": 106.6940257
+    },
+    {
+     "lat": 10.777585,
+     "lon": 106.6939813
+    },
+    {
+     "lat": 10.7777044,
+     "lon": 106.6939597
+    },
+    {
+     "lat": 10.7778248,
+     "lon": 106.6939445
+    },
+    {
+     "lat": 10.7779457,
+     "lon": 106.6939358
+    },
+    {
+     "lat": 10.7780572,
+     "lon": 106.6939336
+    },
+    {
+     "lat": 10.7781687,
+     "lon": 106.6939368
+    },
+    {
+     "lat": 10.7782216,
+     "lon": 106.6939503
+    },
+    {
+     "lat": 10.7782719,
+     "lon": 106.6939718
+    },
+    {
+     "lat": 10.7783207,
+     "lon": 106.6940045
+    },
+    {
+     "lat": 10.7783698,
+     "lon": 106.6940481
+    },
+    {
+     "lat": 10.7783954,
+     "lon": 106.6940778
+    },
+    {
+     "lat": 10.7784243,
+     "lon": 106.6941239
+    },
+    {
+     "lat": 10.7784462,
+     "lon": 106.6941738
+    },
+    {
+     "lat": 10.7784605,
+     "lon": 106.6942265
+    },
+    {
+     "lat": 10.7785475,
+     "lon": 106.6946369
+    },
+    {
+     "lat": 10.7785744,
+     "lon": 106.6947125
+    },
+    {
+     "lat": 10.7785964,
+     "lon": 106.6947897
+    },
+    {
+     "lat": 10.7786133,
+     "lon": 106.6948682
+    },
+    {
+     "lat": 10.7786264,
+     "lon": 106.6949578
+    },
+    {
+     "lat": 10.778633,
+     "lon": 106.6950482
+    },
+    {
+     "lat": 10.778633,
+     "lon": 106.6951388
+    },
+    {
+     "lat": 10.7786264,
+     "lon": 106.6952292
+    },
+    {
+     "lat": 10.7786133,
+     "lon": 106.6953188
+    },
+    {
+     "lat": 10.7785891,
+     "lon": 106.6954034
+    },
+    {
+     "lat": 10.7785596,
+     "lon": 106.6954862
+    },
+    {
+     "lat": 10.7785251,
+     "lon": 106.6955669
+    },
+    {
+     "lat": 10.7784819,
+     "lon": 106.6956519
+    },
+    {
+     "lat": 10.7784331,
+     "lon": 106.6957337
+    },
+    {
+     "lat": 10.7783789,
+     "lon": 106.6958119
+    },
+    {
+     "lat": 10.7783196,
+     "lon": 106.6958861
+    },
+    {
+     "lat": 10.7782524,
+     "lon": 106.6959612
+    },
+    {
+     "lat": 10.7781811,
+     "lon": 106.6960324
+    },
+    {
+     "lat": 10.7781061,
+     "lon": 106.6960993
+    },
+    {
+     "lat": 10.7780256,
+     "lon": 106.6961394
+    }
+   ],
+   "tags": {
+    "access": "permit",
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 35113250,
+   "bounds": {
+    "minlat": 10.7757289,
+    "minlon": 106.6969149,
+    "maxlat": 10.7757981,
+    "maxlon": 106.6969924
+   },
+   "nodes": [
+    11845234639,
+    11845234637,
+    11845234636,
+    11845234638
+   ],
+   "geometry": [
+    {
+     "lat": 10.7757981,
+     "lon": 106.6969149
+    },
+    {
+     "lat": 10.7757884,
+     "lon": 106.6969258
+    },
+    {
+     "lat": 10.775768,
+     "lon": 106.6969486
+    },
+    {
+     "lat": 10.7757289,
+     "lon": 106.6969924
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 35113257,
+   "bounds": {
+    "minlat": 10.7758954,
+    "minlon": 106.6951874,
+    "maxlat": 10.7771584,
+    "maxlon": 106.6959517
+   },
+   "nodes": [
+    11845290166,
+    11845290081,
+    11845290080,
+    11845290077,
+    11845290076,
+    11845290079,
+    11845303855,
+    11845290075,
+    11845290074,
+    11845290072,
+    11845290078,
+    11845290071,
+    11845290070,
+    11845290069,
+    11845290073,
+    11845234668,
+    11845234667,
+    11845234666,
+    11845234665,
+    11845290123
+   ],
+   "geometry": [
+    {
+     "lat": 10.7758954,
+     "lon": 106.6951874
+    },
+    {
+     "lat": 10.776266,
+     "lon": 106.6954077
+    },
+    {
+     "lat": 10.776599,
+     "lon": 106.6957185
+    },
+    {
+     "lat": 10.776627,
+     "lon": 106.6957669
+    },
+    {
+     "lat": 10.7766615,
+     "lon": 106.6958109
+    },
+    {
+     "lat": 10.7767017,
+     "lon": 106.6958496
+    },
+    {
+     "lat": 10.7767252,
+     "lon": 106.6958667
+    },
+    {
+     "lat": 10.7767429,
+     "lon": 106.6958796
+    },
+    {
+     "lat": 10.7767875,
+     "lon": 106.695904
+    },
+    {
+     "lat": 10.7768106,
+     "lon": 106.6959147
+    },
+    {
+     "lat": 10.7768348,
+     "lon": 106.6959223
+    },
+    {
+     "lat": 10.7768674,
+     "lon": 106.6959275
+    },
+    {
+     "lat": 10.7769003,
+     "lon": 106.6959272
+    },
+    {
+     "lat": 10.7769328,
+     "lon": 106.6959214
+    },
+    {
+     "lat": 10.7769639,
+     "lon": 106.6959102
+    },
+    {
+     "lat": 10.7770045,
+     "lon": 106.6959032
+    },
+    {
+     "lat": 10.7770457,
+     "lon": 106.695904
+    },
+    {
+     "lat": 10.777086,
+     "lon": 106.6959126
+    },
+    {
+     "lat": 10.777124,
+     "lon": 106.6959287
+    },
+    {
+     "lat": 10.7771584,
+     "lon": 106.6959517
+    }
+   ],
+   "tags": {
+    "access": "permit",
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 35113663,
+   "bounds": {
+    "minlat": 10.7776976,
+    "minlon": 106.6970292,
+    "maxlat": 10.779602,
+    "maxlon": 106.6988169
+   },
+   "nodes": [
+    411918767,
+    14118646219,
+    14119511500,
+    7501051191,
+    6315539754,
+    6315539755,
+    14357970345,
+    4605453644,
+    7502330652,
+    14119517301,
+    14119365545,
+    411918850
+   ],
+   "geometry": [
+    {
+     "lat": 10.779602,
+     "lon": 106.6988169
+    },
+    {
+     "lat": 10.7795116,
+     "lon": 106.698732
+    },
+    {
+     "lat": 10.7791199,
+     "lon": 106.6983644
+    },
+    {
+     "lat": 10.7789796,
+     "lon": 106.6982326
+    },
+    {
+     "lat": 10.7789564,
+     "lon": 106.6982109
+    },
+    {
+     "lat": 10.7788357,
+     "lon": 106.6980975
+    },
+    {
+     "lat": 10.7787201,
+     "lon": 106.6979891
+    },
+    {
+     "lat": 10.7786413,
+     "lon": 106.6979151
+    },
+    {
+     "lat": 10.7785348,
+     "lon": 106.6978151
+    },
+    {
+     "lat": 10.778131,
+     "lon": 106.697436
+    },
+    {
+     "lat": 10.7777534,
+     "lon": 106.6970816
+    },
+    {
+     "lat": 10.7776976,
+     "lon": 106.6970292
+    }
+   ],
+   "tags": {
+    "highway": "residential",
+    "lanes": "2",
+    "maxspeed": "50",
+    "name": "Hàn Thuyên",
+    "name:en": "Han Thuyen Street",
+    "name:fr": "Rue Han Thuyen",
+    "name:id": "Jalan Han Thuyen",
+    "name:ms": "Jalan Han Thuyen",
+    "name:ru": "улица Хан Тхуен",
+    "name:vi": "Đường Hàn Thuyên",
+    "name:zh": "韩诠路",
+    "old_name:1871-1897": "Rue de Hong Kong",
+    "old_name:1897-1955": "Rue Amiral Page",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 35113743,
+   "bounds": {
+    "minlat": 10.7744849,
+    "minlon": 106.6999227,
+    "maxlat": 10.7768018,
+    "maxlon": 106.700938
+   },
+   "nodes": [
+    9708695734,
+    11534254619,
+    6789206007,
+    9403108730,
+    2392496463,
+    6789206002,
+    411919215,
+    5763135331,
+    6789205999,
+    5763135323,
+    3486801774,
+    411919193
+   ],
+   "geometry": [
+    {
+     "lat": 10.7744849,
+     "lon": 106.700938
+    },
+    {
+     "lat": 10.7746014,
+     "lon": 106.7008868
+    },
+    {
+     "lat": 10.7749136,
+     "lon": 106.7007549
+    },
+    {
+     "lat": 10.7751104,
+     "lon": 106.7006681
+    },
+    {
+     "lat": 10.7753828,
+     "lon": 106.7005478
+    },
+    {
+     "lat": 10.7755241,
+     "lon": 106.7004881
+    },
+    {
+     "lat": 10.7756638,
+     "lon": 106.7004291
+    },
+    {
+     "lat": 10.7757117,
+     "lon": 106.7004089
+    },
+    {
+     "lat": 10.7757371,
+     "lon": 106.7003981
+    },
+    {
+     "lat": 10.7761402,
+     "lon": 106.7002244
+    },
+    {
+     "lat": 10.7764913,
+     "lon": 106.7000666
+    },
+    {
+     "lat": 10.7768018,
+     "lon": 106.6999227
+    }
+   ],
+   "tags": {
+    "highway": "secondary",
+    "lanes": "3",
+    "lit": "yes",
+    "maxspeed": "60",
+    "name": "Pasteur",
+    "name:en": "Pasteur Street",
+    "name:fr": "Rue Pasteur",
+    "name:id": "Jalan Pasteur",
+    "name:ms": "Jalan Pasteur",
+    "name:ru": "улица Пастера",
+    "name:vi": "Đường Pasteur",
+    "name:zh": "巴斯德路",
+    "old_name:1865-1955": "Rue Pellerin",
+    "old_name:1975-1991": "Đường Nguyễn Thị Minh Khai",
+    "oneway": "yes",
+    "smoothness": "excellent",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 35114262,
+   "bounds": {
+    "minlat": 10.7787474,
+    "minlon": 106.6985273,
+    "maxlat": 10.7798663,
+    "maxlon": 106.6997537
+   },
+   "nodes": [
+    12920957290,
+    411918767,
+    5467207442,
+    14302512239,
+    2907860298,
+    2408529960
+   ],
+   "geometry": [
+    {
+     "lat": 10.7798663,
+     "lon": 106.6985273
+    },
+    {
+     "lat": 10.779602,
+     "lon": 106.6988169
+    },
+    {
+     "lat": 10.7791776,
+     "lon": 106.6992821
+    },
+    {
+     "lat": 10.7790621,
+     "lon": 106.6994087
+    },
+    {
+     "lat": 10.779021,
+     "lon": 106.6994538
+    },
+    {
+     "lat": 10.7787474,
+     "lon": 106.6997537
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "3",
+    "maxspeed": "50",
+    "name": "Công trường Công xã Paris",
+    "name:ar": "ساحة بلدية باريس",
+    "name:be": "Плошча Парыжскай Камуны",
+    "name:cjm-Latn": "Kleng bhum Paris",
+    "name:en": "Paris Commune Square",
+    "name:fr": "Place de la Commune-de-Paris",
+    "name:id": "Alun-alun Komune Paris",
+    "name:ms": "Dataran Komune Paris",
+    "name:ru": "Площадь Парижской Коммуны",
+    "name:vi": "Công trường Công xã Paris",
+    "name:vi-Hani": "公場公社巴黎",
+    "name:zh": "巴黎公社广场",
+    "name:zh-Hant": "巴黎公社廣場",
+    "old_name:1902-1955": "Place Pigneau de Béhaine",
+    "old_name:1955-1964": "Công trường Hòa Bình",
+    "old_name:1964-1975": "Công trường Tổng thống John F. Kennedy",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 35114702,
+   "bounds": {
+    "minlat": 10.7809028,
+    "minlon": 106.6977913,
+    "maxlat": 10.782134,
+    "maxlon": 106.6989238
+   },
+   "nodes": [
+    411918714,
+    13855959396,
+    13855959395,
+    1770193829,
+    1769456883
+   ],
+   "geometry": [
+    {
+     "lat": 10.782134,
+     "lon": 106.6989238
+    },
+    {
+     "lat": 10.7816557,
+     "lon": 106.6984868
+    },
+    {
+     "lat": 10.7815998,
+     "lon": 106.6984358
+    },
+    {
+     "lat": 10.7813701,
+     "lon": 106.6982259
+    },
+    {
+     "lat": 10.7809028,
+     "lon": 106.6977913
+    }
+   ],
+   "tags": {
+    "highway": "residential",
+    "motor_vehicle:conditional": "no @ (Apr 29 23:00-23:59; Apr 30 00:00-14:00)",
+    "name": "Nguyễn Văn Chiêm",
+    "name:en": "Nguyen Van Chiem Street",
+    "name:vi": "Đường Nguyễn Văn Chiêm",
+    "old_name": "Rue Marc Pourpe",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 186347711,
+   "bounds": {
+    "minlat": 10.7791401,
+    "minlon": 106.70011,
+    "maxlat": 10.7801873,
+    "maxlon": 106.7010602
+   },
+   "nodes": [
+    411926624,
+    7501050931,
+    411926201
+   ],
+   "geometry": [
+    {
+     "lat": 10.7801873,
+     "lon": 106.7010602
+    },
+    {
+     "lat": 10.7792809,
+     "lon": 106.7002377
+    },
+    {
+     "lat": 10.7791401,
+     "lon": 106.70011
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "2",
+    "maxspeed": "60",
+    "name": "Nguyễn Du",
+    "name:en": "Nguyen Du Street",
+    "name:vi": "Đường Nguyễn Du",
+    "name:zh": "阮攸街",
+    "old_name:1865-1920": "Rue Thabert;Rue Tabert;Rue Taberd",
+    "old_name:1920-1955": "Rue Lucien Mossard",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 287137240,
+   "bounds": {
+    "minlat": 10.7770909,
+    "minlon": 106.6954151,
+    "maxlat": 10.7776094,
+    "maxlon": 106.6959517
+   },
+   "nodes": [
+    11845290114,
+    411921826,
+    9998025062,
+    2907851676,
+    2907851677,
+    2907851678,
+    2907851679,
+    2907851680,
+    2907851681,
+    2907851683,
+    2907851684,
+    2907851685,
+    9998025061,
+    2907851686,
+    11845234664,
+    11845234663,
+    11845290123
+   ],
+   "geometry": [
+    {
+     "lat": 10.7776094,
+     "lon": 106.6954826
+    },
+    {
+     "lat": 10.7775633,
+     "lon": 106.6954642
+    },
+    {
+     "lat": 10.7775108,
+     "lon": 106.6954362
+    },
+    {
+     "lat": 10.7774667,
+     "lon": 106.6954207
+    },
+    {
+     "lat": 10.7774201,
+     "lon": 106.6954151
+    },
+    {
+     "lat": 10.7773685,
+     "lon": 106.6954289
+    },
+    {
+     "lat": 10.7773132,
+     "lon": 106.6954677
+    },
+    {
+     "lat": 10.7772607,
+     "lon": 106.6955224
+    },
+    {
+     "lat": 10.7772152,
+     "lon": 106.6955728
+    },
+    {
+     "lat": 10.7771889,
+     "lon": 106.6956026
+    },
+    {
+     "lat": 10.777145,
+     "lon": 106.6956554
+    },
+    {
+     "lat": 10.7771023,
+     "lon": 106.6957111
+    },
+    {
+     "lat": 10.7770909,
+     "lon": 106.6957594
+    },
+    {
+     "lat": 10.7770953,
+     "lon": 106.6958083
+    },
+    {
+     "lat": 10.7771069,
+     "lon": 106.6958603
+    },
+    {
+     "lat": 10.7771278,
+     "lon": 106.6959079
+    },
+    {
+     "lat": 10.7771584,
+     "lon": 106.6959517
+    }
+   ],
+   "tags": {
+    "access": "permit",
+    "highway": "service",
+    "oneway": "yes",
+    "service": "parking_aisle"
+   }
+  },
+  {
+   "type": "way",
+   "id": 290222654,
+   "bounds": {
+    "minlat": 10.7771401,
+    "minlon": 106.6954666,
+    "maxlat": 10.7780807,
+    "maxlon": 106.6964205
+   },
+   "nodes": [
+    2907851673,
+    11845290119,
+    11845290120,
+    11845290121,
+    11845290122,
+    11845290123,
+    11845290129,
+    11845290124,
+    11845290125,
+    11845290126,
+    11845290130,
+    11845290127,
+    11845290128,
+    11845290136,
+    11845290131,
+    11845290132,
+    11845290133,
+    11845290137,
+    11845290134,
+    11845290135,
+    11845290143,
+    11845290138,
+    11845290139,
+    11845290140,
+    11845290144,
+    11845290141,
+    11845290142,
+    6858588492,
+    6786738898,
+    11845290145,
+    411920511,
+    11845290146,
+    11845290147,
+    11845290148,
+    11845290149,
+    11845290155,
+    11845290150,
+    11845290151,
+    11845290152,
+    11845290156,
+    11845290153,
+    11845290154,
+    11845290159,
+    11845290157,
+    11845290158,
+    11845290161,
+    11845290160,
+    11845290162,
+    11845290114,
+    11845290115,
+    11845290118,
+    11845290116,
+    11845290117,
+    2907851673
+   ],
+   "geometry": [
+    {
+     "lat": 10.7773175,
+     "lon": 106.6956688
+    },
+    {
+     "lat": 10.7772745,
+     "lon": 106.695718
+    },
+    {
+     "lat": 10.7772366,
+     "lon": 106.6957715
+    },
+    {
+     "lat": 10.7772045,
+     "lon": 106.6958287
+    },
+    {
+     "lat": 10.7771783,
+     "lon": 106.695889
+    },
+    {
+     "lat": 10.7771584,
+     "lon": 106.6959517
+    },
+    {
+     "lat": 10.777145,
+     "lon": 106.6960162
+    },
+    {
+     "lat": 10.7771401,
+     "lon": 106.6960563
+    },
+    {
+     "lat": 10.7771405,
+     "lon": 106.6960968
+    },
+    {
+     "lat": 10.7771461,
+     "lon": 106.6961369
+    },
+    {
+     "lat": 10.7771569,
+     "lon": 106.6961758
+    },
+    {
+     "lat": 10.7771724,
+     "lon": 106.6962123
+    },
+    {
+     "lat": 10.7771925,
+     "lon": 106.6962465
+    },
+    {
+     "lat": 10.7772168,
+     "lon": 106.6962777
+    },
+    {
+     "lat": 10.7772558,
+     "lon": 106.6963134
+    },
+    {
+     "lat": 10.7772983,
+     "lon": 106.6963445
+    },
+    {
+     "lat": 10.7773439,
+     "lon": 106.6963707
+    },
+    {
+     "lat": 10.7773921,
+     "lon": 106.6963917
+    },
+    {
+     "lat": 10.7774553,
+     "lon": 106.6964104
+    },
+    {
+     "lat": 10.7775205,
+     "lon": 106.69642
+    },
+    {
+     "lat": 10.7775864,
+     "lon": 106.6964205
+    },
+    {
+     "lat": 10.7776472,
+     "lon": 106.696416
+    },
+    {
+     "lat": 10.777707,
+     "lon": 106.6964041
+    },
+    {
+     "lat": 10.7777649,
+     "lon": 106.6963849
+    },
+    {
+     "lat": 10.7778202,
+     "lon": 106.6963588
+    },
+    {
+     "lat": 10.7778629,
+     "lon": 106.6963329
+    },
+    {
+     "lat": 10.7779027,
+     "lon": 106.6963025
+    },
+    {
+     "lat": 10.777939,
+     "lon": 106.6962679
+    },
+    {
+     "lat": 10.7779725,
+     "lon": 106.6962284
+    },
+    {
+     "lat": 10.7780014,
+     "lon": 106.6961854
+    },
+    {
+     "lat": 10.7780256,
+     "lon": 106.6961394
+    },
+    {
+     "lat": 10.7780518,
+     "lon": 106.6960746
+    },
+    {
+     "lat": 10.7780699,
+     "lon": 106.6960069
+    },
+    {
+     "lat": 10.7780796,
+     "lon": 106.6959374
+    },
+    {
+     "lat": 10.7780807,
+     "lon": 106.6958673
+    },
+    {
+     "lat": 10.7780732,
+     "lon": 106.6957976
+    },
+    {
+     "lat": 10.7780621,
+     "lon": 106.6957464
+    },
+    {
+     "lat": 10.7780446,
+     "lon": 106.6956971
+    },
+    {
+     "lat": 10.7780212,
+     "lon": 106.6956504
+    },
+    {
+     "lat": 10.7779922,
+     "lon": 106.6956072
+    },
+    {
+     "lat": 10.7779605,
+     "lon": 106.6955705
+    },
+    {
+     "lat": 10.7779247,
+     "lon": 106.695538
+    },
+    {
+     "lat": 10.7778855,
+     "lon": 106.6955099
+    },
+    {
+     "lat": 10.7778493,
+     "lon": 106.6954915
+    },
+    {
+     "lat": 10.7778111,
+     "lon": 106.695478
+    },
+    {
+     "lat": 10.7777715,
+     "lon": 106.6954697
+    },
+    {
+     "lat": 10.7777247,
+     "lon": 106.6954666
+    },
+    {
+     "lat": 10.777678,
+     "lon": 106.695469
+    },
+    {
+     "lat": 10.7776094,
+     "lon": 106.6954826
+    },
+    {
+     "lat": 10.777543,
+     "lon": 106.6955046
+    },
+    {
+     "lat": 10.7774797,
+     "lon": 106.6955347
+    },
+    {
+     "lat": 10.7774204,
+     "lon": 106.6955726
+    },
+    {
+     "lat": 10.777366,
+     "lon": 106.6956175
+    },
+    {
+     "lat": 10.7773175,
+     "lon": 106.6956688
+    }
+   ],
+   "tags": {
+    "access": "permit",
+    "highway": "service",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 326771006,
+   "bounds": {
+    "minlat": 10.7781831,
+    "minlon": 106.6950003,
+    "maxlat": 10.7795666,
+    "maxlon": 106.6965022
+   },
+   "nodes": [
+    2664205599,
+    6753737924,
+    14357970341,
+    411918854,
+    14119517306,
+    6753737923,
+    6858588491
+   ],
+   "geometry": [
+    {
+     "lat": 10.7795666,
+     "lon": 106.6950003
+    },
+    {
+     "lat": 10.7787796,
+     "lon": 106.6958547
+    },
+    {
+     "lat": 10.7787253,
+     "lon": 106.6959136
+    },
+    {
+     "lat": 10.7786688,
+     "lon": 106.6959749
+    },
+    {
+     "lat": 10.7786091,
+     "lon": 106.6960397
+    },
+    {
+     "lat": 10.7782875,
+     "lon": 106.6963888
+    },
+    {
+     "lat": 10.7781831,
+     "lon": 106.6965022
+    }
+   ],
+   "tags": {
+    "highway": "secondary",
+    "lanes": "3",
+    "maxspeed": "60",
+    "name": "Nam Kỳ Khởi Nghĩa",
+    "name:en": "Nam Ky Khoi Nghia Street",
+    "name:ja": "ナムキーコイギア通り",
+    "name:vi": "Đường Nam Kỳ Khởi Nghĩa",
+    "old_name:1870-1945": "Rue Mac Mahon",
+    "old_name:1945-1955": "Rue du Général de Gaulle",
+    "old_name:1955-1975": "Đường Công Lý",
+    "oneway": "yes",
+    "sidewalk:left": "yes",
+    "sidewalk:right": "separate",
+    "smoothness": "excellent",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 326849845,
+   "bounds": {
+    "minlat": 10.7805067,
+    "minlon": 106.6958839,
+    "maxlat": 10.7816606,
+    "maxlon": 106.6969683
+   },
+   "nodes": [
+    411926604,
+    14365189424,
+    14365189422,
+    411925946
+   ],
+   "geometry": [
+    {
+     "lat": 10.7805067,
+     "lon": 106.6958839
+    },
+    {
+     "lat": 10.781554,
+     "lon": 106.6968681
+    },
+    {
+     "lat": 10.78158,
+     "lon": 106.6968925
+    },
+    {
+     "lat": 10.7816606,
+     "lon": 106.6969683
+    }
+   ],
+   "tags": {
+    "highway": "primary",
+    "lanes": "3",
+    "lit": "yes",
+    "maxspeed": "60",
+    "name": "Nguyễn Thị Minh Khai",
+    "name:en": "Nguyen Thi Minh Khai Street",
+    "name:fr": "Rue Nguyen Thi Minh Khai",
+    "name:id": "Jalan Nguyen Thi Minh Khai",
+    "name:ms": "Jalan Nguyen Thi Minh Khai",
+    "name:ru": "улица Нгуен Тхи Минь Хай",
+    "name:vi": "Đường Nguyễn Thị Minh Khai",
+    "name:zh": "阮氏明开路",
+    "old_name:1865-1955": "Rue Chasseloup-Laubat",
+    "old_name:1955-1975": "Đường Hồng Thập Tự",
+    "old_name:1975-1991": "Đường Xô Viết Nghệ Tĩnh",
+    "oneway": "yes",
+    "sidewalk:left": "separate",
+    "sidewalk:right": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 326849846,
+   "bounds": {
+    "minlat": 10.7805067,
+    "minlon": 106.6938208,
+    "maxlat": 10.7823972,
+    "maxlon": 106.6958839
+   },
+   "nodes": [
+    411926604,
+    14247137063,
+    14247137066,
+    411925942,
+    5778360098,
+    9403108735,
+    14247137070,
+    411926554
+   ],
+   "geometry": [
+    {
+     "lat": 10.7805067,
+     "lon": 106.6958839
+    },
+    {
+     "lat": 10.7813161,
+     "lon": 106.6949984
+    },
+    {
+     "lat": 10.7813956,
+     "lon": 106.6949114
+    },
+    {
+     "lat": 10.7814514,
+     "lon": 106.6948507
+    },
+    {
+     "lat": 10.7814998,
+     "lon": 106.6947982
+    },
+    {
+     "lat": 10.7822721,
+     "lon": 106.6939601
+    },
+    {
+     "lat": 10.7823162,
+     "lon": 106.693911
+    },
+    {
+     "lat": 10.7823972,
+     "lon": 106.6938208
+    }
+   ],
+   "tags": {
+    "highway": "secondary",
+    "lanes": "2",
+    "lit": "yes",
+    "maxspeed": "60",
+    "name": "Pasteur",
+    "name:en": "Pasteur Street",
+    "name:fr": "Rue Pasteur",
+    "name:id": "Jalan Pasteur",
+    "name:ms": "Jalan Pasteur",
+    "name:ru": "улица Пастера",
+    "name:vi": "Đường Pasteur",
+    "name:zh": "巴斯德路",
+    "old_name:1865-1955": "Rue Pellerin",
+    "old_name:1975-1991": "Đường Nguyễn Thị Minh Khai",
+    "oneway": "yes",
+    "sidewalk": "both",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 329878177,
+   "bounds": {
+    "minlat": 10.7801873,
+    "minlon": 106.6996356,
+    "maxlat": 10.7814762,
+    "maxlon": 106.7010602
+   },
+   "nodes": [
+    411926624,
+    11294870756,
+    7501051433,
+    7501164288,
+    411926033,
+    12882982836,
+    411926547
+   ],
+   "geometry": [
+    {
+     "lat": 10.7801873,
+     "lon": 106.7010602
+    },
+    {
+     "lat": 10.7806722,
+     "lon": 106.7005323
+    },
+    {
+     "lat": 10.7807442,
+     "lon": 106.700454
+    },
+    {
+     "lat": 10.781005,
+     "lon": 106.7001598
+    },
+    {
+     "lat": 10.7810392,
+     "lon": 106.7001212
+    },
+    {
+     "lat": 10.7813823,
+     "lon": 106.6997399
+    },
+    {
+     "lat": 10.7814762,
+     "lon": 106.6996356
+    }
+   ],
+   "tags": {
+    "highway": "primary",
+    "lanes": "2",
+    "name": "Hai Bà Trưng",
+    "name:en": "Hai Ba Trung Street",
+    "name:id": "Jalan Hai Ba Trung",
+    "name:ja": "ハイバーチュン通り",
+    "name:vi": "Đường Hai Bà Trưng",
+    "name:vi-Hani": "塘𠄩婆徵",
+    "name:zh": "二徵夫人路",
+    "old_name:1870-1901": "Rue Nationale",
+    "old_name:1901-1955": "Rue Paul Blanchy",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 329878178,
+   "bounds": {
+    "minlat": 10.7792016,
+    "minlon": 106.7010602,
+    "maxlat": 10.7801873,
+    "maxlon": 106.7021793
+   },
+   "nodes": [
+    411926594,
+    11753277697,
+    411926624
+   ],
+   "geometry": [
+    {
+     "lat": 10.7792016,
+     "lon": 106.7021793
+    },
+    {
+     "lat": 10.7796568,
+     "lon": 106.7016787
+    },
+    {
+     "lat": 10.7801873,
+     "lon": 106.7010602
+    }
+   ],
+   "tags": {
+    "highway": "primary",
+    "lanes": "2",
+    "name": "Hai Bà Trưng",
+    "name:en": "Hai Ba Trung Street",
+    "name:id": "Jalan Hai Ba Trung",
+    "name:ja": "ハイバーチュン通り",
+    "name:vi": "Đường Hai Bà Trưng",
+    "name:vi-Hani": "塘𠄩婆徵",
+    "name:zh": "二徵夫人路",
+    "old_name:1870-1901": "Rue Nationale",
+    "old_name:1901-1955": "Rue Paul Blanchy",
+    "parking": "no",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 329878181,
+   "bounds": {
+    "minlat": 10.7779378,
+    "minlon": 106.7010212,
+    "maxlat": 10.7792016,
+    "maxlon": 106.7021793
+   },
+   "nodes": [
+    411926380,
+    14119388427,
+    7500135660,
+    7500135653,
+    2043347017,
+    411926594
+   ],
+   "geometry": [
+    {
+     "lat": 10.7779378,
+     "lon": 106.7010212
+    },
+    {
+     "lat": 10.778002,
+     "lon": 106.7010821
+    },
+    {
+     "lat": 10.7782399,
+     "lon": 106.7012979
+    },
+    {
+     "lat": 10.7787207,
+     "lon": 106.701738
+    },
+    {
+     "lat": 10.7787367,
+     "lon": 106.7017527
+    },
+    {
+     "lat": 10.7792016,
+     "lon": 106.7021793
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "3",
+    "name": "Lý Tự Trọng",
+    "name:en": "Ly Tu Trong Street",
+    "name:etymology": "Lý Tự Trọng",
+    "name:etymology:wikidata": "Q6711589",
+    "name:id": "Jalan Ly Tu Trong",
+    "name:ms": "Jalan Ly Tu Trong",
+    "name:ru": "улица Ли Ты Чонг",
+    "name:vi": "Đường Lý Tự Trọng",
+    "name:zh": "李自仲路",
+    "old_name:1870-1955": "Rue de la Grandière",
+    "old_name:1955-1975": "Đường Gia Long",
+    "oneway": "yes",
+    "surface": "asphalt",
+    "wikidata": "Q108166873"
+   }
+  },
+  {
+   "type": "way",
+   "id": 329878183,
+   "bounds": {
+    "minlat": 10.7758208,
+    "minlon": 106.6979831,
+    "maxlat": 10.7767991,
+    "maxlon": 106.6990461
+   },
+   "nodes": [
+    411926696,
+    12117939940,
+    411926694,
+    11313988728,
+    2303320812,
+    11313988766,
+    5743072751
+   ],
+   "geometry": [
+    {
+     "lat": 10.7767991,
+     "lon": 106.6979831
+    },
+    {
+     "lat": 10.7767254,
+     "lon": 106.6980637
+    },
+    {
+     "lat": 10.7763635,
+     "lon": 106.6984594
+    },
+    {
+     "lat": 10.7763109,
+     "lon": 106.6985175
+    },
+    {
+     "lat": 10.7762559,
+     "lon": 106.6985782
+    },
+    {
+     "lat": 10.775904,
+     "lon": 106.6989594
+    },
+    {
+     "lat": 10.7758208,
+     "lon": 106.6990461
+    }
+   ],
+   "tags": {
+    "highway": "secondary",
+    "lanes": "3",
+    "name": "Nam Kỳ Khởi Nghĩa",
+    "name:en": "Nam Ky Khoi Nghia Street",
+    "name:ja": "ナムキーコイギア通り",
+    "name:vi": "Đường Nam Kỳ Khởi Nghĩa",
+    "old_name:1870-1945": "Rue Mac Mahon",
+    "old_name:1945-1955": "Rue du Général de Gaulle",
+    "old_name:1955-1975": "Đường Công Lý",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 329878185,
+   "bounds": {
+    "minlat": 10.7736186,
+    "minlon": 106.6944794,
+    "maxlat": 10.7767991,
+    "maxlon": 106.6979831
+   },
+   "nodes": [
+    411926696,
+    14118873173,
+    3593939153,
+    411918830,
+    11845234638,
+    1861212923,
+    14268089389,
+    14268089388,
+    411926065,
+    14118873175,
+    411926677,
+    14268260015,
+    11543493234,
+    411919033
+   ],
+   "geometry": [
+    {
+     "lat": 10.7767991,
+     "lon": 106.6979831
+    },
+    {
+     "lat": 10.7767072,
+     "lon": 106.6978962
+    },
+    {
+     "lat": 10.7763368,
+     "lon": 106.6975534
+    },
+    {
+     "lat": 10.775818,
+     "lon": 106.697075
+    },
+    {
+     "lat": 10.7757289,
+     "lon": 106.6969924
+    },
+    {
+     "lat": 10.7750805,
+     "lon": 106.6964378
+    },
+    {
+     "lat": 10.7749382,
+     "lon": 106.6962963
+    },
+    {
+     "lat": 10.7749113,
+     "lon": 106.6962694
+    },
+    {
+     "lat": 10.7747657,
+     "lon": 106.6961096
+    },
+    {
+     "lat": 10.774645,
+     "lon": 106.6959431
+    },
+    {
+     "lat": 10.7741413,
+     "lon": 106.6952278
+    },
+    {
+     "lat": 10.7737367,
+     "lon": 106.6946484
+    },
+    {
+     "lat": 10.7737087,
+     "lon": 106.6946083
+    },
+    {
+     "lat": 10.7736186,
+     "lon": 106.6944794
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "2",
+    "name": "Nguyễn Du",
+    "name:en": "Nguyen Du Street",
+    "name:vi": "Đường Nguyễn Du",
+    "name:zh": "阮攸街",
+    "old_name:1865-1955": "Rue Thabert;Rue Tabert;Rue Taberd",
+    "oneway": "yes",
+    "smoothness": "good",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 329878186,
+   "bounds": {
+    "minlat": 10.7768018,
+    "minlon": 106.6988715,
+    "maxlat": 10.7777767,
+    "maxlon": 106.6999227
+   },
+   "nodes": [
+    411919193,
+    11540373964,
+    7502330343,
+    7502330350,
+    2043347100,
+    13982399712,
+    9403108733,
+    13982399715,
+    2043347112,
+    7501050996,
+    7502310177,
+    411919306
+   ],
+   "geometry": [
+    {
+     "lat": 10.7768018,
+     "lon": 106.6999227
+    },
+    {
+     "lat": 10.7768402,
+     "lon": 106.6998817
+    },
+    {
+     "lat": 10.7770336,
+     "lon": 106.6996752
+    },
+    {
+     "lat": 10.7770749,
+     "lon": 106.6996311
+    },
+    {
+     "lat": 10.7771014,
+     "lon": 106.6996028
+    },
+    {
+     "lat": 10.777162,
+     "lon": 106.6995381
+    },
+    {
+     "lat": 10.7771894,
+     "lon": 106.6995088
+    },
+    {
+     "lat": 10.7772195,
+     "lon": 106.6994767
+    },
+    {
+     "lat": 10.7772614,
+     "lon": 106.6994319
+    },
+    {
+     "lat": 10.7774104,
+     "lon": 106.6992727
+    },
+    {
+     "lat": 10.7774332,
+     "lon": 106.6992485
+    },
+    {
+     "lat": 10.7777767,
+     "lon": 106.6988715
+    }
+   ],
+   "tags": {
+    "highway": "secondary",
+    "lanes": "3",
+    "lit": "yes",
+    "maxspeed": "60",
+    "name": "Pasteur",
+    "name:en": "Pasteur Street",
+    "name:fr": "Rue Pasteur",
+    "name:id": "Jalan Pasteur",
+    "name:ms": "Jalan Pasteur",
+    "name:ru": "улица Пастера",
+    "name:vi": "Đường Pasteur",
+    "name:zh": "巴斯德路",
+    "old_name:1865-1955": "Rue Pellerin",
+    "old_name:1975-1991": "Đường Nguyễn Thị Minh Khai",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 353581931,
+   "bounds": {
+    "minlat": 10.7763368,
+    "minlon": 106.6969684,
+    "maxlat": 10.7764792,
+    "maxlon": 106.6975534
+   },
+   "nodes": [
+    3593939153,
+    1770597626,
+    11543493225,
+    11845137392,
+    3593939154,
+    11845324877,
+    11845324879,
+    11845324876,
+    11845324875,
+    11845324878,
+    11845324873,
+    11845324874,
+    11845324872,
+    11845324871,
+    11845290187
+   ],
+   "geometry": [
+    {
+     "lat": 10.7763368,
+     "lon": 106.6975534
+    },
+    {
+     "lat": 10.7763664,
+     "lon": 106.6975233
+    },
+    {
+     "lat": 10.7763869,
+     "lon": 106.6975008
+    },
+    {
+     "lat": 10.7764,
+     "lon": 106.6974864
+    },
+    {
+     "lat": 10.7764743,
+     "lon": 106.6974051
+    },
+    {
+     "lat": 10.7764571,
+     "lon": 106.6973914
+    },
+    {
+     "lat": 10.7764435,
+     "lon": 106.6973741
+    },
+    {
+     "lat": 10.7764331,
+     "lon": 106.6973504
+    },
+    {
+     "lat": 10.7764292,
+     "lon": 106.6973247
+    },
+    {
+     "lat": 10.7764323,
+     "lon": 106.697299
+    },
+    {
+     "lat": 10.7764516,
+     "lon": 106.6972356
+    },
+    {
+     "lat": 10.7764659,
+     "lon": 106.6971709
+    },
+    {
+     "lat": 10.7764752,
+     "lon": 106.6971038
+    },
+    {
+     "lat": 10.7764792,
+     "lon": 106.6970361
+    },
+    {
+     "lat": 10.7764778,
+     "lon": 106.6969684
+    }
+   ],
+   "tags": {
+    "highway": "service",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 465309061,
+   "bounds": {
+    "minlat": 10.7791401,
+    "minlon": 106.6988815,
+    "maxlat": 10.7802608,
+    "maxlon": 106.70011
+   },
+   "nodes": [
+    411926201,
+    1771302992,
+    12721904608,
+    7513216533,
+    411918775,
+    411918773
+   ],
+   "geometry": [
+    {
+     "lat": 10.7791401,
+     "lon": 106.70011
+    },
+    {
+     "lat": 10.7794089,
+     "lon": 106.6998156
+    },
+    {
+     "lat": 10.7794559,
+     "lon": 106.6997639
+    },
+    {
+     "lat": 10.7796859,
+     "lon": 106.6995117
+    },
+    {
+     "lat": 10.7800072,
+     "lon": 106.6991595
+    },
+    {
+     "lat": 10.7802608,
+     "lon": 106.6988815
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "3",
+    "maxspeed": "50",
+    "name": "Công trường Công xã Paris",
+    "name:ar": "ساحة بلدية باريس",
+    "name:be": "Плошча Парыжскай Камуны",
+    "name:cjm-Latn": "Kleng bhum Paris",
+    "name:en": "Paris Commune Square",
+    "name:fr": "Place de la Commune-de-Paris",
+    "name:id": "Alun-alun Komune Paris",
+    "name:ms": "Dataran Komune Paris",
+    "name:ru": "Площадь Парижской Коммуны",
+    "name:vi": "Công trường Công xã Paris",
+    "name:vi-Hani": "公場公社巴黎",
+    "name:zh": "巴黎公社广场",
+    "name:zh-Hant": "巴黎公社廣場",
+    "old_name:1902-1955": "Place Pigneau de Béhaine",
+    "old_name:1955-1964": "Công trường Hòa Bình",
+    "old_name:1964-1975": "Công trường Tổng thống John F. Kennedy",
+    "oneway": "yes",
+    "sidewalk": "right",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 605534602,
+   "bounds": {
+    "minlat": 10.7757997,
+    "minlon": 106.7007327,
+    "maxlat": 10.7761813,
+    "maxlon": 106.7011025
+   },
+   "nodes": [
+    5743072752,
+    11534254626,
+    5743072753
+   ],
+   "geometry": [
+    {
+     "lat": 10.7761813,
+     "lon": 106.7011025
+    },
+    {
+     "lat": 10.7760979,
+     "lon": 106.7010217
+    },
+    {
+     "lat": 10.7757997,
+     "lon": 106.7007327
+    }
+   ],
+   "tags": {
+    "highway": "service",
+    "oneway": "yes"
+   }
+  },
+  {
+   "type": "way",
+   "id": 608251290,
+   "bounds": {
+    "minlat": 10.7754645,
+    "minlon": 106.6960052,
+    "maxlat": 10.7756793,
+    "maxlon": 106.6960831
+   },
+   "nodes": [
+    5763135342,
+    5763135339,
+    11845234652
+   ],
+   "geometry": [
+    {
+     "lat": 10.7754645,
+     "lon": 106.6960052
+    },
+    {
+     "lat": 10.7755872,
+     "lon": 106.6960403
+    },
+    {
+     "lat": 10.7756793,
+     "lon": 106.6960831
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 608251291,
+   "bounds": {
+    "minlat": 10.7750805,
+    "minlon": 106.6956823,
+    "maxlat": 10.775632,
+    "maxlon": 106.6964378
+   },
+   "nodes": [
+    1861212923,
+    11543493226,
+    11845137393,
+    5763135342,
+    5763135341
+   ],
+   "geometry": [
+    {
+     "lat": 10.7750805,
+     "lon": 106.6964378
+    },
+    {
+     "lat": 10.7751274,
+     "lon": 106.696377
+    },
+    {
+     "lat": 10.7751556,
+     "lon": 106.6963456
+    },
+    {
+     "lat": 10.7754645,
+     "lon": 106.6960052
+    },
+    {
+     "lat": 10.775632,
+     "lon": 106.6956823
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 678315474,
+   "bounds": {
+    "minlat": 10.7786413,
+    "minlon": 106.6973866,
+    "maxlat": 10.7791218,
+    "maxlon": 106.6979151
+   },
+   "nodes": [
+    4605453644,
+    7502330666,
+    13903692897,
+    14203479320,
+    14118646229,
+    6858588489
+   ],
+   "geometry": [
+    {
+     "lat": 10.7786413,
+     "lon": 106.6979151
+    },
+    {
+     "lat": 10.7787226,
+     "lon": 106.6978257
+    },
+    {
+     "lat": 10.7788986,
+     "lon": 106.6976321
+    },
+    {
+     "lat": 10.778949,
+     "lon": 106.6975767
+    },
+    {
+     "lat": 10.7789745,
+     "lon": 106.6975487
+    },
+    {
+     "lat": 10.7791218,
+     "lon": 106.6973866
+    }
+   ],
+   "tags": {
+    "foot": "no",
+    "highway": "secondary",
+    "lanes": "3",
+    "lit": "yes",
+    "maxspeed": "60",
+    "name": "Pasteur",
+    "name:en": "Pasteur Street",
+    "name:fr": "Rue Pasteur",
+    "name:id": "Jalan Pasteur",
+    "name:ms": "Jalan Pasteur",
+    "name:ru": "улица Пастера",
+    "name:vi": "Đường Pasteur",
+    "name:zh": "巴斯德路",
+    "old_name:1865-1955": "Rue Pellerin",
+    "old_name:1975-1991": "Đường Nguyễn Thị Minh Khai",
+    "oneway": "yes",
+    "sidewalk": "no",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 678315475,
+   "bounds": {
+    "minlat": 10.7786688,
+    "minlon": 106.6959749,
+    "maxlat": 10.779606,
+    "maxlon": 106.6968542
+   },
+   "nodes": [
+    411918866,
+    14118646215,
+    14119517308,
+    6751186745,
+    411918854
+   ],
+   "geometry": [
+    {
+     "lat": 10.779606,
+     "lon": 106.6968542
+    },
+    {
+     "lat": 10.7795285,
+     "lon": 106.6967816
+    },
+    {
+     "lat": 10.779101,
+     "lon": 106.6963805
+    },
+    {
+     "lat": 10.7787234,
+     "lon": 106.6960263
+    },
+    {
+     "lat": 10.7786688,
+     "lon": 106.6959749
+    }
+   ],
+   "tags": {
+    "highway": "residential",
+    "lanes": "2",
+    "maxspeed": "50",
+    "name": "Alexandre de Rhodes",
+    "name:en": "Alexandre de Rhodes Street",
+    "name:vi": "Đường Alexandre de Rhodes",
+    "name:vi-Hani": "塘阿歷山得路",
+    "name:zh": "亚历山德罗路",
+    "old_name:1871-1897": "Rue de l'Évêché",
+    "old_name:1897-1955": "Rue Colombert",
+    "old_name:1985-1995": "Đường Thái Văn Lung",
+    "sidewalk": "both",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 678315476,
+   "bounds": {
+    "minlat": 10.779606,
+    "minlon": 106.6958839,
+    "maxlat": 10.7805067,
+    "maxlon": 106.6968542
+   },
+   "nodes": [
+    411918866,
+    7501051262,
+    9403108734,
+    13961678624,
+    14247137062,
+    411926604
+   ],
+   "geometry": [
+    {
+     "lat": 10.779606,
+     "lon": 106.6968542
+    },
+    {
+     "lat": 10.7796446,
+     "lon": 106.6968135
+    },
+    {
+     "lat": 10.7800898,
+     "lon": 106.6963442
+    },
+    {
+     "lat": 10.7802148,
+     "lon": 106.6962061
+    },
+    {
+     "lat": 10.7804172,
+     "lon": 106.6959852
+    },
+    {
+     "lat": 10.7805067,
+     "lon": 106.6958839
+    }
+   ],
+   "tags": {
+    "highway": "secondary",
+    "lanes": "2",
+    "lit": "yes",
+    "maxspeed": "60",
+    "name": "Pasteur",
+    "name:en": "Pasteur Street",
+    "name:fr": "Rue Pasteur",
+    "name:id": "Jalan Pasteur",
+    "name:ms": "Jalan Pasteur",
+    "name:ru": "улица Пастера",
+    "name:vi": "Đường Pasteur",
+    "name:zh": "巴斯德路",
+    "old_name:1865-1955": "Rue Pellerin",
+    "old_name:1975-1991": "Đường Nguyễn Thị Minh Khai",
+    "oneway": "yes",
+    "sidewalk": "both",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 686500792,
+   "bounds": {
+    "minlat": 10.7791218,
+    "minlon": 106.6968542,
+    "maxlat": 10.779606,
+    "maxlon": 106.6973866
+   },
+   "nodes": [
+    6858588489,
+    7502330663,
+    14118646213,
+    411918866
+   ],
+   "geometry": [
+    {
+     "lat": 10.7791218,
+     "lon": 106.6973866
+    },
+    {
+     "lat": 10.7792251,
+     "lon": 106.6972731
+    },
+    {
+     "lat": 10.7795234,
+     "lon": 106.696945
+    },
+    {
+     "lat": 10.779606,
+     "lon": 106.6968542
+    }
+   ],
+   "tags": {
+    "foot": "no",
+    "highway": "secondary",
+    "lane_markings": "yes",
+    "lanes": "1",
+    "lit": "yes",
+    "maxspeed": "60",
+    "name": "Pasteur",
+    "name:en": "Pasteur Street",
+    "name:fr": "Rue Pasteur",
+    "name:id": "Jalan Pasteur",
+    "name:ms": "Jalan Pasteur",
+    "name:ru": "улица Пастера",
+    "name:vi": "Đường Pasteur",
+    "name:zh": "巴斯德路",
+    "old_name:1865-1955": "Rue Pellerin",
+    "old_name:1975-1991": "Đường Nguyễn Thị Minh Khai",
+    "oneway": "yes",
+    "sidewalk": "no",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 690160065,
+   "bounds": {
+    "minlat": 10.7801873,
+    "minlon": 106.7010602,
+    "maxlat": 10.7826605,
+    "maxlon": 106.7017473
+   },
+   "nodes": [
+    411925954,
+    5742669208,
+    5742669210,
+    5742669214,
+    12435144083,
+    12435144082,
+    411926624
+   ],
+   "geometry": [
+    {
+     "lat": 10.7826605,
+     "lon": 106.7017473
+    },
+    {
+     "lat": 10.7823791,
+     "lon": 106.7016741
+    },
+    {
+     "lat": 10.7822804,
+     "lon": 106.7016484
+    },
+    {
+     "lat": 10.7814769,
+     "lon": 106.7014332
+    },
+    {
+     "lat": 10.7813191,
+     "lon": 106.7013876
+    },
+    {
+     "lat": 10.7810684,
+     "lon": 106.701315
+    },
+    {
+     "lat": 10.7801873,
+     "lon": 106.7010602
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lane_markings": "no",
+    "lanes": "2",
+    "maxspeed": "60",
+    "name": "Nguyễn Du",
+    "name:en": "Nguyen Du Street",
+    "name:id": "Jalan Nguyen Du",
+    "name:vi": "Đường Nguyễn Du",
+    "name:zh": "阮攸街",
+    "old_name:1865-1920": "Rue Thabert;Rue Tabert;Rue Taberd",
+    "old_name:1920-1955": "Rue Lucien Mossard",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 716065020,
+   "bounds": {
+    "minlat": 10.7748371,
+    "minlon": 106.6981499,
+    "maxlat": 10.7758208,
+    "maxlon": 106.6990461
+   },
+   "nodes": [
+    411926412,
+    7502727863,
+    11313988755,
+    7502727869,
+    11314016769,
+    5743072751
+   ],
+   "geometry": [
+    {
+     "lat": 10.7748371,
+     "lon": 106.6981499
+    },
+    {
+     "lat": 10.7750468,
+     "lon": 106.6983434
+    },
+    {
+     "lat": 10.775309,
+     "lon": 106.6985788
+    },
+    {
+     "lat": 10.7753433,
+     "lon": 106.6986091
+    },
+    {
+     "lat": 10.7757213,
+     "lon": 106.698955
+    },
+    {
+     "lat": 10.7758208,
+     "lon": 106.6990461
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "3",
+    "name": "Lý Tự Trọng",
+    "name:en": "Ly Tu Trong Street",
+    "name:id": "Jalan Ly Tu Trong",
+    "name:ms": "Jalan Ly Tu Trong",
+    "name:ru": "улица Ли Ты Чонг",
+    "name:vi": "Đường Lý Tự Trọng",
+    "name:zh": "李自仲路",
+    "old_name:1870-1950": "Rue de la Grandière",
+    "old_name:1950-1955": "Rue Gia Long",
+    "old_name:1955-1975": "Đường Gia Long",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 724391099,
+   "bounds": {
+    "minlat": 10.7746638,
+    "minlon": 106.6995694,
+    "maxlat": 10.7756638,
+    "maxlon": 106.7004291
+   },
+   "nodes": [
+    411919215,
+    6789206000,
+    7502727952,
+    14203479319,
+    6753854478,
+    411926545
+   ],
+   "geometry": [
+    {
+     "lat": 10.7756638,
+     "lon": 106.7004291
+    },
+    {
+     "lat": 10.7755606,
+     "lon": 106.7003388
+    },
+    {
+     "lat": 10.775259,
+     "lon": 106.7000609
+    },
+    {
+     "lat": 10.7747753,
+     "lon": 106.6996756
+    },
+    {
+     "lat": 10.7747604,
+     "lon": 106.6996637
+    },
+    {
+     "lat": 10.7746638,
+     "lon": 106.6995694
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "3",
+    "motor_vehicle:conditional": "no @ (Apr 29 23:00-23:59; Apr 30 00:00-14:00)",
+    "name": "Lê Thánh Tôn",
+    "name:en": "Le Thanh Ton Street",
+    "name:fr": "Rue Le Thanh Ton",
+    "name:id": "Jalan Le Thanh Ton",
+    "name:ms": "Jalan Le Thanh Ton",
+    "name:ru": "улица Ле Тхань Тон",
+    "name:vi": "Đường Lê Thánh Tôn",
+    "name:zh": "黎圣宋街",
+    "old_name:1870-1947": "Rue d'Espagne",
+    "old_name:1947-1955": "Rue Lê Lợi",
+    "oneway": "yes",
+    "smoothness": "excellent",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 732571882,
+   "bounds": {
+    "minlat": 10.7767991,
+    "minlon": 106.6979831,
+    "maxlat": 10.7787474,
+    "maxlon": 106.6997537
+   },
+   "nodes": [
+    2408529960,
+    11537242391,
+    7501050904,
+    411919306,
+    7502330534,
+    7502330531,
+    6753854476,
+    411926696
+   ],
+   "geometry": [
+    {
+     "lat": 10.7787474,
+     "lon": 106.6997537
+    },
+    {
+     "lat": 10.7786504,
+     "lon": 106.6996656
+    },
+    {
+     "lat": 10.7782762,
+     "lon": 106.6993255
+    },
+    {
+     "lat": 10.7777767,
+     "lon": 106.6988715
+    },
+    {
+     "lat": 10.777482,
+     "lon": 106.6986037
+    },
+    {
+     "lat": 10.7773299,
+     "lon": 106.6984655
+    },
+    {
+     "lat": 10.7768684,
+     "lon": 106.6980461
+    },
+    {
+     "lat": 10.7767991,
+     "lon": 106.6979831
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "2",
+    "motor_vehicle:conditional": "no @ (Apr 29 23:00-23:59; Apr 30 00:00-14:00)",
+    "name": "Nguyễn Du",
+    "name:en": "Nguyen Du Street",
+    "name:vi": "Đường Nguyễn Du",
+    "name:zh": "阮攸街",
+    "old_name:1865-1955": "Rue Thabert;Rue Tabert;Rue Taberd",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 744573169,
+   "bounds": {
+    "minlat": 10.777939,
+    "minlon": 106.6962679,
+    "maxlat": 10.7781831,
+    "maxlon": 106.6965022
+   },
+   "nodes": [
+    6858588491,
+    12715785162,
+    11494677854,
+    6858588492
+   ],
+   "geometry": [
+    {
+     "lat": 10.7781831,
+     "lon": 106.6965022
+    },
+    {
+     "lat": 10.7781409,
+     "lon": 106.6964617
+    },
+    {
+     "lat": 10.7780177,
+     "lon": 106.6963434
+    },
+    {
+     "lat": 10.777939,
+     "lon": 106.6962679
+    }
+   ],
+   "tags": {
+    "highway": "service",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 747226799,
+   "bounds": {
+    "minlat": 10.7803108,
+    "minlon": 106.6985867,
+    "maxlat": 10.7814762,
+    "maxlon": 106.6996356
+   },
+   "nodes": [
+    5467207450,
+    7501051280,
+    12721904611,
+    6858588496,
+    10978360608,
+    6858588497,
+    10978360614,
+    12882982837,
+    411926547
+   ],
+   "geometry": [
+    {
+     "lat": 10.7803108,
+     "lon": 106.6985867
+    },
+    {
+     "lat": 10.7804795,
+     "lon": 106.6987452
+    },
+    {
+     "lat": 10.7806518,
+     "lon": 106.6988744
+    },
+    {
+     "lat": 10.7807495,
+     "lon": 106.6989702
+    },
+    {
+     "lat": 10.7808551,
+     "lon": 106.6990668
+    },
+    {
+     "lat": 10.7809221,
+     "lon": 106.6991333
+    },
+    {
+     "lat": 10.7811132,
+     "lon": 106.6993049
+    },
+    {
+     "lat": 10.781409,
+     "lon": 106.6995744
+    },
+    {
+     "lat": 10.7814762,
+     "lon": 106.6996356
+    }
+   ],
+   "tags": {
+    "destination": "Thảo Cầm Viên",
+    "highway": "secondary",
+    "lanes": "3",
+    "motor_vehicle:conditional": "no @ (Apr 29 23:00-23:59; Apr 30 00:00-14:00)",
+    "name": "Lê Duẩn",
+    "name:en": "Le Duan Boulevard",
+    "name:fr": "Boulevard Le Duan",
+    "name:id": "Jalan Le Duan",
+    "name:ms": "Jalan Le Duan",
+    "name:ru": "улица Ле Зуан",
+    "name:vi": "Đường Lê Duẩn",
+    "name:zh": "黎笋路",
+    "old_name:1871-1955": "Boulevard Norodom",
+    "old_name:1955-1975": "Đại lộ Thống Nhứt;Đại lộ Thống Nhất",
+    "old_name:1975-1986": "Đường 30 tháng 4",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 747226800,
+   "bounds": {
+    "minlat": 10.7795666,
+    "minlon": 106.6950003,
+    "maxlat": 10.7805067,
+    "maxlon": 106.6958839
+   },
+   "nodes": [
+    2664205599,
+    13961678635,
+    13961678634,
+    14247137061,
+    411926604
+   ],
+   "geometry": [
+    {
+     "lat": 10.7795666,
+     "lon": 106.6950003
+    },
+    {
+     "lat": 10.7799784,
+     "lon": 106.6953873
+    },
+    {
+     "lat": 10.7800508,
+     "lon": 106.6954554
+    },
+    {
+     "lat": 10.7803945,
+     "lon": 106.6957785
+    },
+    {
+     "lat": 10.7805067,
+     "lon": 106.6958839
+    }
+   ],
+   "tags": {
+    "highway": "primary",
+    "lanes": "3",
+    "lit": "yes",
+    "name": "Nguyễn Thị Minh Khai",
+    "name:en": "Nguyen Thi Minh Khai Street",
+    "name:fr": "Rue Nguyen Thi Minh Khai",
+    "name:id": "Jalan Nguyen Thi Minh Khai",
+    "name:ms": "Jalan Nguyen Thi Minh Khai",
+    "name:ru": "улица Нгуен Тхи Минь Хай",
+    "name:vi": "Đường Nguyễn Thị Minh Khai",
+    "name:zh": "阮氏明开路",
+    "old_name:1865-1955": "Rue Chasseloup-Laubat",
+    "old_name:1955-1975": "Đường Hồng Thập Tự",
+    "old_name:1975-1991": "Đường Xô Viết Nghệ Tĩnh",
+    "oneway": "yes",
+    "sidewalk": "both",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 747231131,
+   "bounds": {
+    "minlat": 10.7777767,
+    "minlon": 106.6979151,
+    "maxlat": 10.7786413,
+    "maxlon": 106.6988715
+   },
+   "nodes": [
+    411919306,
+    7501020284,
+    7502330560,
+    6315539756,
+    4605453644
+   ],
+   "geometry": [
+    {
+     "lat": 10.7777767,
+     "lon": 106.6988715
+    },
+    {
+     "lat": 10.7781521,
+     "lon": 106.6984587
+    },
+    {
+     "lat": 10.7782379,
+     "lon": 106.6983598
+    },
+    {
+     "lat": 10.7786053,
+     "lon": 106.6979547
+    },
+    {
+     "lat": 10.7786413,
+     "lon": 106.6979151
+    }
+   ],
+   "tags": {
+    "highway": "secondary",
+    "lanes": "3",
+    "lit": "yes",
+    "maxspeed": "60",
+    "name": "Pasteur",
+    "name:en": "Pasteur Street",
+    "name:fr": "Rue Pasteur",
+    "name:id": "Jalan Pasteur",
+    "name:ms": "Jalan Pasteur",
+    "name:ru": "улица Пастера",
+    "name:vi": "Đường Pasteur",
+    "name:zh": "巴斯德路",
+    "old_name:1865-1955": "Rue Pellerin",
+    "old_name:1975-1991": "Đường Nguyễn Thị Minh Khai",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 749986988,
+   "bounds": {
+    "minlat": 10.7767991,
+    "minlon": 106.6965022,
+    "maxlat": 10.7781831,
+    "maxlon": 106.6979831
+   },
+   "nodes": [
+    6858588491,
+    14119517304,
+    14119365543,
+    411918850,
+    6753854483,
+    411918430,
+    7502330580,
+    6753854477,
+    411926696
+   ],
+   "geometry": [
+    {
+     "lat": 10.7781831,
+     "lon": 106.6965022
+    },
+    {
+     "lat": 10.7780696,
+     "lon": 106.6966253
+    },
+    {
+     "lat": 10.7777537,
+     "lon": 106.6969684
+    },
+    {
+     "lat": 10.7776976,
+     "lon": 106.6970292
+    },
+    {
+     "lat": 10.7776361,
+     "lon": 106.6970958
+    },
+    {
+     "lat": 10.7774772,
+     "lon": 106.6972678
+    },
+    {
+     "lat": 10.7774709,
+     "lon": 106.6972746
+    },
+    {
+     "lat": 10.7768968,
+     "lon": 106.6978943
+    },
+    {
+     "lat": 10.7767991,
+     "lon": 106.6979831
+    }
+   ],
+   "tags": {
+    "highway": "secondary",
+    "lanes": "3",
+    "motor_vehicle:conditional": "no @ (Apr 29 23:00-23:59; Apr 30 00:00-14:00)",
+    "name": "Nam Kỳ Khởi Nghĩa",
+    "name:en": "Nam Ky Khoi Nghia Street",
+    "name:ja": "ナムキーコイギア通り",
+    "name:vi": "Đường Nam Kỳ Khởi Nghĩa",
+    "old_name:1870-1945": "Rue Mac Mahon",
+    "old_name:1945-1955": "Rue du Général de Gaulle",
+    "old_name:1955-1975": "Đường Công Lý",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 758852506,
+   "bounds": {
+    "minlat": 10.7781831,
+    "minlon": 106.6965022,
+    "maxlat": 10.7791218,
+    "maxlon": 106.6973866
+   },
+   "nodes": [
+    6858588489,
+    7502330658,
+    14203479322,
+    14362513281,
+    7502330679,
+    6858588491
+   ],
+   "geometry": [
+    {
+     "lat": 10.7791218,
+     "lon": 106.6973866
+    },
+    {
+     "lat": 10.779002,
+     "lon": 106.6972737
+    },
+    {
+     "lat": 10.7789234,
+     "lon": 106.6971996
+    },
+    {
+     "lat": 10.7786174,
+     "lon": 106.6969114
+    },
+    {
+     "lat": 10.778238,
+     "lon": 106.696554
+    },
+    {
+     "lat": 10.7781831,
+     "lon": 106.6965022
+    }
+   ],
+   "tags": {
+    "highway": "secondary",
+    "lanes": "6",
+    "name": "Lê Duẩn",
+    "name:en": "Le Duan Boulevard",
+    "name:fr": "Boulevard Le Duan",
+    "name:id": "Jalan Le Duan",
+    "name:ms": "Jalan Le Duan",
+    "name:ru": "улица Ле Зуан",
+    "name:vi": "Đường Lê Duẩn",
+    "name:zh": "黎笋路",
+    "old_name:1871-1955": "Boulevard Norodom",
+    "old_name:1955-1975": "Đại lộ Thống Nhứt;Đại lộ Thống Nhất",
+    "old_name:1975-1986": "Đường 30 tháng 4",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 758856171,
+   "bounds": {
+    "minlat": 10.7748371,
+    "minlon": 106.697075,
+    "maxlat": 10.775818,
+    "maxlon": 106.6981499
+   },
+   "nodes": [
+    411926412,
+    5763135357,
+    411925850,
+    411918830
+   ],
+   "geometry": [
+    {
+     "lat": 10.7748371,
+     "lon": 106.6981499
+    },
+    {
+     "lat": 10.7751555,
+     "lon": 106.6978009
+    },
+    {
+     "lat": 10.775338,
+     "lon": 106.697601
+    },
+    {
+     "lat": 10.775818,
+     "lon": 106.697075
+    }
+   ],
+   "tags": {
+    "highway": "residential",
+    "maxspeed": "50",
+    "name": "Nguyễn Trung Trực",
+    "name:en": "Nguyen Trung Truc Street",
+    "name:id": "Jalan Nguyen Trung Truc",
+    "name:ru": "улица Нгуен Чунг Чык",
+    "name:vi": "Đường Nguyễn Trung Trực",
+    "name:zh": "阮忠直街",
+    "old_name:1871-1897": "Rue du Cap Saint-Jacques",
+    "old_name:1897-1955": "Rue Filippini",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 761150515,
+   "bounds": {
+    "minlat": 10.7787474,
+    "minlon": 106.6997537,
+    "maxlat": 10.7789421,
+    "maxlon": 106.6999303
+   },
+   "nodes": [
+    6859935900,
+    2408529960
+   ],
+   "geometry": [
+    {
+     "lat": 10.7789421,
+     "lon": 106.6999303
+    },
+    {
+     "lat": 10.7787474,
+     "lon": 106.6997537
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "2",
+    "name": "Nguyễn Du",
+    "name:en": "Nguyen Du Street",
+    "name:vi": "Đường Nguyễn Du",
+    "name:zh": "阮攸街",
+    "old_name:1865-1955": "Rue Thabert;Rue Tabert;Rue Taberd",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 801710799,
+   "bounds": {
+    "minlat": 10.7757997,
+    "minlon": 106.700633,
+    "maxlat": 10.7758977,
+    "maxlon": 106.7007327
+   },
+   "nodes": [
+    5743072753,
+    7498869370,
+    5743072754
+   ],
+   "geometry": [
+    {
+     "lat": 10.7757997,
+     "lon": 106.7007327
+    },
+    {
+     "lat": 10.775871,
+     "lon": 106.7006602
+    },
+    {
+     "lat": 10.7758977,
+     "lon": 106.700633
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 801710800,
+   "bounds": {
+    "minlat": 10.7757723,
+    "minlon": 106.7007327,
+    "maxlat": 10.7757997,
+    "maxlon": 106.7007613
+   },
+   "nodes": [
+    5743072753,
+    7498869368
+   ],
+   "geometry": [
+    {
+     "lat": 10.7757997,
+     "lon": 106.7007327
+    },
+    {
+     "lat": 10.7757723,
+     "lon": 106.7007613
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 801848920,
+   "bounds": {
+    "minlat": 10.7766246,
+    "minlon": 106.7006337,
+    "maxlat": 10.7769609,
+    "maxlon": 106.7010387
+   },
+   "nodes": [
+    7500135736,
+    7500135716,
+    7500135712,
+    7500135714,
+    7500135713
+   ],
+   "geometry": [
+    {
+     "lat": 10.7769609,
+     "lon": 106.7010387
+    },
+    {
+     "lat": 10.7768308,
+     "lon": 106.700926
+    },
+    {
+     "lat": 10.7768292,
+     "lon": 106.7008964
+    },
+    {
+     "lat": 10.7768324,
+     "lon": 106.7008095
+    },
+    {
+     "lat": 10.7766246,
+     "lon": 106.7006337
+    }
+   ],
+   "tags": {
+    "access": "private",
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 801848927,
+   "bounds": {
+    "minlat": 10.7767717,
+    "minlon": 106.701105,
+    "maxlat": 10.7769072,
+    "maxlon": 106.7012804
+   },
+   "nodes": [
+    7500135738,
+    11551555138
+   ],
+   "geometry": [
+    {
+     "lat": 10.7767717,
+     "lon": 106.7012804
+    },
+    {
+     "lat": 10.7769072,
+     "lon": 106.701105
+    }
+   ],
+   "tags": {
+    "access": "private",
+    "highway": "service",
+    "layer": "-1",
+    "tunnel": "yes"
+   }
+  },
+  {
+   "type": "way",
+   "id": 801848928,
+   "bounds": {
+    "minlat": 10.7766216,
+    "minlon": 106.7009886,
+    "maxlat": 10.7767552,
+    "maxlon": 106.7011485
+   },
+   "nodes": [
+    3486809796,
+    7500135739
+   ],
+   "geometry": [
+    {
+     "lat": 10.7766216,
+     "lon": 106.7011485
+    },
+    {
+     "lat": 10.7767552,
+     "lon": 106.7009886
+    }
+   ],
+   "tags": {
+    "access": "private",
+    "highway": "service",
+    "layer": "-1",
+    "tunnel": "yes"
+   }
+  },
+  {
+   "type": "way",
+   "id": 801950672,
+   "bounds": {
+    "minlat": 10.7781521,
+    "minlon": 106.6984587,
+    "maxlat": 10.7786714,
+    "maxlon": 106.6988461
+   },
+   "nodes": [
+    11893045332,
+    11893045333,
+    7501020283,
+    7501050885,
+    11893045334,
+    7501020284
+   ],
+   "geometry": [
+    {
+     "lat": 10.7786714,
+     "lon": 106.6988461
+    },
+    {
+     "lat": 10.778475,
+     "lon": 106.6986918
+    },
+    {
+     "lat": 10.7784306,
+     "lon": 106.6986656
+    },
+    {
+     "lat": 10.7783574,
+     "lon": 106.698636
+    },
+    {
+     "lat": 10.7782015,
+     "lon": 106.6985014
+    },
+    {
+     "lat": 10.7781521,
+     "lon": 106.6984587
+    }
+   ],
+   "tags": {
+    "highway": "service",
+    "name": "Hẻm 178 Pasteur",
+    "service": "alley"
+   }
+  },
+  {
+   "type": "way",
+   "id": 801950676,
+   "bounds": {
+    "minlat": 10.7782228,
+    "minlon": 106.6993255,
+    "maxlat": 10.7784107,
+    "maxlon": 106.6995483
+   },
+   "nodes": [
+    7501050906,
+    7501050905,
+    7501050904
+   ],
+   "geometry": [
+    {
+     "lat": 10.7784107,
+     "lon": 106.6995483
+    },
+    {
+     "lat": 10.7782228,
+     "lon": 106.6993945
+    },
+    {
+     "lat": 10.7782762,
+     "lon": 106.6993255
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 801950679,
+   "bounds": {
+    "minlat": 10.7786957,
+    "minlon": 106.7000274,
+    "maxlat": 10.7788478,
+    "maxlon": 106.7001819
+   },
+   "nodes": [
+    7501050922,
+    7501050921,
+    7501050920,
+    7501050919
+   ],
+   "geometry": [
+    {
+     "lat": 10.7788478,
+     "lon": 106.7000327
+    },
+    {
+     "lat": 10.7787668,
+     "lon": 106.7000274
+    },
+    {
+     "lat": 10.7786957,
+     "lon": 106.7001032
+    },
+    {
+     "lat": 10.7787104,
+     "lon": 106.7001819
+    }
+   ],
+   "tags": {
+    "highway": "service",
+    "oneway": "yes"
+   }
+  },
+  {
+   "type": "way",
+   "id": 801950680,
+   "bounds": {
+    "minlat": 10.778931,
+    "minlon": 106.7002377,
+    "maxlat": 10.7792809,
+    "maxlon": 106.7005953
+   },
+   "nodes": [
+    7501050931,
+    7501050929
+   ],
+   "geometry": [
+    {
+     "lat": 10.7792809,
+     "lon": 106.7002377
+    },
+    {
+     "lat": 10.778931,
+     "lon": 106.7005953
+    }
+   ],
+   "tags": {
+    "highway": "service",
+    "name": "Hẻm 59 Nguyễn Du",
+    "service": "alley"
+   }
+  },
+  {
+   "type": "way",
+   "id": 801950689,
+   "bounds": {
+    "minlat": 10.7774104,
+    "minlon": 106.6992727,
+    "maxlat": 10.7776213,
+    "maxlon": 106.6995936
+   },
+   "nodes": [
+    7501050992,
+    7501050993,
+    7501050994,
+    7501050995,
+    7501050997,
+    7501050996
+   ],
+   "geometry": [
+    {
+     "lat": 10.7775614,
+     "lon": 106.6995936
+    },
+    {
+     "lat": 10.7775976,
+     "lon": 106.6995453
+    },
+    {
+     "lat": 10.7776134,
+     "lon": 106.6995138
+    },
+    {
+     "lat": 10.7776213,
+     "lon": 106.6994923
+    },
+    {
+     "lat": 10.7776108,
+     "lon": 106.6994481
+    },
+    {
+     "lat": 10.7774104,
+     "lon": 106.6992727
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 801950696,
+   "bounds": {
+    "minlat": 10.77753,
+    "minlon": 106.6999912,
+    "maxlat": 10.7777715,
+    "maxlon": 106.7002618
+   },
+   "nodes": [
+    11537242395,
+    7501051051
+   ],
+   "geometry": [
+    {
+     "lat": 10.77753,
+     "lon": 106.7002618
+    },
+    {
+     "lat": 10.7777715,
+     "lon": 106.6999912
+    }
+   ],
+   "tags": {
+    "access": "private",
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 801950697,
+   "bounds": {
+    "minlat": 10.7771599,
+    "minlon": 106.6996761,
+    "maxlat": 10.7776977,
+    "maxlon": 106.7002614
+   },
+   "nodes": [
+    7501051054,
+    11537242380,
+    7501051053
+   ],
+   "geometry": [
+    {
+     "lat": 10.7776977,
+     "lon": 106.6996761
+    },
+    {
+     "lat": 10.7771963,
+     "lon": 106.7002218
+    },
+    {
+     "lat": 10.7771599,
+     "lon": 106.7002614
+    }
+   ],
+   "tags": {
+    "highway": "service",
+    "service": "alley"
+   }
+  },
+  {
+   "type": "way",
+   "id": 801950716,
+   "bounds": {
+    "minlat": 10.7786588,
+    "minlon": 106.6982326,
+    "maxlat": 10.7789796,
+    "maxlon": 106.6984899
+   },
+   "nodes": [
+    7501051191,
+    7501051190,
+    7501051183,
+    7501051182,
+    7501051181
+   ],
+   "geometry": [
+    {
+     "lat": 10.7789796,
+     "lon": 106.6982326
+    },
+    {
+     "lat": 10.7788037,
+     "lon": 106.6984402
+    },
+    {
+     "lat": 10.7787504,
+     "lon": 106.6983993
+    },
+    {
+     "lat": 10.7787359,
+     "lon": 106.6984081
+    },
+    {
+     "lat": 10.7786588,
+     "lon": 106.6984899
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 801950753,
+   "bounds": {
+    "minlat": 10.7798243,
+    "minlon": 106.7001358,
+    "maxlat": 10.7807442,
+    "maxlon": 106.7004704
+   },
+   "nodes": [
+    7501051433,
+    7501051432,
+    7501051434,
+    7501051437,
+    7501051436,
+    7501051435
+   ],
+   "geometry": [
+    {
+     "lat": 10.7807442,
+     "lon": 106.700454
+    },
+    {
+     "lat": 10.7803876,
+     "lon": 106.7001358
+    },
+    {
+     "lat": 10.7803488,
+     "lon": 106.700139
+    },
+    {
+     "lat": 10.7800462,
+     "lon": 106.7004704
+    },
+    {
+     "lat": 10.7798522,
+     "lon": 106.7002842
+    },
+    {
+     "lat": 10.7798243,
+     "lon": 106.7003161
+    }
+   ],
+   "tags": {
+    "highway": "service",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 801958371,
+   "bounds": {
+    "minlat": 10.7806722,
+    "minlon": 106.7001598,
+    "maxlat": 10.7810189,
+    "maxlon": 106.7005323
+   },
+   "nodes": [
+    11294870756,
+    11294873674,
+    7501164295,
+    7501164294,
+    7501164293,
+    7501164292,
+    7501164291,
+    7501164290,
+    11294873673,
+    7501164288
+   ],
+   "geometry": [
+    {
+     "lat": 10.7806722,
+     "lon": 106.7005323
+    },
+    {
+     "lat": 10.7807713,
+     "lon": 106.7005238
+    },
+    {
+     "lat": 10.7808261,
+     "lon": 106.7005191
+    },
+    {
+     "lat": 10.780887,
+     "lon": 106.7005051
+    },
+    {
+     "lat": 10.7809352,
+     "lon": 106.7004751
+    },
+    {
+     "lat": 10.7809811,
+     "lon": 106.7004233
+    },
+    {
+     "lat": 10.7810095,
+     "lon": 106.7003648
+    },
+    {
+     "lat": 10.7810189,
+     "lon": 106.7002943
+    },
+    {
+     "lat": 10.7810154,
+     "lon": 106.7002598
+    },
+    {
+     "lat": 10.781005,
+     "lon": 106.7001598
+    }
+   ],
+   "tags": {
+    "highway": "service",
+    "oneway": "yes",
+    "service": "parking_aisle",
+    "surface": "paving_stones"
+   }
+  },
+  {
+   "type": "way",
+   "id": 802069344,
+   "bounds": {
+    "minlat": 10.7771753,
+    "minlon": 106.6991029,
+    "maxlat": 10.7772843,
+    "maxlon": 106.6992373
+   },
+   "nodes": [
+    7502310171,
+    7502310172,
+    7502310170
+   ],
+   "geometry": [
+    {
+     "lat": 10.7772843,
+     "lon": 106.6991029
+    },
+    {
+     "lat": 10.7772156,
+     "lon": 106.6991876
+    },
+    {
+     "lat": 10.7771753,
+     "lon": 106.6992373
+    }
+   ],
+   "tags": {
+    "access": "private",
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 802069345,
+   "bounds": {
+    "minlat": 10.7770706,
+    "minlon": 106.6990665,
+    "maxlat": 10.7772156,
+    "maxlon": 106.6991876
+   },
+   "nodes": [
+    7502310172,
+    7502310173
+   ],
+   "geometry": [
+    {
+     "lat": 10.7772156,
+     "lon": 106.6991876
+    },
+    {
+     "lat": 10.7770706,
+     "lon": 106.6990665
+    }
+   ],
+   "tags": {
+    "access": "private",
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 802069346,
+   "bounds": {
+    "minlat": 10.7770706,
+    "minlon": 106.698974,
+    "maxlat": 10.7774332,
+    "maxlon": 106.6992485
+   },
+   "nodes": [
+    7502310177,
+    11350209792,
+    7502310176,
+    7502310175,
+    7502310171,
+    7502310174,
+    7502310173
+   ],
+   "geometry": [
+    {
+     "lat": 10.7774332,
+     "lon": 106.6992485
+    },
+    {
+     "lat": 10.7773471,
+     "lon": 106.6991818
+    },
+    {
+     "lat": 10.7772919,
+     "lon": 106.699139
+    },
+    {
+     "lat": 10.7772952,
+     "lon": 106.6991215
+    },
+    {
+     "lat": 10.7772843,
+     "lon": 106.6991029
+    },
+    {
+     "lat": 10.7771497,
+     "lon": 106.698974
+    },
+    {
+     "lat": 10.7770706,
+     "lon": 106.6990665
+    }
+   ],
+   "tags": {
+    "access": "private",
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 802069355,
+   "bounds": {
+    "minlat": 10.7770336,
+    "minlon": 106.6996752,
+    "maxlat": 10.777367,
+    "maxlon": 106.6999906
+   },
+   "nodes": [
+    7502330344,
+    7502330343
+   ],
+   "geometry": [
+    {
+     "lat": 10.777367,
+     "lon": 106.6999906
+    },
+    {
+     "lat": 10.7770336,
+     "lon": 106.6996752
+    }
+   ],
+   "tags": {
+    "highway": "service",
+    "motorcar": "destination",
+    "name:en": "Hẻm 158 Pasteur"
+   }
+  },
+  {
+   "type": "way",
+   "id": 802069357,
+   "bounds": {
+    "minlat": 10.7765489,
+    "minlon": 106.6991423,
+    "maxlat": 10.7770749,
+    "maxlon": 106.6996311
+   },
+   "nodes": [
+    7502330350,
+    7502330349
+   ],
+   "geometry": [
+    {
+     "lat": 10.7770749,
+     "lon": 106.6996311
+    },
+    {
+     "lat": 10.7765489,
+     "lon": 106.6991423
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 802069388,
+   "bounds": {
+    "minlat": 10.7773299,
+    "minlon": 106.6982458,
+    "maxlat": 10.7775278,
+    "maxlon": 106.6984655
+   },
+   "nodes": [
+    7502330532,
+    7502330531
+   ],
+   "geometry": [
+    {
+     "lat": 10.7775278,
+     "lon": 106.6982458
+    },
+    {
+     "lat": 10.7773299,
+     "lon": 106.6984655
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 802069389,
+   "bounds": {
+    "minlat": 10.777482,
+    "minlon": 106.6982364,
+    "maxlat": 10.7777926,
+    "maxlon": 106.6986037
+   },
+   "nodes": [
+    7502330534,
+    7502330533
+   ],
+   "geometry": [
+    {
+     "lat": 10.777482,
+     "lon": 106.6986037
+    },
+    {
+     "lat": 10.7777926,
+     "lon": 106.6982364
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 802069394,
+   "bounds": {
+    "minlat": 10.7778756,
+    "minlon": 106.6980346,
+    "maxlat": 10.7782379,
+    "maxlon": 106.6983598
+   },
+   "nodes": [
+    7502330560,
+    7502330559
+   ],
+   "geometry": [
+    {
+     "lat": 10.7782379,
+     "lon": 106.6983598
+    },
+    {
+     "lat": 10.7778756,
+     "lon": 106.6980346
+    }
+   ],
+   "tags": {
+    "highway": "service",
+    "service": "alley"
+   }
+  },
+  {
+   "type": "way",
+   "id": 802069398,
+   "bounds": {
+    "minlat": 10.7774709,
+    "minlon": 106.6972746,
+    "maxlat": 10.7777445,
+    "maxlon": 106.6978146
+   },
+   "nodes": [
+    7502330580,
+    7502330579,
+    7502330578,
+    7502330577
+   ],
+   "geometry": [
+    {
+     "lat": 10.7774709,
+     "lon": 106.6972746
+    },
+    {
+     "lat": 10.7777445,
+     "lon": 106.6975323
+    },
+    {
+     "lat": 10.7777326,
+     "lon": 106.6975665
+    },
+    {
+     "lat": 10.7775001,
+     "lon": 106.6978146
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 802105048,
+   "bounds": {
+    "minlat": 10.7751985,
+    "minlon": 106.6995272,
+    "maxlat": 10.7755002,
+    "maxlon": 106.7000609
+   },
+   "nodes": [
+    7502727952,
+    7502727954,
+    7502727953
+   ],
+   "geometry": [
+    {
+     "lat": 10.775259,
+     "lon": 106.7000609
+    },
+    {
+     "lat": 10.7755002,
+     "lon": 106.6997914
+    },
+    {
+     "lat": 10.7751985,
+     "lon": 106.6995272
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 802105054,
+   "bounds": {
+    "minlat": 10.7760588,
+    "minlon": 106.6998919,
+    "maxlat": 10.7764737,
+    "maxlon": 106.700065
+   },
+   "nodes": [
+    7502727996,
+    7502727999,
+    7502727998,
+    7502727997,
+    7502728026
+   ],
+   "geometry": [
+    {
+     "lat": 10.7764737,
+     "lon": 106.6998919
+    },
+    {
+     "lat": 10.7764277,
+     "lon": 106.6999121
+    },
+    {
+     "lat": 10.7761194,
+     "lon": 106.700065
+    },
+    {
+     "lat": 10.7760838,
+     "lon": 106.700061
+    },
+    {
+     "lat": 10.7760588,
+     "lon": 106.7000207
+    }
+   ],
+   "tags": {
+    "foot": "yes",
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 802105055,
+   "bounds": {
+    "minlat": 10.7760325,
+    "minlon": 106.6997332,
+    "maxlat": 10.7763123,
+    "maxlon": 106.7000328
+   },
+   "nodes": [
+    7502728027,
+    7502728026,
+    7502728025
+   ],
+   "geometry": [
+    {
+     "lat": 10.7763123,
+     "lon": 106.6997332
+    },
+    {
+     "lat": 10.7760588,
+     "lon": 106.7000207
+    },
+    {
+     "lat": 10.7760325,
+     "lon": 106.7000328
+    }
+   ],
+   "tags": {
+    "foot": "yes",
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 802105064,
+   "bounds": {
+    "minlat": 10.7757171,
+    "minlon": 106.6991093,
+    "maxlat": 10.7758012,
+    "maxlon": 106.6992483
+   },
+   "nodes": [
+    11494677862,
+    11494677857,
+    7502728044
+   ],
+   "geometry": [
+    {
+     "lat": 10.7757171,
+     "lon": 106.6991093
+    },
+    {
+     "lat": 10.7757775,
+     "lon": 106.6992091
+    },
+    {
+     "lat": 10.7758012,
+     "lon": 106.6992483
+    }
+   ],
+   "tags": {
+    "highway": "service",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 802105065,
+   "bounds": {
+    "minlat": 10.7762381,
+    "minlon": 106.6995298,
+    "maxlat": 10.7763625,
+    "maxlon": 106.6996598
+   },
+   "nodes": [
+    7502728047,
+    13545172761,
+    7502728046
+   ],
+   "geometry": [
+    {
+     "lat": 10.7763625,
+     "lon": 106.6995298
+    },
+    {
+     "lat": 10.7763259,
+     "lon": 106.6995681
+    },
+    {
+     "lat": 10.7762381,
+     "lon": 106.6996598
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 802105066,
+   "bounds": {
+    "minlat": 10.7755226,
+    "minlon": 106.6992483,
+    "maxlat": 10.7765133,
+    "maxlon": 106.6999309
+   },
+   "nodes": [
+    7502728038,
+    7502728039,
+    7502728040,
+    7502728041,
+    7502728042,
+    7502728043,
+    7502728044,
+    7502728049,
+    7502728046,
+    7502728027,
+    7502727996,
+    7502728048
+   ],
+   "geometry": [
+    {
+     "lat": 10.7755226,
+     "lon": 106.6995339
+    },
+    {
+     "lat": 10.7755536,
+     "lon": 106.6995607
+    },
+    {
+     "lat": 10.7755707,
+     "lon": 106.699556
+    },
+    {
+     "lat": 10.775707,
+     "lon": 106.6994179
+    },
+    {
+     "lat": 10.7757558,
+     "lon": 106.6993555
+    },
+    {
+     "lat": 10.7757788,
+     "lon": 106.6992999
+    },
+    {
+     "lat": 10.7758012,
+     "lon": 106.6992483
+    },
+    {
+     "lat": 10.7758322,
+     "lon": 106.6992583
+    },
+    {
+     "lat": 10.7762381,
+     "lon": 106.6996598
+    },
+    {
+     "lat": 10.7763123,
+     "lon": 106.6997332
+    },
+    {
+     "lat": 10.7764737,
+     "lon": 106.6998919
+    },
+    {
+     "lat": 10.7765133,
+     "lon": 106.6999309
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 803279638,
+   "bounds": {
+    "minlat": 10.7791218,
+    "minlon": 106.6973866,
+    "maxlat": 10.7800819,
+    "maxlon": 106.6982911
+   },
+   "nodes": [
+    14357970407,
+    12181641731,
+    6858588490,
+    2408528251,
+    14362513278,
+    14203479321,
+    14118646226,
+    6858588489
+   ],
+   "geometry": [
+    {
+     "lat": 10.7800819,
+     "lon": 106.6982911
+    },
+    {
+     "lat": 10.7800349,
+     "lon": 106.6982468
+    },
+    {
+     "lat": 10.7799833,
+     "lon": 106.6981983
+    },
+    {
+     "lat": 10.7798589,
+     "lon": 106.6980811
+    },
+    {
+     "lat": 10.7796008,
+     "lon": 106.697838
+    },
+    {
+     "lat": 10.7792971,
+     "lon": 106.6975518
+    },
+    {
+     "lat": 10.7792461,
+     "lon": 106.6975037
+    },
+    {
+     "lat": 10.7791218,
+     "lon": 106.6973866
+    }
+   ],
+   "tags": {
+    "highway": "secondary",
+    "lanes": "6",
+    "name": "Lê Duẩn",
+    "name:en": "Le Duan Boulevard",
+    "name:fr": "Boulevard Le Duan",
+    "name:id": "Jalan Le Duan",
+    "name:ms": "Jalan Le Duan",
+    "name:ru": "улица Ле Зуан",
+    "name:vi": "Đường Lê Duẩn",
+    "name:zh": "黎笋路",
+    "old_name:1871-1955": "Boulevard Norodom",
+    "old_name:1955-1975": "Đại lộ Thống Nhứt;Đại lộ Thống Nhất",
+    "old_name:1975-1986": "Đường 30 tháng 4",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 803279639,
+   "bounds": {
+    "minlat": 10.7809028,
+    "minlon": 106.6969683,
+    "maxlat": 10.7816606,
+    "maxlon": 106.6977913
+   },
+   "nodes": [
+    1769456883,
+    11774744216,
+    1770193953,
+    14365189419,
+    14365189418,
+    411925946
+   ],
+   "geometry": [
+    {
+     "lat": 10.7809028,
+     "lon": 106.6977913
+    },
+    {
+     "lat": 10.7810786,
+     "lon": 106.6976004
+    },
+    {
+     "lat": 10.7811745,
+     "lon": 106.6974962
+    },
+    {
+     "lat": 10.7815869,
+     "lon": 106.6970484
+    },
+    {
+     "lat": 10.781623,
+     "lon": 106.6970091
+    },
+    {
+     "lat": 10.7816606,
+     "lon": 106.6969683
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "2",
+    "motor_vehicle:conditional": "no @ (Apr 29 23:00-23:59; Apr 30 00:00-14:00)",
+    "name": "Phạm Ngọc Thạch",
+    "name:en": "Pham Ngoc Thach Street",
+    "name:vi": "Đường Phạm Ngọc Thạch",
+    "old_name:1897-1955": "Rue Blancsubé",
+    "old_name:1955-1985": "Đường Duy Tân",
+    "smoothness": "excellent",
+    "surface": "asphalt",
+    "traffic_signals:direction": "backward"
+   }
+  },
+  {
+   "type": "way",
+   "id": 803279640,
+   "bounds": {
+    "minlat": 10.7801342,
+    "minlon": 106.6984257,
+    "maxlat": 10.7803108,
+    "maxlon": 106.6986196
+   },
+   "nodes": [
+    14357970367,
+    14357970385,
+    14357970384,
+    14357970383,
+    14357970382,
+    14357970381,
+    14357970380,
+    14357970386,
+    14357970379,
+    14357970378,
+    14357970377,
+    14357970376,
+    5467207450
+   ],
+   "geometry": [
+    {
+     "lat": 10.7801841,
+     "lon": 106.6984257
+    },
+    {
+     "lat": 10.7801613,
+     "lon": 106.6984443
+    },
+    {
+     "lat": 10.7801446,
+     "lon": 106.6984686
+    },
+    {
+     "lat": 10.7801354,
+     "lon": 106.6984967
+    },
+    {
+     "lat": 10.7801342,
+     "lon": 106.6985263
+    },
+    {
+     "lat": 10.7801414,
+     "lon": 106.6985551
+    },
+    {
+     "lat": 10.7801562,
+     "lon": 106.6985807
+    },
+    {
+     "lat": 10.7801774,
+     "lon": 106.6986009
+    },
+    {
+     "lat": 10.7802034,
+     "lon": 106.6986143
+    },
+    {
+     "lat": 10.7802321,
+     "lon": 106.6986196
+    },
+    {
+     "lat": 10.7802611,
+     "lon": 106.6986166
+    },
+    {
+     "lat": 10.780288,
+     "lon": 106.6986053
+    },
+    {
+     "lat": 10.7803108,
+     "lon": 106.6985867
+    }
+   ],
+   "tags": {
+    "highway": "secondary",
+    "junction": "roundabout",
+    "lane_markings": "no",
+    "oneway": "yes",
+    "smoothness": "excellent",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1122280205,
+   "bounds": {
+    "minlat": 10.7754753,
+    "minlon": 106.7009788,
+    "maxlat": 10.7762943,
+    "maxlon": 106.7018715
+   },
+   "nodes": [
+    2043347015,
+    11534254624,
+    5743072752,
+    6534620997,
+    2907864527,
+    10197901323,
+    14180704867,
+    6534620987,
+    10560232675
+   ],
+   "geometry": [
+    {
+     "lat": 10.7762943,
+     "lon": 106.7009788
+    },
+    {
+     "lat": 10.776258,
+     "lon": 106.7010186
+    },
+    {
+     "lat": 10.7761813,
+     "lon": 106.7011025
+    },
+    {
+     "lat": 10.7761307,
+     "lon": 106.7011579
+    },
+    {
+     "lat": 10.7760402,
+     "lon": 106.7012568
+    },
+    {
+     "lat": 10.775974,
+     "lon": 106.7013293
+    },
+    {
+     "lat": 10.7755919,
+     "lon": 106.7017472
+    },
+    {
+     "lat": 10.7755657,
+     "lon": 106.7017759
+    },
+    {
+     "lat": 10.7754753,
+     "lon": 106.7018715
+    }
+   ],
+   "tags": {
+    "alt_name:vi": "Đại lộ Nguyễn Huệ",
+    "goods": "no",
+    "highway": "tertiary",
+    "lanes": "3",
+    "motor_vehicle:conditional": "no @ (Sa-Su 18:30-23:00)",
+    "name": "Nguyễn Huệ",
+    "name:en": "Nguyen Hue Boulevard",
+    "name:fr": "Boulevard Nguyen Hue",
+    "name:id": "Jalan Nguyen Hue",
+    "name:ja": "グエンフエ通り",
+    "name:ms": "Jalan Nguyen Hue",
+    "name:ru": "улица Нгуен Хуе",
+    "name:vi": "Đường Nguyễn Huệ",
+    "name:zh": "阮惠路",
+    "old_name:1865-1887": "Quai Charner",
+    "old_name:1887-1955": "Boulevard Charner",
+    "oneway": "yes",
+    "sidewalk": "right",
+    "surface": "paving_stones"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1157160322,
+   "bounds": {
+    "minlat": 10.7803053,
+    "minlon": 106.6979413,
+    "maxlat": 10.7807647,
+    "maxlon": 106.6984402
+   },
+   "nodes": [
+    14357970366,
+    14118646220,
+    5467207464,
+    14118646218,
+    1769456941
+   ],
+   "geometry": [
+    {
+     "lat": 10.7803053,
+     "lon": 106.6984402
+    },
+    {
+     "lat": 10.7803608,
+     "lon": 106.6983799
+    },
+    {
+     "lat": 10.7804272,
+     "lon": 106.6983078
+    },
+    {
+     "lat": 10.7807056,
+     "lon": 106.6980054
+    },
+    {
+     "lat": 10.7807647,
+     "lon": 106.6979413
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "2",
+    "motor_vehicle:conditional": "no @ (Apr 29 23:00-23:59; Apr 30 00:00-14:00)",
+    "name": "Phạm Ngọc Thạch",
+    "name:en": "Pham Ngoc Thach Street",
+    "name:vi": "Đường Phạm Ngọc Thạch",
+    "old_name:1897-1955": "Rue Blancsubé",
+    "old_name:1955-1985": "Đường Duy Tân",
+    "smoothness": "excellent",
+    "surface": "asphalt",
+    "traffic_signals:direction": "backward"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1177448206,
+   "bounds": {
+    "minlat": 10.7807647,
+    "minlon": 106.6977913,
+    "maxlat": 10.7809028,
+    "maxlon": 106.6979413
+   },
+   "nodes": [
+    1769456941,
+    1769456883
+   ],
+   "geometry": [
+    {
+     "lat": 10.7807647,
+     "lon": 106.6979413
+    },
+    {
+     "lat": 10.7809028,
+     "lon": 106.6977913
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "2",
+    "motor_vehicle:conditional": "no @ (Apr 29 17:00-23:59; Apr 30 00:00-14:00)",
+    "name": "Phạm Ngọc Thạch",
+    "name:en": "Pham Ngoc Thach Street",
+    "name:vi": "Đường Phạm Ngọc Thạch",
+    "old_name:1897-1955": "Rue Blancsubé",
+    "old_name:1955-1985": "Đường Duy Tân",
+    "smoothness": "excellent",
+    "surface": "asphalt",
+    "traffic_signals:direction": "backward"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1182181717,
+   "bounds": {
+    "minlat": 10.7803308,
+    "minlon": 106.6984759,
+    "maxlat": 10.7815337,
+    "maxlon": 106.6995731
+   },
+   "nodes": [
+    10978330103,
+    10978360613,
+    10978330104,
+    10978360605,
+    14224896649,
+    12721904605,
+    14357970372
+   ],
+   "geometry": [
+    {
+     "lat": 10.7815337,
+     "lon": 106.6995731
+    },
+    {
+     "lat": 10.7811691,
+     "lon": 106.6992435
+    },
+    {
+     "lat": 10.7809094,
+     "lon": 106.6990055
+    },
+    {
+     "lat": 10.7807906,
+     "lon": 106.6988944
+    },
+    {
+     "lat": 10.7804749,
+     "lon": 106.6985951
+    },
+    {
+     "lat": 10.7804267,
+     "lon": 106.6985494
+    },
+    {
+     "lat": 10.7803308,
+     "lon": 106.6984759
+    }
+   ],
+   "tags": {
+    "highway": "secondary",
+    "motor_vehicle:conditional": "no @ (Apr 18 21:00-23:59, Apr 27 07:00-12:00)",
+    "name": "Lê Duẩn",
+    "name:en": "Le Duan Boulevard",
+    "name:fr": "Boulevard Le Duan",
+    "name:id": "Jalan Le Duan",
+    "name:ms": "Jalan Le Duan",
+    "name:ru": "улица Ле Зуан",
+    "name:vi": "Đường Lê Duẩn",
+    "name:zh": "黎笋路",
+    "old_name:1871-1955": "Boulevard Norodom",
+    "old_name:1955-1975": "Đại lộ Thống Nhứt;Đại lộ Thống Nhất",
+    "old_name:1975-1986": "Đường 30 tháng 4",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1182181718,
+   "bounds": {
+    "minlat": 10.7807906,
+    "minlon": 106.6982259,
+    "maxlat": 10.7813701,
+    "maxlon": 106.6988944
+   },
+   "nodes": [
+    10978360605,
+    13855959393,
+    1770193829
+   ],
+   "geometry": [
+    {
+     "lat": 10.7807906,
+     "lon": 106.6988944
+    },
+    {
+     "lat": 10.7812815,
+     "lon": 106.6983281
+    },
+    {
+     "lat": 10.7813701,
+     "lon": 106.6982259
+    }
+   ],
+   "tags": {
+    "highway": "service",
+    "layer": "-1",
+    "oneway": "yes",
+    "tunnel": "yes"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1182181719,
+   "bounds": {
+    "minlat": 10.7808551,
+    "minlon": 106.6990055,
+    "maxlat": 10.7809094,
+    "maxlon": 106.6990668
+   },
+   "nodes": [
+    10978330104,
+    10978360608
+   ],
+   "geometry": [
+    {
+     "lat": 10.7809094,
+     "lon": 106.6990055
+    },
+    {
+     "lat": 10.7808551,
+     "lon": 106.6990668
+    }
+   ],
+   "tags": {
+    "highway": "secondary_link",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1182181722,
+   "bounds": {
+    "minlat": 10.7811132,
+    "minlon": 106.6992435,
+    "maxlat": 10.7811691,
+    "maxlon": 106.6993049
+   },
+   "nodes": [
+    10978360613,
+    10978360614
+   ],
+   "geometry": [
+    {
+     "lat": 10.7811691,
+     "lon": 106.6992435
+    },
+    {
+     "lat": 10.7811132,
+     "lon": 106.6993049
+    }
+   ],
+   "tags": {
+    "highway": "secondary_link"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1220988992,
+   "bounds": {
+    "minlat": 10.7751971,
+    "minlon": 106.6973459,
+    "maxlat": 10.7763047,
+    "maxlon": 106.6985416
+   },
+   "nodes": [
+    11313988760,
+    11313988759,
+    11313988758,
+    11313988757,
+    11313988726,
+    11313988729,
+    11313988727,
+    11313988748,
+    11313988749,
+    11313988750,
+    11313988754,
+    11313988751
+   ],
+   "geometry": [
+    {
+     "lat": 10.7757082,
+     "lon": 106.6973459
+    },
+    {
+     "lat": 10.776291,
+     "lon": 106.6979016
+    },
+    {
+     "lat": 10.7763037,
+     "lon": 106.6979263
+    },
+    {
+     "lat": 10.7763047,
+     "lon": 106.6979467
+    },
+    {
+     "lat": 10.7762924,
+     "lon": 106.6979735
+    },
+    {
+     "lat": 10.7760327,
+     "lon": 106.6982531
+    },
+    {
+     "lat": 10.7757791,
+     "lon": 106.698526
+    },
+    {
+     "lat": 10.7757598,
+     "lon": 106.6985394
+    },
+    {
+     "lat": 10.7757377,
+     "lon": 106.6985416
+    },
+    {
+     "lat": 10.7757187,
+     "lon": 106.698533
+    },
+    {
+     "lat": 10.7755175,
+     "lon": 106.6983448
+    },
+    {
+     "lat": 10.7751971,
+     "lon": 106.6980405
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1220988993,
+   "bounds": {
+    "minlat": 10.7760327,
+    "minlon": 106.6982531,
+    "maxlat": 10.7763109,
+    "maxlon": 106.6985175
+   },
+   "nodes": [
+    11313988728,
+    11543493221,
+    11313988697,
+    11313988729
+   ],
+   "geometry": [
+    {
+     "lat": 10.7763109,
+     "lon": 106.6985175
+    },
+    {
+     "lat": 10.7762743,
+     "lon": 106.6984823
+    },
+    {
+     "lat": 10.776181,
+     "lon": 106.6983925
+    },
+    {
+     "lat": 10.7760327,
+     "lon": 106.6982531
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1220989002,
+   "bounds": {
+    "minlat": 10.775309,
+    "minlon": 106.6983448,
+    "maxlat": 10.7755175,
+    "maxlon": 106.6985788
+   },
+   "nodes": [
+    11313988754,
+    11313988756,
+    11313988765,
+    11313988755
+   ],
+   "geometry": [
+    {
+     "lat": 10.7755175,
+     "lon": 106.6983448
+    },
+    {
+     "lat": 10.7753712,
+     "lon": 106.6985101
+    },
+    {
+     "lat": 10.7753551,
+     "lon": 106.6985278
+    },
+    {
+     "lat": 10.775309,
+     "lon": 106.6985788
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1239028499,
+   "bounds": {
+    "minlat": 10.7758208,
+    "minlon": 106.6990461,
+    "maxlat": 10.7768018,
+    "maxlon": 106.6999227
+   },
+   "nodes": [
+    5743072751,
+    11313988768,
+    7502728047,
+    14119542964,
+    411919193
+   ],
+   "geometry": [
+    {
+     "lat": 10.7758208,
+     "lon": 106.6990461
+    },
+    {
+     "lat": 10.7758902,
+     "lon": 106.6991081
+    },
+    {
+     "lat": 10.7763625,
+     "lon": 106.6995298
+    },
+    {
+     "lat": 10.7766844,
+     "lon": 106.6998177
+    },
+    {
+     "lat": 10.7768018,
+     "lon": 106.6999227
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "3",
+    "name": "Lý Tự Trọng",
+    "name:en": "Ly Tu Trong Street",
+    "name:id": "Jalan Ly Tu Trong",
+    "name:ms": "Jalan Ly Tu Trong",
+    "name:ru": "улица Ли Ты Чонг",
+    "name:vi": "Đường Lý Tự Trọng",
+    "name:zh": "李自仲路",
+    "old_name:1870-1950": "Rue de la Grandière",
+    "old_name:1950-1955": "Rue Gia Long",
+    "old_name:1955-1975": "Đường Gia Long",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1241678413,
+   "bounds": {
+    "minlat": 10.7773654,
+    "minlon": 106.7003856,
+    "maxlat": 10.7774204,
+    "maxlon": 106.7004489
+   },
+   "nodes": [
+    7501051052,
+    11537242381,
+    11537242396
+   ],
+   "geometry": [
+    {
+     "lat": 10.7773654,
+     "lon": 106.7004489
+    },
+    {
+     "lat": 10.7773983,
+     "lon": 106.7004118
+    },
+    {
+     "lat": 10.7774204,
+     "lon": 106.7003856
+    }
+   ],
+   "tags": {
+    "access": "private",
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1241678414,
+   "bounds": {
+    "minlat": 10.7774204,
+    "minlon": 106.7002618,
+    "maxlat": 10.77753,
+    "maxlon": 106.7003856
+   },
+   "nodes": [
+    11537242396,
+    11537242395
+   ],
+   "geometry": [
+    {
+     "lat": 10.7774204,
+     "lon": 106.7003856
+    },
+    {
+     "lat": 10.77753,
+     "lon": 106.7002618
+    }
+   ],
+   "tags": {
+    "access": "private",
+    "highway": "service",
+    "layer": "-1",
+    "tunnel": "yes"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1242943081,
+   "bounds": {
+    "minlat": 10.7769072,
+    "minlon": 106.7010387,
+    "maxlat": 10.7769609,
+    "maxlon": 106.701105
+   },
+   "nodes": [
+    11551555138,
+    7500135736
+   ],
+   "geometry": [
+    {
+     "lat": 10.7769072,
+     "lon": 106.701105
+    },
+    {
+     "lat": 10.7769609,
+     "lon": 106.7010387
+    }
+   ],
+   "tags": {
+    "access": "private",
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1242943083,
+   "bounds": {
+    "minlat": 10.7765708,
+    "minlon": 106.7011485,
+    "maxlat": 10.7766216,
+    "maxlon": 106.7012198
+   },
+   "nodes": [
+    1769277472,
+    11551555142,
+    3486809796
+   ],
+   "geometry": [
+    {
+     "lat": 10.7765708,
+     "lon": 106.7012198
+    },
+    {
+     "lat": 10.7766065,
+     "lon": 106.7011697
+    },
+    {
+     "lat": 10.7766216,
+     "lon": 106.7011485
+    }
+   ],
+   "tags": {
+    "access": "private",
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1242943084,
+   "bounds": {
+    "minlat": 10.7767552,
+    "minlon": 106.7008964,
+    "maxlat": 10.7768292,
+    "maxlon": 106.7009886
+   },
+   "nodes": [
+    7500135739,
+    7500135712
+   ],
+   "geometry": [
+    {
+     "lat": 10.7767552,
+     "lon": 106.7009886
+    },
+    {
+     "lat": 10.7768292,
+     "lon": 106.7008964
+    }
+   ],
+   "tags": {
+    "access": "private",
+    "highway": "service"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1265822554,
+   "bounds": {
+    "minlat": 10.7801841,
+    "minlon": 106.6984114,
+    "maxlat": 10.7803053,
+    "maxlon": 106.6984402
+   },
+   "nodes": [
+    14357970366,
+    14357970371,
+    14357970370,
+    14357970369,
+    14357970368,
+    14357970367
+   ],
+   "geometry": [
+    {
+     "lat": 10.7803053,
+     "lon": 106.6984402
+    },
+    {
+     "lat": 10.7802947,
+     "lon": 106.6984301
+    },
+    {
+     "lat": 10.7802687,
+     "lon": 106.6984167
+    },
+    {
+     "lat": 10.78024,
+     "lon": 106.6984114
+    },
+    {
+     "lat": 10.780211,
+     "lon": 106.6984144
+    },
+    {
+     "lat": 10.7801841,
+     "lon": 106.6984257
+    }
+   ],
+   "tags": {
+    "highway": "secondary",
+    "junction": "roundabout",
+    "lane_markings": "no",
+    "oneway": "yes",
+    "smoothness": "excellent",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1265822570,
+   "bounds": {
+    "minlat": 10.7803053,
+    "minlon": 106.6984402,
+    "maxlat": 10.7803308,
+    "maxlon": 106.6984759
+   },
+   "nodes": [
+    14357970372,
+    14357970387,
+    14357970366
+   ],
+   "geometry": [
+    {
+     "lat": 10.7803308,
+     "lon": 106.6984759
+    },
+    {
+     "lat": 10.780316,
+     "lon": 106.6984503
+    },
+    {
+     "lat": 10.7803053,
+     "lon": 106.6984402
+    }
+   ],
+   "tags": {
+    "highway": "secondary",
+    "junction": "roundabout",
+    "lane_markings": "no",
+    "oneway": "yes",
+    "smoothness": "excellent",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1267913090,
+   "bounds": {
+    "minlat": 10.7746638,
+    "minlon": 106.6990461,
+    "maxlat": 10.7758208,
+    "maxlon": 106.6995694
+   },
+   "nodes": [
+    5743072751,
+    11313988767,
+    11494677862,
+    11305274928,
+    6753854479,
+    14203479318,
+    411926545
+   ],
+   "geometry": [
+    {
+     "lat": 10.7758208,
+     "lon": 106.6990461
+    },
+    {
+     "lat": 10.7757513,
+     "lon": 106.6990941
+    },
+    {
+     "lat": 10.7757171,
+     "lon": 106.6991093
+    },
+    {
+     "lat": 10.7748542,
+     "lon": 106.6994888
+    },
+    {
+     "lat": 10.7747818,
+     "lon": 106.6995213
+    },
+    {
+     "lat": 10.7747753,
+     "lon": 106.6995239
+    },
+    {
+     "lat": 10.7746638,
+     "lon": 106.6995694
+    }
+   ],
+   "tags": {
+    "highway": "secondary",
+    "lanes": "3",
+    "motor_vehicle:conditional": "no @ (Apr 29 23:00-23:59; Apr 30 00:00-14:00)",
+    "name": "Nam Kỳ Khởi Nghĩa",
+    "name:en": "Nam Ky Khoi Nghia Street",
+    "name:ja": "ナムキーコイギア通り",
+    "name:vi": "Đường Nam Kỳ Khởi Nghĩa",
+    "old_name:1870-1952": "Rue Mac Mahon",
+    "old_name:1952-1955": "Rue du Maréchal de Lattre de Tassigny",
+    "old_name:1955-1975": "Đường Công Lý",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1278461433,
+   "bounds": {
+    "minlat": 10.7789421,
+    "minlon": 106.6999303,
+    "maxlat": 10.7791401,
+    "maxlon": 106.70011
+   },
+   "nodes": [
+    411926201,
+    6859935900
+   ],
+   "geometry": [
+    {
+     "lat": 10.7791401,
+     "lon": 106.70011
+    },
+    {
+     "lat": 10.7789421,
+     "lon": 106.6999303
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "2",
+    "name": "Nguyễn Du",
+    "name:en": "Nguyen Du Street",
+    "name:vi": "Đường Nguyễn Du",
+    "name:zh": "阮攸街",
+    "old_name:1865-1920": "Rue Thabert;Rue Tabert;Rue Taberd",
+    "old_name:1920-1955": "Rue Lucien Mossard",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1278461434,
+   "bounds": {
+    "minlat": 10.7779378,
+    "minlon": 106.6999303,
+    "maxlat": 10.7789421,
+    "maxlon": 106.7010212
+   },
+   "nodes": [
+    6859935900,
+    7501050922,
+    7501050919,
+    11537242387,
+    411926380
+   ],
+   "geometry": [
+    {
+     "lat": 10.7789421,
+     "lon": 106.6999303
+    },
+    {
+     "lat": 10.7788478,
+     "lon": 106.7000327
+    },
+    {
+     "lat": 10.7787104,
+     "lon": 106.7001819
+    },
+    {
+     "lat": 10.7780178,
+     "lon": 106.7009342
+    },
+    {
+     "lat": 10.7779378,
+     "lon": 106.7010212
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "2",
+    "maxspeed": "60",
+    "name": "Đồng Khởi",
+    "name:en": "Dong Khoi Street",
+    "name:fr": "Rue Dong Khoi",
+    "name:id": "Jalan Dong Khoi",
+    "name:ja": "ドンコイ通り",
+    "name:ms": "Jalan Dong Khoi",
+    "name:ru": "улица Донг Хой",
+    "name:vi": "Đường Đồng Khởi",
+    "name:zh": "同起路",
+    "old_name:1865-1955": "Rue Catinat",
+    "old_name:1955-1975": "Đường Tự Do",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1278461435,
+   "bounds": {
+    "minlat": 10.7768018,
+    "minlon": 106.6999227,
+    "maxlat": 10.7779378,
+    "maxlon": 106.7010212
+   },
+   "nodes": [
+    411919193,
+    11537242378,
+    7501051053,
+    7501051052,
+    11537242383,
+    411926380
+   ],
+   "geometry": [
+    {
+     "lat": 10.7768018,
+     "lon": 106.6999227
+    },
+    {
+     "lat": 10.7768497,
+     "lon": 106.699968
+    },
+    {
+     "lat": 10.7771599,
+     "lon": 106.7002614
+    },
+    {
+     "lat": 10.7773654,
+     "lon": 106.7004489
+    },
+    {
+     "lat": 10.7778836,
+     "lon": 106.7009668
+    },
+    {
+     "lat": 10.7779378,
+     "lon": 106.7010212
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "2",
+    "name": "Lý Tự Trọng",
+    "name:en": "Ly Tu Trong Street",
+    "name:etymology": "Lý Tự Trọng",
+    "name:etymology:wikidata": "Q6711589",
+    "name:id": "Jalan Ly Tu Trong",
+    "name:ms": "Jalan Ly Tu Trong",
+    "name:ru": "улица Ли Ты Чонг",
+    "name:vi": "Đường Lý Tự Trọng",
+    "name:zh": "李自仲路",
+    "old_name:1870-1950": "Rue de la Grandière",
+    "old_name:1950-1955": "Rue Gia Long",
+    "old_name:1955-1975": "Đường Gia Long",
+    "oneway": "yes",
+    "surface": "asphalt",
+    "wikidata": "Q108166873"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1278461438,
+   "bounds": {
+    "minlat": 10.7772278,
+    "minlon": 106.7010212,
+    "maxlat": 10.7779378,
+    "maxlon": 106.7017924
+   },
+   "nodes": [
+    411926380,
+    7500135731,
+    7500135735,
+    7500135650,
+    411926157
+   ],
+   "geometry": [
+    {
+     "lat": 10.7779378,
+     "lon": 106.7010212
+    },
+    {
+     "lat": 10.7775732,
+     "lon": 106.7014172
+    },
+    {
+     "lat": 10.7774547,
+     "lon": 106.7015459
+    },
+    {
+     "lat": 10.7772918,
+     "lon": 106.7017228
+    },
+    {
+     "lat": 10.7772278,
+     "lon": 106.7017924
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "2",
+    "maxspeed": "60",
+    "name": "Đồng Khởi",
+    "name:en": "Dong Khoi Street",
+    "name:fr": "Rue Dong Khoi",
+    "name:id": "Jalan Dong Khoi",
+    "name:ja": "ドンコイ通り",
+    "name:ms": "Jalan Dong Khoi",
+    "name:ru": "улица Донг Хой",
+    "name:vi": "Đường Đồng Khởi",
+    "name:zh": "同起路",
+    "old_name:1865-1955": "Rue Catinat",
+    "old_name:1955-1975": "Đường Tự Do",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1343957793,
+   "bounds": {
+    "minlat": 10.7810684,
+    "minlon": 106.7011445,
+    "maxlat": 10.7813488,
+    "maxlon": 106.7013876
+   },
+   "nodes": [
+    12435144083,
+    12435084827,
+    12435084828,
+    12435084829,
+    12435084830,
+    12435144082
+   ],
+   "geometry": [
+    {
+     "lat": 10.7813191,
+     "lon": 106.7013876
+    },
+    {
+     "lat": 10.7813366,
+     "lon": 106.7013139
+    },
+    {
+     "lat": 10.7813488,
+     "lon": 106.7012568
+    },
+    {
+     "lat": 10.7812145,
+     "lon": 106.7011445
+    },
+    {
+     "lat": 10.7811189,
+     "lon": 106.7012548
+    },
+    {
+     "lat": 10.7810684,
+     "lon": 106.701315
+    }
+   ],
+   "tags": {
+    "highway": "service",
+    "oneway": "yes",
+    "service": "driveway",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1347893965,
+   "bounds": {
+    "minlat": 10.7788974,
+    "minlon": 106.7005953,
+    "maxlat": 10.7790079,
+    "maxlon": 106.7008053
+   },
+   "nodes": [
+    7501050929,
+    12468139631,
+    12468139632
+   ],
+   "geometry": [
+    {
+     "lat": 10.778931,
+     "lon": 106.7005953
+    },
+    {
+     "lat": 10.7790079,
+     "lon": 106.7006788
+    },
+    {
+     "lat": 10.7788974,
+     "lon": 106.7008053
+    }
+   ],
+   "tags": {
+    "highway": "service",
+    "service": "alley"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1372004229,
+   "bounds": {
+    "minlat": 10.7756638,
+    "minlon": 106.7004291,
+    "maxlat": 10.7765708,
+    "maxlon": 106.7012198
+   },
+   "nodes": [
+    1769277472,
+    14250561654,
+    12785300023,
+    2043347015,
+    5743072754,
+    6789206001,
+    411919215
+   ],
+   "geometry": [
+    {
+     "lat": 10.7765708,
+     "lon": 106.7012198
+    },
+    {
+     "lat": 10.776506,
+     "lon": 106.7011633
+    },
+    {
+     "lat": 10.7764584,
+     "lon": 106.7011218
+    },
+    {
+     "lat": 10.7762943,
+     "lon": 106.7009788
+    },
+    {
+     "lat": 10.7758977,
+     "lon": 106.700633
+    },
+    {
+     "lat": 10.7757836,
+     "lon": 106.7005335
+    },
+    {
+     "lat": 10.7756638,
+     "lon": 106.7004291
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "2",
+    "lanes:motorcycle": "1",
+    "motor_vehicle:conditional": "no @ (Sa-Su 18:30-23:00)",
+    "motorcar": "yes",
+    "motorcycle:lanes": "||yes",
+    "name": "Lê Thánh Tôn",
+    "name:en": "Le Thanh Ton Street",
+    "name:fr": "Rue Le Thanh Ton",
+    "name:id": "Jalan Le Thanh Ton",
+    "name:ja": "レタントン通り",
+    "name:ms": "Jalan Le Thanh Ton",
+    "name:ru": "улица Ле Тхань Тон",
+    "name:vi": "Đường Lê Thánh Tôn",
+    "name:zh": "黎圣宗路",
+    "old_name:1870-1947": "Rue d'Espagne",
+    "old_name:1947-1955": "Rue Lê Lợi",
+    "oneway": "yes",
+    "smoothness": "excellent",
+    "surface": "paving_stones"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1374006570,
+   "bounds": {
+    "minlat": 10.7802608,
+    "minlon": 106.6985867,
+    "maxlat": 10.7803365,
+    "maxlon": 106.6988815
+   },
+   "nodes": [
+    411918773,
+    14357970346,
+    12721904607,
+    12721904612,
+    5467207443,
+    5467207450
+   ],
+   "geometry": [
+    {
+     "lat": 10.7802608,
+     "lon": 106.6988815
+    },
+    {
+     "lat": 10.7802909,
+     "lon": 106.6988514
+    },
+    {
+     "lat": 10.7803133,
+     "lon": 106.6988128
+    },
+    {
+     "lat": 10.7803292,
+     "lon": 106.6987689
+    },
+    {
+     "lat": 10.7803365,
+     "lon": 106.6986761
+    },
+    {
+     "lat": 10.7803108,
+     "lon": 106.6985867
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "name": "Công trường Công xã Paris",
+    "name:ar": "ساحة بلدية باريس",
+    "name:be": "Плошча Парыжскай Камуны",
+    "name:cjm-Latn": "Kleng bhum Paris",
+    "name:en": "Paris Commune Square",
+    "name:fr": "Place de la Commune-de-Paris",
+    "name:id": "Alun-alun Komune Paris",
+    "name:ms": "Dataran Komune Paris",
+    "name:ru": "Площадь Парижской Коммуны",
+    "name:vi": "Công trường Công xã Paris",
+    "name:vi-Hani": "公場公社巴黎",
+    "name:zh": "巴黎公社广场",
+    "name:zh-Hant": "巴黎公社廣場",
+    "old_name:1902-1955": "Place Pigneau de Béhaine",
+    "old_name:1955-1964": "Công trường Hòa Bình",
+    "old_name:1964-1975": "Công trường Tổng thống John F. Kennedy",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1374006571,
+   "bounds": {
+    "minlat": 10.7802608,
+    "minlon": 106.6988744,
+    "maxlat": 10.7806518,
+    "maxlon": 106.6988815
+   },
+   "nodes": [
+    411918773,
+    12920957281,
+    12721904611
+   ],
+   "geometry": [
+    {
+     "lat": 10.7802608,
+     "lon": 106.6988815
+    },
+    {
+     "lat": 10.7804455,
+     "lon": 106.6988802
+    },
+    {
+     "lat": 10.7806518,
+     "lon": 106.6988744
+    }
+   ],
+   "tags": {
+    "highway": "secondary_link",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1391882256,
+   "bounds": {
+    "minlat": 10.7800819,
+    "minlon": 106.6982911,
+    "maxlat": 10.7801841,
+    "maxlon": 106.6984257
+   },
+   "nodes": [
+    14357970407,
+    14357970367
+   ],
+   "geometry": [
+    {
+     "lat": 10.7800819,
+     "lon": 106.6982911
+    },
+    {
+     "lat": 10.7801841,
+     "lon": 106.6984257
+    }
+   ],
+   "tags": {
+    "highway": "secondary",
+    "name": "Lê Duẩn",
+    "name:en": "Le Duan Boulevard",
+    "name:fr": "Boulevard Le Duan",
+    "name:id": "Jalan Le Duan",
+    "name:ms": "Jalan Le Duan",
+    "name:ru": "улица Ле Зуан",
+    "name:vi": "Đường Lê Duẩn",
+    "name:zh": "黎笋路",
+    "old_name:1871-1955": "Boulevard Norodom",
+    "old_name:1955-1975": "Đại lộ Thống Nhứt;Đại lộ Thống Nhất",
+    "old_name:1975-1986": "Đường 30 tháng 4",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1391882257,
+   "bounds": {
+    "minlat": 10.7798663,
+    "minlon": 106.6982911,
+    "maxlat": 10.7800819,
+    "maxlon": 106.6985273
+   },
+   "nodes": [
+    14357970407,
+    14118646222,
+    12920957290
+   ],
+   "geometry": [
+    {
+     "lat": 10.7800819,
+     "lon": 106.6982911
+    },
+    {
+     "lat": 10.7799319,
+     "lon": 106.6984555
+    },
+    {
+     "lat": 10.7798663,
+     "lon": 106.6985273
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "3",
+    "maxspeed": "50",
+    "name": "Công trường Công xã Paris",
+    "name:ar": "ساحة بلدية باريس",
+    "name:be": "Плошча Парыжскай Камуны",
+    "name:cjm-Latn": "Kleng bhum Paris",
+    "name:en": "Paris Commune Square",
+    "name:fr": "Place de la Commune-de-Paris",
+    "name:id": "Alun-alun Komune Paris",
+    "name:ms": "Dataran Komune Paris",
+    "name:ru": "Площадь Парижской Коммуны",
+    "name:vi": "Công trường Công xã Paris",
+    "name:vi-Hani": "公場公社巴黎",
+    "name:zh": "巴黎公社广场",
+    "name:zh-Hant": "巴黎公社廣場",
+    "old_name:1902-1955": "Place Pigneau de Béhaine",
+    "old_name:1955-1964": "Công trường Hòa Bình",
+    "old_name:1964-1975": "Công trường Tổng thống John F. Kennedy",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1395935224,
+   "bounds": {
+    "minlat": 10.7798589,
+    "minlon": 106.6980811,
+    "maxlat": 10.7798663,
+    "maxlon": 106.6985273
+   },
+   "nodes": [
+    2408528251,
+    7502330708,
+    14118646224,
+    12920957290
+   ],
+   "geometry": [
+    {
+     "lat": 10.7798589,
+     "lon": 106.6980811
+    },
+    {
+     "lat": 10.7798614,
+     "lon": 106.6982283
+    },
+    {
+     "lat": 10.7798647,
+     "lon": 106.6984273
+    },
+    {
+     "lat": 10.7798663,
+     "lon": 106.6985273
+    }
+   ],
+   "tags": {
+    "highway": "secondary_link",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1414094279,
+   "bounds": {
+    "minlat": 10.7803108,
+    "minlon": 106.6984759,
+    "maxlat": 10.7803379,
+    "maxlon": 106.6985867
+   },
+   "nodes": [
+    5467207450,
+    14357970375,
+    14357970374,
+    14357970373,
+    14357970372
+   ],
+   "geometry": [
+    {
+     "lat": 10.7803108,
+     "lon": 106.6985867
+    },
+    {
+     "lat": 10.7803275,
+     "lon": 106.6985624
+    },
+    {
+     "lat": 10.7803368,
+     "lon": 106.6985343
+    },
+    {
+     "lat": 10.7803379,
+     "lon": 106.6985047
+    },
+    {
+     "lat": 10.7803308,
+     "lon": 106.6984759
+    }
+   ],
+   "tags": {
+    "highway": "secondary",
+    "junction": "roundabout",
+    "lane_markings": "no",
+    "oneway": "yes",
+    "smoothness": "excellent",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1531863899,
+   "bounds": {
+    "minlat": 10.7799982,
+    "minlon": 106.6954554,
+    "maxlat": 10.7802987,
+    "maxlon": 106.6962061
+   },
+   "nodes": [
+    13961678624,
+    13961678640,
+    13961678625,
+    13961678626,
+    13961678627,
+    13961678628,
+    13961678629,
+    13961678630,
+    13961678631,
+    13961678632,
+    13961678633,
+    13961678634
+   ],
+   "geometry": [
+    {
+     "lat": 10.7802148,
+     "lon": 106.6962061
+    },
+    {
+     "lat": 10.7801481,
+     "lon": 106.6961265
+    },
+    {
+     "lat": 10.780148,
+     "lon": 106.6960812
+    },
+    {
+     "lat": 10.7801934,
+     "lon": 106.6960238
+    },
+    {
+     "lat": 10.7802678,
+     "lon": 106.6959435
+    },
+    {
+     "lat": 10.7802987,
+     "lon": 106.6959018
+    },
+    {
+     "lat": 10.7802972,
+     "lon": 106.6958444
+    },
+    {
+     "lat": 10.7802653,
+     "lon": 106.6957936
+    },
+    {
+     "lat": 10.7800546,
+     "lon": 106.6955969
+    },
+    {
+     "lat": 10.7799982,
+     "lon": 106.6955501
+    },
+    {
+     "lat": 10.7800142,
+     "lon": 106.6954978
+    },
+    {
+     "lat": 10.7800508,
+     "lon": 106.6954554
+    }
+   ],
+   "tags": {
+    "highway": "service",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1531863900,
+   "bounds": {
+    "minlat": 10.7797639,
+    "minlon": 106.6953873,
+    "maxlat": 10.7800142,
+    "maxlon": 106.6957042
+   },
+   "nodes": [
+    13961678635,
+    13961678636,
+    13961678637,
+    13961678638,
+    13961678639,
+    13961678633
+   ],
+   "geometry": [
+    {
+     "lat": 10.7799784,
+     "lon": 106.6953873
+    },
+    {
+     "lat": 10.7797877,
+     "lon": 106.6955913
+    },
+    {
+     "lat": 10.7797639,
+     "lon": 106.6956491
+    },
+    {
+     "lat": 10.7798115,
+     "lon": 106.6957042
+    },
+    {
+     "lat": 10.7798586,
+     "lon": 106.6956753
+    },
+    {
+     "lat": 10.7800142,
+     "lon": 106.6954978
+    }
+   ],
+   "tags": {
+    "highway": "service",
+    "oneway": "yes",
+    "surface": "asphalt"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1534505386,
+   "bounds": {
+    "minlat": 10.777162,
+    "minlon": 106.6994767,
+    "maxlat": 10.777228,
+    "maxlon": 106.6995456
+   },
+   "nodes": [
+    13982399712,
+    13982399713,
+    13982399714,
+    13982399715
+   ],
+   "geometry": [
+    {
+     "lat": 10.777162,
+     "lon": 106.6995381
+    },
+    {
+     "lat": 10.7771942,
+     "lon": 106.6995456
+    },
+    {
+     "lat": 10.777228,
+     "lon": 106.6995094
+    },
+    {
+     "lat": 10.7772195,
+     "lon": 106.6994767
+    }
+   ],
+   "tags": {
+    "highway": "service",
+    "oneway": "yes"
+   }
+  }
+ ]
+}

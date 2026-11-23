@@ -1,0 +1,21 @@
+# Tailgating: a time gap under minTimeGapS to the car ahead in the same lane for sustainS, only
+# above minSpeedMps so a queue does not count. Outside expressways ND 168 fines the gap only
+# when it causes a collision (handled by the crash rule), so this deducts score only.
+id: following-distance
+title: { vi: "Không giữ khoảng cách an toàn" }
+description: { vi: "Bám quá sát xe phía trước cùng làn." }
+vehicleClasses: [car, motorbike]
+detection:
+  type: gap-ahead
+  params: { minSpeedMps: 5, minTimeGapS: 1, sustainS: 2 }
+  paramBasis: { minSpeedMps: design, minTimeGapS: design, sustainS: design }
+obligation:
+  - sourceId: law36-2024
+    article: Điều 12
+    clause: '1'
+    quote: phải chấp hành quy định về tốc độ, khoảng cách an toàn tối thiểu với xe phía trước cùng làn đường hoặc phần đường.
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+tiers:
+  - danger: 2
+    scoreOnly: true
+    note: { vi: "Ngoài đường cao tốc, luật chỉ phạt khi không giữ khoảng cách mà gây va chạm; lỗi này chỉ trừ điểm trò chơi." }

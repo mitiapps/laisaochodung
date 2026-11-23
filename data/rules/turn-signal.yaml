@@ -1,0 +1,25 @@
+# Turning at a junction without the indicator toward the turn held from signalFromM before the
+# junction until the exit. A U-turn needs the left indicator.
+id: turn-signal
+title: { vi: "Chuyển hướng không có tín hiệu báo rẽ" }
+description: { vi: "Rẽ hoặc quay đầu tại nút giao mà không bật xi nhan liên tục từ trước khi vào nút đến khi ra khỏi nút." }
+vehicleClasses: [car, motorbike]
+detection:
+  type: junction-turn
+  params: { mode: signal, signalFromM: 30, turnMinDeg: 45, uturnMinDeg: 135 }
+  paramBasis: { mode: legal, signalFromM: design, turnMinDeg: design, uturnMinDeg: design }
+obligation:
+  - sourceId: law36-2024
+    article: Điều 15
+    clause: '2'
+    quote: phải quan sát, bảo đảm khoảng cách an toàn với xe phía sau, giảm tốc độ và có tín hiệu báo hướng rẽ
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+  - sourceId: law36-2024
+    article: Điều 15
+    clause: '2'
+    quote: Tín hiệu báo hướng rẽ hoặc tín hiệu bằng tay phải sử dụng liên tục trong quá trình chuyển hướng.
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+tiers:
+  - danger: 2
+    scoreOnly: false
+    clause: { D6: D6.3.c, D7: D7.3.a }

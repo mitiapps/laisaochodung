@@ -1,0 +1,34 @@
+# Speeding against the limit bound to the ego lane: a P.127 zone, else the TT 38 default.
+# Bands follow ND 168 exactly: car [5, 10), [10, 20], (20, 35], over 35; motorbike [5, 10),
+# [10, 20], over 20. Under 5 km/h over there is no clause.
+id: speeding
+title: { vi: "Chạy quá tốc độ quy định" }
+description: { vi: "Tốc độ vượt giới hạn đang áp dụng cho làn đường từ 5 km/h trở lên." }
+vehicleClasses: [car, motorbike]
+detection:
+  type: speed-over-limit
+  params: { minOverKmh: 5, sustainS: 1 }
+  paramBasis: { minOverKmh: legal, sustainS: design }
+obligation:
+  - sourceId: law36-2024
+    article: Điều 12
+    clause: '1'
+    quote: phải chấp hành quy định về tốc độ, khoảng cách an toàn tối thiểu với xe phía trước cùng làn đường hoặc phần đường.
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+tiers:
+  - when: { overKmh: { min: 5, max: 10, maxInclusive: false } }
+    danger: 1
+    scoreOnly: false
+    clause: { D6: D6.3.a, D7: D7.2.b }
+  - when: { overKmh: { min: 10, max: 20, maxInclusive: true } }
+    danger: 2
+    scoreOnly: false
+    clause: { D6: D6.5.đ, D7: D7.4.a }
+  - when: { overKmh: { min: 20, minInclusive: false, max: 35, maxInclusive: true } }
+    danger: 3
+    scoreOnly: false
+    clause: { D6: D6.6.a, D7: D7.8.a }
+  - when: { overKmh: { min: 35, minInclusive: false } }
+    danger: 4
+    scoreOnly: false
+    clause: { D6: D6.7.a, D7: D7.8.a }

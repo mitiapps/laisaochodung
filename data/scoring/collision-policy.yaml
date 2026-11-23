@@ -1,0 +1,30 @@
+# Collision clause choice (CollisionPolicy, src/contracts/rule.js).
+#
+# An accident (a pedestrian hit, or an NPC car hit at or above `accidentImpulse`) cites
+# `accidentB` when the clause of its cause is in `accidentBList`, else `accidentA`; with no cause
+# it cites `accidentA` ("không quan sát, giảm tốc độ hoặc dừng lại để bảo đảm an toàn theo quy
+# định mà gây tai nạn giao thông").
+#
+# `accidentBList` copies the điểm lists named in ND 168 Điều 6 khoản 10 điểm b and Điều 7
+# khoản 10 điểm b (clause records D6.10.b, D7.10.b); scripts/rules/build.test.js parses those
+# quotes and checks the lists match.
+#
+# `inferredAccidentCauses` lists causes named in neither 10.a nor 10.b. An entry is a clause id
+# or a rule id; the accident then cites `accidentA` with "suy luận". Pavement driving is named in
+# neither list. It is listed by rule id because its motorbike clause D7.7.a also covers wrong-way
+# riding, which 7.10.a names, so the clause id alone cannot tell the two apart.
+
+accidentA: { D6: D6.10.a, D7: D7.10.a }
+accidentB: { D6: D6.10.b, D7: D7.10.b }
+accidentBList:
+  D6: [D6.1.a, D6.1.b, D6.1.c, D6.1.d, D6.1.đ, D6.2.c, D6.3.b, D6.3.g, D6.3.h, D6.3.n, D6.3.o, D6.3.p,
+       D6.4.a, D6.4.c, D6.4.d, D6.5.c, D6.5.d, D6.5.e, D6.5.h, D6.5.n, D6.5.o, D6.5.q, D6.7.b, D6.9.b,
+       D6.9.c, D6.9.d]
+  D7: [D7.1.a, D7.1.d, D7.1.đ, D7.1.g, D7.1.h, D7.1.i, D7.1.k, D7.2.c, D7.2.đ, D7.2.g, D7.3.b, D7.3.e,
+       D7.3.g, D7.3.h, D7.3.k, D7.4.đ, D7.6.c, D7.6.d, D7.7.c, D7.7.d, D7.7.đ, D7.9.a, D7.9.b, D7.9.h,
+       D7.9.k]
+inferredAccidentCauses: [pavement]
+# Va chạm with the vehicle ahead in the same lane below the accident impulse.
+sameLaneAhead: { D6: D6.4.l, D7: D7.3.i }
+# Static objects, kerbs and scooter falls never carry a legal penalty.
+staticAndFall: scoreOnly

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+src/generated/
+public/maps/
+test-results/
+playwright-report/
+coverage/
+.wrangler/
+*.log

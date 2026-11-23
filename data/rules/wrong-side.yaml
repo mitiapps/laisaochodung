@@ -1,0 +1,27 @@
+# Wrong side on a two-way road. Crossing a dashed centre line (vạch 1.1) to overtake is lawful, so
+# this fires only after the ego reached the opposing lane over a line it may not cross from its
+# side (solid, double solid, the solid side of a mixed line), or when it stays in the opposing
+# lane into a junction or for longer than maxOpposingS.
+id: wrong-side
+title: { vi: "Đi không đúng phần đường" }
+description: { vi: "Đi vào làn ngược chiều qua vạch liền, hoặc đi lâu trong làn ngược chiều, hoặc đi vào nút giao trên làn ngược chiều." }
+vehicleClasses: [car, motorbike]
+detection:
+  type: against-lane-dir
+  params: { mode: two-way, againstAngleDeg: 120, minSpeedMps: 0.5, maxOpposingS: 10 }
+  paramBasis: { mode: legal, againstAngleDeg: design, minSpeedMps: design, maxOpposingS: design }
+obligation:
+  - sourceId: law36-2024
+    article: Điều 10
+    clause: '1'
+    quote: phải đi bên phải theo chiều đi của mình, đi đúng làn đường, phần đường quy định, chấp hành báo hiệu đường bộ
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+  - sourceId: qcvn41-2024
+    article: Phụ lục G
+    point: Vạch 1.2
+    quote: xe không được lấn làn, không được đè lên vạch.
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
+tiers:
+  - danger: 3
+    scoreOnly: false
+    clause: { D6: D6.5.b, D7: D7.3.d }

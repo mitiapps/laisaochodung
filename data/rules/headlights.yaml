@@ -1,0 +1,19 @@
+# Headlights off while moving from 18:00 to 06:00 or in rain.
+id: headlights
+title: { vi: "Không bật đèn chiếu sáng" }
+description: { vi: "Không bật đèn từ 18 giờ đến 6 giờ sáng hoặc khi trời mưa." }
+vehicleClasses: [car, motorbike]
+detection:
+  type: lights-required
+  params: { nightFromMin: 1080, nightToMin: 360, minSpeedMps: 0.5, sustainS: 3 }
+  paramBasis: { nightFromMin: legal, nightToMin: legal, minSpeedMps: design, sustainS: design }
+obligation:
+  - sourceId: law36-2024
+    article: Điều 20
+    clause: '1'
+    quote: phải bật đèn chiếu sáng phía trước trong thời gian từ 18 giờ ngày hôm trước đến 06 giờ ngày hôm sau hoặc khi có sương mù, khói, bụi, trời mưa, thời tiết xấu làm hạn chế tầm nhìn.
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+tiers:
+  - danger: 2
+    scoreOnly: false
+    clause: { D6: D6.3.g, D7: D7.1.g }

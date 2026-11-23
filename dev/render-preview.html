@@ -1,0 +1,123 @@
+<!doctype html>
+<!--
+  Dev-only renderer preview (not a build input). Run `npm run dev` and open /dev/render-preview.html.
+  It plays tests/fixtures/frames-straight.json on tests/fixtures/map-minimal.json in a loop.
+  Query options: vehicle=scooter, night=1 (21:00 with low beams), high=1 (high beams), rain=1,
+  indicators=left|right|hazard, brake=1, skid=1 (all wheels sliding), shift=<metres> (moves the
+  ego east along its lane, e.g. shift=50 to look at the junction), crash=1 (a 10 m/s collision
+  at tick 60), fall=1 (a fall at tick 60 and a reset 5 m back at tick 61). The status line shows the
+  WebGL draw calls of the last frame.
+-->
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Render preview</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #111; }
+      canvas { display: block; width: 100vw; height: 100vh; }
+      #status { position: fixed; left: 8px; top: 8px; font: 12px monospace; color: #fff; background: #0008; padding: 4px 6px; white-space: pre; }
+    </style>
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+    <div id="status">loading…</div>
+    <script type="module">
+      import { createRenderer } from '/src/render/index.js';
+
+      const status = document.getElementById('status');
+      const errors = [];
+      const report = (msg) => {
+        errors.push(msg);
+        status.textContent = `ERROR\n${errors.join('\n')}`;
+      };
+      window.addEventListener('error', (e) => report(String(e.message)));
+      window.addEventListener('unhandledrejection', (e) => report(String(e.reason)));
+
+      const getJson = async (path) => {
+        const res = await fetch(path);
+        if (!res.ok) throw new Error(`HTTP ${res.status} for ${path}`);
+        return res.json();
+      };
+
+      // Count draw calls per frame by wrapping the WebGL2 draw entry points.
+      let calls = 0;
+      for (const name of ['drawElements', 'drawArrays', 'drawElementsInstanced', 'drawArraysInstanced']) {
+        const original = WebGL2RenderingContext.prototype[name];
+        WebGL2RenderingContext.prototype[name] = function (...args) {
+          calls += 1;
+          return original.apply(this, args);
+        };
+      }
+
+      try {
+        const q = new URLSearchParams(location.search);
+        const [map, frames, vehicles] = await Promise.all([
+          getJson('/tests/fixtures/map-minimal.json'),
+          getJson('/tests/fixtures/frames-straight.json'),
+          getJson('/data/vehicles/vehicles.json'),
+        ]);
+        const vehicleId = q.get('vehicle') ?? frames[0].ego.vehicleId;
+        const vehicle = vehicles.find((v) => v.id === vehicleId);
+        if (!vehicle) throw new Error(`Unknown vehicle ${vehicleId}`);
+
+        // Option overrides applied to the recorded frames (display only).
+        const shaped = frames.map((f) => {
+          const shift = Number(q.get('shift') ?? 0) || 0;
+          const ego = { ...f.ego, pos: { ...f.ego.pos, x: f.ego.pos.x + shift }, input: { ...f.ego.input } };
+          if (vehicle.legalClass !== 'car') ego.wheels = ego.wheels.slice(0, 2);
+          if (q.get('night') === '1') ego.lights = 'low';
+          if (q.get('high') === '1') ego.lights = 'high';
+          if (q.get('indicators')) ego.indicators = q.get('indicators');
+          if (q.get('brake') === '1') ego.input.brakeFront = 1;
+          if (q.get('skid') === '1') ego.wheels = ego.wheels.map((w) => ({ ...w, skid: 0.9 }));
+          const env = {
+            clockMin: q.get('night') === '1' ? 21 * 60 : f.env.clockMin,
+            weather: q.get('rain') === '1' ? 'rain' : f.env.weather,
+          };
+          let events = f.events;
+          if (q.get('crash') === '1' && f.tick === 60) {
+            events = [...events, { type: 'collision', otherKind: 'static', otherId: null, impulse: 9000, egoSpeed: 10, relSpeed: 10, sameLaneAhead: false }];
+          }
+          if (q.get('fall') === '1' && f.tick === 60) events = [...events, { type: 'fall' }];
+          if (q.get('fall') === '1' && f.tick >= 61) {
+            ego.pos = { ...ego.pos, x: ego.pos.x - 5 };
+            if (f.tick === 61) events = [...events, { type: 'reset' }];
+          }
+          return { ...f, ego, env, events };
+        });
+
+        const canvas = document.getElementById('view');
+        const renderer = createRenderer(canvas, map, vehicle);
+        const resize = () => renderer.resize(canvas.clientWidth, canvas.clientHeight);
+        window.addEventListener('resize', resize);
+        resize();
+
+        const DT = 1 / 60;
+        let i = 0;
+        let acc = 0;
+        let last = performance.now();
+        let drawn = 0;
+        const loop = (now) => {
+          acc += Math.min(0.25, (now - last) / 1000);
+          last = now;
+          while (acc >= DT) {
+            acc -= DT;
+            i = (i + 1) % shaped.length;
+          }
+          const prev = i > 0 ? shaped[i - 1] : null;
+          calls = 0;
+          renderer.render(prev, shaped[i], acc / DT);
+          drawn += 1;
+          window.__drawCalls = calls;
+          if (errors.length === 0) status.textContent = `tick ${shaped[i].tick}  frames drawn ${drawn}  draw calls ${calls}`;
+          requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
+        window.__preview = { renderer, frames: shaped };
+      } catch (err) {
+        report(err instanceof Error ? err.message : String(err));
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,33 @@
+# Entering a crosswalk while an active pedestrian is on it. Turning (in a junction, or within
+# turnWindowS after leaving one, with a heading change of at least turnMinDeg) cites the turning
+# clause; going straight has no dedicated clause and cites the catch-all by inference.
+id: crosswalk-yield
+title: { vi: "Không nhường đường cho người đi bộ" }
+description: { vi: "Đi vào vạch người đi bộ qua đường khi đang có người đi bộ trên đó." }
+vehicleClasses: [car, motorbike]
+detection:
+  type: crosswalk-occupied
+  params: { minSpeedMps: 0.5, turnMinDeg: 30, turnWindowS: 3 }
+  paramBasis: { minSpeedMps: design, turnMinDeg: design, turnWindowS: design }
+obligation:
+  - sourceId: law36-2024
+    article: Điều 15
+    clause: '3'
+    quote: phải nhường đường cho người đi bộ, xe thô sơ, xe đi ngược chiều
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+  - sourceId: qcvn41-2024
+    article: Phụ lục G
+    point: G2.3
+    quote: các phương tiện phải dừng lại nhường đường cho người đi bộ qua đường khi có dấu hiệu người đi bộ qua đường trong khu vực kẻ vạch dừng xe.
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
+tiers:
+  - when: { turning: false }
+    danger: 4
+    scoreOnly: false
+    clause: { D6: D6.1.a, D7: D7.1.a }
+    inferred: true
+    note: { vi: "Đi thẳng không có điểm phạt riêng; áp dụng lỗi không chấp hành vạch kẻ đường dành cho người đi bộ." }
+  - when: { turning: true }
+    danger: 4
+    scoreOnly: false
+    clause: { D6: D6.5.l, D7: D7.5.b }

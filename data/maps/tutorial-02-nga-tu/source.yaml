@@ -1,0 +1,88 @@
+# Tutorial 2: junctions. A signalled crossroads with a banned left turn and a banned U-turn, a
+# W.208 give-way entry onto an I.401 priority road, a one-way street (I.407a) with P.102 at its far
+# end, a closed side road (P.101) and a STOP (R.122) junction.
+# Coordinates in metres: +x east, +z south (north is −z). See tutorial-01 for the source format.
+kind: tutorial
+name: { vi: "Bài 2: Ngã tư và biển báo" }
+environment: { startClockMin: 600, weather: clear, surfaceGrip: 1 }
+timeLimitS: 360
+
+nodes:
+  w0: [-200, 0]
+  j1: [0, 0]
+  n1: [0, -150]
+  s1: [0, 150]
+  j2: [250, 0]
+  u0: [250, 150]
+  j3: [250, -250]
+  u3: [250, -370]
+  c0: [130, -250]
+  j4: [500, -250]
+  c4: [500, -350]
+  f5: [500, 120]
+
+ways:
+  - id: tay
+    nodes: [w0, j1]
+    centerLine: [{ toS: 150, type: dashed }, { type: solid }]
+  - id: bac
+    nodes: [j1, n1]
+  - id: nam
+    nodes: [s1, j1]
+  - id: giua
+    nodes: [j1, j2]
+    centerLine: [{ toS: 200, type: dashed }, { type: solid }]
+  # Priority road (I.401), north–south.
+  - { id: uu-tien-nam, nodes: [u0, j2], priority: true }
+  - { id: uu-tien, nodes: [j2, j3], priority: true }
+  - { id: uu-tien-bac, nodes: [j3, u3], priority: true }
+  # Closed to all vehicles (P.101) from the junction.
+  - id: cam
+    nodes: [j3, c0]
+    class: residential
+  # One-way street, eastbound.
+  - id: mot-chieu
+    nodes: [j3, j4]
+    oneway: true
+    lanes: { forward: 2 }
+    laneLine: [{ toS: 210, type: dashed }, { type: solid }]
+  - id: cuoi-bac
+    nodes: [c4, j4]
+  - id: cuoi
+    nodes: [j4, f5]
+
+junctions:
+  - { node: j1, signals: { green: 27, yellow: 3, red: 30 } }
+
+signs:
+  - { id: s-r420, code: R.420, at: { way: tay, s: 3 } }
+  - { id: s-p123a, code: P.123a, at: { way: tay, s: 150 } }
+  - { id: s-p124a, code: P.124a, at: { way: tay, s: 160 } }
+  - { id: s-w208, code: W.208, at: { way: giua, s: 170 } }
+  - { id: s-i401, code: I.401, at: { way: uu-tien, s: 12 } }
+  - { id: s-p101, code: P.101, at: { way: cam, s: 8 } }
+  - { id: s-i407a, code: I.407a, at: { way: mot-chieu, s: 10 } }
+  - { id: s-p102, code: P.102, at: { way: mot-chieu, s: 240 }, dir: backward }
+  - { id: s-r122, code: R.122, at: { way: mot-chieu, s: 225 } }
+
+crosswalks:
+  - { id: cw-tay, at: { way: tay, s: 186 } }
+
+buildings:
+  - { way: tay, side: right, fromS: 20, toS: 180 }
+  - { way: tay, side: left, fromS: 20, toS: 180 }
+  - { way: giua, side: right, fromS: 20, toS: 230 }
+  - { way: uu-tien, side: left, fromS: 20, toS: 230 }
+  - { way: mot-chieu, side: right, fromS: 20, toS: 230 }
+
+route:
+  start: { way: tay, s: 15, lane: 0 }
+  checkpoints:
+    - { way: giua, s: 100 }
+    - { way: uu-tien, s: 25 }
+    - { way: uu-tien, s: 150 }
+    - { way: mot-chieu, s: 25 }
+    - { way: mot-chieu, s: 120 }
+    - { way: cuoi, s: 25 }
+    - { way: cuoi, s: 100 }
+  finish: { way: cuoi, s: 200 }

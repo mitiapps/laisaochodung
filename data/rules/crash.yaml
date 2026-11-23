@@ -1,0 +1,21 @@
+# Collisions. The clause comes from the collision policy (data/scoring/collision-policy.yaml); a
+# contact below the scoring table's contactMinEgoSpeed is ignored. A pedestrian hit ends the run
+# with score 0. Static objects, kerbs and falls deduct score only.
+id: crash
+title: { vi: "Va chạm" }
+description: { vi: "Va chạm với người đi bộ, xe khác, vật cản hoặc ngã xe." }
+vehicleClasses: [car, motorbike]
+detection:
+  type: collision
+  params: {}
+  paramBasis: {}
+obligation:
+  - sourceId: law36-2024
+    article: Điều 12
+    clause: '3'
+    quote: phải quan sát, giảm tốc độ hoặc dừng lại để bảo đảm an toàn
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+tiers:
+  - danger: 5
+    scoreOnly: false
+    clauseFromPolicy: true

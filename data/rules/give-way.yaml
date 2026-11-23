@@ -1,0 +1,25 @@
+# Give way: crossing a give-way line, or entering an unsignalled junction from a road that is not
+# one of its priority roads, without slowing to slowSpeedMps within the last withinM.
+id: give-way
+title: { vi: "Không nhường đường khi ra đường ưu tiên" }
+description: { vi: "Từ đường không ưu tiên đi vào nút giao mà không giảm tốc độ để nhường đường." }
+vehicleClasses: [car, motorbike]
+detection:
+  type: stop-line-no-slow
+  params: { slowSpeedMps: 3, withinM: 10 }
+  paramBasis: { slowSpeedMps: design, withinM: design }
+obligation:
+  - sourceId: law36-2024
+    article: Điều 22
+    clause: '1'
+    quote: xe đi từ đường không ưu tiên hoặc đường nhánh phải nhường đường cho xe đi trên đường ưu tiên hoặc đường chính từ bất kỳ hướng nào tới
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+  - sourceId: qcvn41-2024
+    article: Phụ lục C
+    point: C.8 b)
+    quote: Các xe đi trên đường có đặt biển số W.208 phải nhường đường cho xe đi trên đường ưu tiên khi qua nơi giao nhau
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
+tiers:
+  - danger: 3
+    scoreOnly: false
+    clause: { D6: D6.5.n, D7: D7.6.c }

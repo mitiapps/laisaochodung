@@ -1,0 +1,30 @@
+# One complete rule (src/contracts/rule.js `Rule`): car speeding in two tiers, pointing at the
+# clauses in clauses-sample.yaml. Danger levels and the sustain time are sample values.
+
+id: speeding
+title: { vi: Chạy quá tốc độ quy định }
+description: { vi: Tốc độ vượt giới hạn đang áp dụng cho làn đường từ 5 km/h trở lên. }
+vehicleClasses: [car]
+detection:
+  type: speed-over-limit
+  params:
+    minOverKmh: 5
+    sustainS: 1
+  paramBasis:
+    minOverKmh: legal
+    sustainS: design
+obligation:
+  - sourceId: law36-2024
+    article: Điều 12
+    clause: '1'
+    quote: phải chấp hành quy định về tốc độ, khoảng cách an toàn tối thiểu với xe phía trước cùng làn đường hoặc phần đường.
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+tiers:
+  - when: { overKmh: { min: 5, max: 10, maxInclusive: false } }
+    danger: 2
+    scoreOnly: false
+    clause: { D6: D6.3.a }
+  - when: { overKmh: { min: 10, max: 20, maxInclusive: true } }
+    danger: 3
+    scoreOnly: false
+    clause: { D6: D6.5.đ }

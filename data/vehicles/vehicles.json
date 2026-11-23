@@ -1,0 +1,20 @@
+[
+  {
+    "id": "car-sedan",
+    "name": { "vi": "Ô tô con (số sàn không côn)" },
+    "legalClass": "car",
+    "decreeGroup": "D6",
+    "lengthM": 4.5,
+    "widthM": 1.8,
+    "gearbox": "manual"
+  },
+  {
+    "id": "scooter",
+    "name": { "vi": "Xe tay ga" },
+    "legalClass": "motorbike",
+    "decreeGroup": "D7",
+    "lengthM": 1.85,
+    "widthM": 0.7,
+    "gearbox": "auto"
+  }
+]

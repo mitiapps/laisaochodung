@@ -1,0 +1,18 @@
+# Score parameters (ScoringTable, src/contracts/rule.js). All values are game design, not law.
+# Score = max(0, 10 − Σ deductions), one deduction per episode at its worst tier.
+
+deductionByDanger:
+  '1': 0.25
+  '2': 0.5
+  '3': 1
+  '4': 2
+  '5': 4
+# Seconds a rule must stay clear before it can open a new episode.
+rearmS: 3
+# A collision takes as its cause the worst rule breach active in this many seconds before it.
+crashCauseWindowS: 3
+# Contact impulse (N·s) from which a collision with an NPC car counts as an accident (tai nạn)
+# rather than a va chạm. The game's own line ("ngưỡng của trò chơi").
+accidentImpulse: 2000
+# Below this ego speed (m/s) a contact is never a breach and never ends the run.
+contactMinEgoSpeed: 0.5

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 700 700">
+<!-- P.124a Cấm quay đầu xe — drawn for laisaochodung (Apache-2.0) from QCVN 41:2024/BGTVT, Điều 12 Bảng 1 sizes. Figure not yet compared with the official annex. -->
+  <circle cx="350" cy="350" r="350" fill="#d71920"/>
+  <circle cx="350" cy="350" r="250" fill="#ffffff"/>
+  <path d="M420 560 V300 A90 90 0 0 0 240 300 V390" fill="none" stroke="#000000" stroke-width="52"/>
+  <polygon points="240,480 175,375 305,375" fill="#000000"/>
+  <line x1="173" y1="173" x2="527" y2="527" stroke="#d71920" stroke-width="70"/>
+</svg>

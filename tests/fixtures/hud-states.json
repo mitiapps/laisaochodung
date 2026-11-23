@@ -1,0 +1,531 @@
+{
+  "ready": {
+    "speedKmh": 0,
+    "speedLimitKmh": 50,
+    "gear": "N",
+    "rpm": 800,
+    "indicators": "off",
+    "lights": "off",
+    "horn": false,
+    "skid": false,
+    "score": 10,
+    "headingRad": 0,
+    "nav": {
+      "distanceM": 55,
+      "bearingRad": 0
+    },
+    "toasts": [],
+    "runStatus": "ready"
+  },
+  "running": {
+    "speedKmh": 42,
+    "speedLimitKmh": 50,
+    "gear": 3,
+    "rpm": 3200,
+    "indicators": "off",
+    "lights": "low",
+    "horn": false,
+    "skid": false,
+    "score": 10,
+    "headingRad": 0,
+    "nav": {
+      "distanceM": 38.5,
+      "bearingRad": 0.12
+    },
+    "toasts": [],
+    "runStatus": "running"
+  },
+  "withToasts": {
+    "speedKmh": 63,
+    "speedLimitKmh": 50,
+    "gear": 5,
+    "rpm": 4100,
+    "indicators": "left",
+    "lights": "low",
+    "horn": false,
+    "skid": true,
+    "score": 7.25,
+    "headingRad": 0,
+    "nav": {
+      "distanceM": 12,
+      "bearingRad": -0.4
+    },
+    "toasts": [
+      {
+        "ruleId": "speeding",
+        "title": {
+          "vi": "Chạy quá tốc độ quy định"
+        },
+        "tierIndex": 0,
+        "tick": 300,
+        "t": 5,
+        "pos": {
+          "x": 80,
+          "z": 1.75
+        },
+        "danger": 2,
+        "deduction": 0.5,
+        "clause": {
+          "id": "D6.3.a",
+          "fineVnd": {
+            "min": 800000,
+            "max": 1000000
+          },
+          "licencePoints": 0,
+          "suspensionMonths": null,
+          "citation": {
+            "sourceId": "nd168-2024",
+            "article": "Điều 6",
+            "clause": "3",
+            "point": "a",
+            "quote": "Điều khiển xe chạy quá tốc độ quy định từ 05 km/h đến dưới 10 km/h;",
+            "url": "https://luatvietnam.vn/an-ninh-trat-tu/nghi-dinh-168-2024-nd-cp-xu-phat-vi-pham-hanh-chinh-giao-thong-duong-bo-tru-diem-phuc-hoi-diem-giay-phep-lai-xe-382883-d1.html"
+          },
+          "effectiveFrom": "2025-01-01",
+          "verified": false,
+          "checkedOn": "2026-11-23"
+        },
+        "source": {
+          "number": "168/2024/NĐ-CP",
+          "title": "Nghị định quy định xử phạt vi phạm hành chính về trật tự, an toàn giao thông trong lĩnh vực giao thông đường bộ; trừ điểm, phục hồi điểm giấy phép lái xe",
+          "url": "https://storage-vnportal.vnpt.vn/gov-tha/6443/FileQuanTriTinTuc/NĐ%20So%20168_2024%20XU%20PHAT%20VPHC%20GTĐB638714994106201900.pdf"
+        },
+        "amendmentSources": [],
+        "inferred": false,
+        "designParams": [
+          "sustainS"
+        ],
+        "scoreOnly": false,
+        "episodeId": "speeding-0",
+        "kind": "new"
+      },
+      {
+        "ruleId": "speeding",
+        "title": {
+          "vi": "Chạy quá tốc độ quy định"
+        },
+        "tierIndex": 1,
+        "tick": 600,
+        "t": 10,
+        "pos": {
+          "x": 155,
+          "z": 1.75
+        },
+        "danger": 3,
+        "deduction": 1,
+        "clause": {
+          "id": "D6.5.đ",
+          "fineVnd": {
+            "min": 4000000,
+            "max": 6000000
+          },
+          "licencePoints": 2,
+          "suspensionMonths": null,
+          "citation": {
+            "sourceId": "nd168-2024",
+            "article": "Điều 6",
+            "clause": "5",
+            "point": "đ",
+            "quote": "Điều khiển xe chạy quá tốc độ quy định từ 10 km/h đến 20 km/h;",
+            "url": "https://luatvietnam.vn/an-ninh-trat-tu/nghi-dinh-168-2024-nd-cp-xu-phat-vi-pham-hanh-chinh-giao-thong-duong-bo-tru-diem-phuc-hoi-diem-giay-phep-lai-xe-382883-d1.html"
+          },
+          "effectiveFrom": "2025-01-01",
+          "verified": true,
+          "checkedOn": "2026-11-23"
+        },
+        "source": {
+          "number": "168/2024/NĐ-CP",
+          "title": "Nghị định quy định xử phạt vi phạm hành chính về trật tự, an toàn giao thông trong lĩnh vực giao thông đường bộ; trừ điểm, phục hồi điểm giấy phép lái xe",
+          "url": "https://storage-vnportal.vnpt.vn/gov-tha/6443/FileQuanTriTinTuc/NĐ%20So%20168_2024%20XU%20PHAT%20VPHC%20GTĐB638714994106201900.pdf"
+        },
+        "amendmentSources": [],
+        "inferred": false,
+        "designParams": [
+          "sustainS"
+        ],
+        "scoreOnly": false,
+        "episodeId": "speeding-0",
+        "kind": "escalated"
+      },
+      {
+        "ruleId": "crosswalk-yield",
+        "title": {
+          "vi": "Không nhường đường cho người đi bộ qua vạch"
+        },
+        "tierIndex": 0,
+        "tick": 900,
+        "t": 15,
+        "pos": {
+          "x": 92,
+          "z": 1.75
+        },
+        "danger": 3,
+        "deduction": 1,
+        "clause": {
+          "id": "D6.1.a",
+          "fineVnd": {
+            "min": 400000,
+            "max": 600000
+          },
+          "licencePoints": 0,
+          "suspensionMonths": null,
+          "citation": {
+            "sourceId": "nd168-2024",
+            "article": "Điều 6",
+            "clause": "1",
+            "point": "a",
+            "quote": "Không chấp hành hiệu lệnh, chỉ dẫn của biển báo hiệu, vạch kẻ đường, trừ các hành vi vi phạm quy định tại điểm a, điểm c, điểm d, điểm đ khoản 2; điểm a, điểm d, điểm đ, điểm e, điểm n, điểm o khoản 3; điểm a, điểm b, điểm đ, điểm e, điểm i, điểm k, điểm l khoản 4; điểm a, điểm b, điểm c, điểm d, điểm đ, điểm i, điểm k khoản 5; điểm a khoản 6; khoản 7; điểm b, điểm d khoản 9; điểm a khoản 10; điểm đ khoản 11 Điều này;",
+            "url": "https://luatvietnam.vn/an-ninh-trat-tu/nghi-dinh-168-2024-nd-cp-xu-phat-vi-pham-hanh-chinh-giao-thong-duong-bo-tru-diem-phuc-hoi-diem-giay-phep-lai-xe-382883-d1.html"
+          },
+          "effectiveFrom": "2025-01-01",
+          "verified": true,
+          "checkedOn": "2026-11-23"
+        },
+        "source": {
+          "number": "168/2024/NĐ-CP",
+          "title": "Nghị định quy định xử phạt vi phạm hành chính về trật tự, an toàn giao thông trong lĩnh vực giao thông đường bộ; trừ điểm, phục hồi điểm giấy phép lái xe",
+          "url": "https://storage-vnportal.vnpt.vn/gov-tha/6443/FileQuanTriTinTuc/NĐ%20So%20168_2024%20XU%20PHAT%20VPHC%20GTĐB638714994106201900.pdf"
+        },
+        "amendmentSources": [],
+        "inferred": true,
+        "designParams": [],
+        "scoreOnly": false,
+        "note": {
+          "vi": "Đi thẳng qua vạch kẻ đường khi có người đi bộ: không có điểm riêng, áp dụng điểm a khoản 1 theo suy luận."
+        },
+        "episodeId": "crosswalk-yield-0",
+        "kind": "new"
+      },
+      {
+        "ruleId": "lane-change",
+        "title": {
+          "vi": "Chuyển làn đường không đúng quy định"
+        },
+        "tierIndex": 0,
+        "tick": 1200,
+        "t": 20,
+        "pos": {
+          "x": 120,
+          "z": 0.2
+        },
+        "danger": 2,
+        "deduction": 0.5,
+        "clause": {
+          "id": "D6.2.a",
+          "fineVnd": {
+            "min": 600000,
+            "max": 800000
+          },
+          "licencePoints": 0,
+          "suspensionMonths": null,
+          "citation": {
+            "sourceId": "nd168-2024",
+            "article": "Điều 6",
+            "clause": "2",
+            "point": "a",
+            "quote": "Chuyển làn đường không đúng nơi cho phép hoặc không có tín hiệu báo trước hoặc chuyển làn đường không đúng quy định “mỗi lần chuyển làn đường chỉ được phép chuyển sang một làn đường liền kề”, trừ các hành vi vi phạm quy định tại điểm g khoản 5 Điều này;",
+            "url": "https://luatvietnam.vn/an-ninh-trat-tu/nghi-dinh-168-2024-nd-cp-xu-phat-vi-pham-hanh-chinh-giao-thong-duong-bo-tru-diem-phuc-hoi-diem-giay-phep-lai-xe-382883-d1.html"
+          },
+          "amendments": [
+            {
+              "sourceId": "nd238-2026",
+              "article": "Điều 19",
+              "clause": "2",
+              "quote": "hoặc chuyển làn đường không bảo đảm khoảng cách an toàn với xe phía trước, xe phía sau, xe hai bên",
+              "url": "https://congbaocdn.chinhphu.vn/180507251028987904/2026/7/13/469913-1783914973_v1_1783915444_signed.pdf"
+            }
+          ],
+          "effectiveFrom": "2026-08-15",
+          "verified": true,
+          "checkedOn": "2026-11-23"
+        },
+        "source": {
+          "number": "168/2024/NĐ-CP",
+          "title": "Nghị định quy định xử phạt vi phạm hành chính về trật tự, an toàn giao thông trong lĩnh vực giao thông đường bộ; trừ điểm, phục hồi điểm giấy phép lái xe",
+          "url": "https://storage-vnportal.vnpt.vn/gov-tha/6443/FileQuanTriTinTuc/NĐ%20So%20168_2024%20XU%20PHAT%20VPHC%20GTĐB638714994106201900.pdf"
+        },
+        "amendmentSources": [
+          {
+            "sourceId": "nd238-2026",
+            "number": "238/2026/NĐ-CP",
+            "title": "Nghị định sửa đổi, bổ sung một số điều của Nghị định số 168/2024/NĐ-CP ngày 26 tháng 12 năm 2024 của Chính phủ quy định xử phạt vi phạm hành chính về trật tự, an toàn giao thông trong lĩnh vực giao thông đường bộ; trừ điểm, phục hồi điểm giấy phép lái xe",
+            "url": "https://congbaocdn.chinhphu.vn/180507251028987904/2026/7/13/469913-1783914973_v1_1783915444_signed.pdf"
+          }
+        ],
+        "inferred": false,
+        "designParams": [
+          "signalLeadS"
+        ],
+        "scoreOnly": false,
+        "episodeId": "lane-change-0",
+        "kind": "new"
+      },
+      {
+        "ruleId": "crash",
+        "title": {
+          "vi": "Va chạm"
+        },
+        "tierIndex": 0,
+        "tick": 1500,
+        "t": 25,
+        "pos": {
+          "x": 130,
+          "z": 3.4
+        },
+        "danger": 1,
+        "deduction": 0.25,
+        "clause": null,
+        "source": null,
+        "amendmentSources": [],
+        "inferred": false,
+        "designParams": [],
+        "scoreOnly": true,
+        "note": {
+          "vi": "Va vào lề đường: chỉ trừ điểm trò chơi, không có mức phạt."
+        },
+        "episodeId": "crash-0",
+        "kind": "new"
+      }
+    ],
+    "runStatus": "running"
+  },
+  "paused": {
+    "speedKmh": 0,
+    "speedLimitKmh": 50,
+    "gear": "N",
+    "rpm": 800,
+    "indicators": "off",
+    "lights": "off",
+    "horn": false,
+    "skid": false,
+    "score": 9.5,
+    "headingRad": 0,
+    "nav": {
+      "distanceM": 55,
+      "bearingRad": 0
+    },
+    "toasts": [],
+    "runStatus": "paused"
+  },
+  "finished": {
+    "speedKmh": 0,
+    "speedLimitKmh": 50,
+    "gear": "N",
+    "rpm": 800,
+    "indicators": "off",
+    "lights": "off",
+    "horn": false,
+    "skid": false,
+    "score": 7.25,
+    "headingRad": 0,
+    "nav": {
+      "distanceM": 55,
+      "bearingRad": 0
+    },
+    "toasts": [],
+    "runStatus": "finished",
+    "report": {
+      "score": 7.25,
+      "breaches": [
+        {
+          "ruleId": "speeding",
+          "title": {
+            "vi": "Chạy quá tốc độ quy định"
+          },
+          "tierIndex": 1,
+          "tick": 600,
+          "t": 10,
+          "pos": {
+            "x": 155,
+            "z": 1.75
+          },
+          "danger": 3,
+          "deduction": 1,
+          "clause": {
+            "id": "D6.5.đ",
+            "fineVnd": {
+              "min": 4000000,
+              "max": 6000000
+            },
+            "licencePoints": 2,
+            "suspensionMonths": null,
+            "citation": {
+              "sourceId": "nd168-2024",
+              "article": "Điều 6",
+              "clause": "5",
+              "point": "đ",
+              "quote": "Điều khiển xe chạy quá tốc độ quy định từ 10 km/h đến 20 km/h;",
+              "url": "https://luatvietnam.vn/an-ninh-trat-tu/nghi-dinh-168-2024-nd-cp-xu-phat-vi-pham-hanh-chinh-giao-thong-duong-bo-tru-diem-phuc-hoi-diem-giay-phep-lai-xe-382883-d1.html"
+            },
+            "effectiveFrom": "2025-01-01",
+            "verified": true,
+            "checkedOn": "2026-11-23"
+          },
+          "source": {
+            "number": "168/2024/NĐ-CP",
+            "title": "Nghị định quy định xử phạt vi phạm hành chính về trật tự, an toàn giao thông trong lĩnh vực giao thông đường bộ; trừ điểm, phục hồi điểm giấy phép lái xe",
+            "url": "https://storage-vnportal.vnpt.vn/gov-tha/6443/FileQuanTriTinTuc/NĐ%20So%20168_2024%20XU%20PHAT%20VPHC%20GTĐB638714994106201900.pdf"
+          },
+          "amendmentSources": [],
+          "inferred": false,
+          "designParams": [
+            "sustainS"
+          ],
+          "scoreOnly": false,
+          "episodeId": "speeding-0",
+          "kind": "escalated"
+        },
+        {
+          "ruleId": "crosswalk-yield",
+          "title": {
+            "vi": "Không nhường đường cho người đi bộ qua vạch"
+          },
+          "tierIndex": 0,
+          "tick": 900,
+          "t": 15,
+          "pos": {
+            "x": 92,
+            "z": 1.75
+          },
+          "danger": 3,
+          "deduction": 1,
+          "clause": {
+            "id": "D6.1.a",
+            "fineVnd": {
+              "min": 400000,
+              "max": 600000
+            },
+            "licencePoints": 0,
+            "suspensionMonths": null,
+            "citation": {
+              "sourceId": "nd168-2024",
+              "article": "Điều 6",
+              "clause": "1",
+              "point": "a",
+              "quote": "Không chấp hành hiệu lệnh, chỉ dẫn của biển báo hiệu, vạch kẻ đường, trừ các hành vi vi phạm quy định tại điểm a, điểm c, điểm d, điểm đ khoản 2; điểm a, điểm d, điểm đ, điểm e, điểm n, điểm o khoản 3; điểm a, điểm b, điểm đ, điểm e, điểm i, điểm k, điểm l khoản 4; điểm a, điểm b, điểm c, điểm d, điểm đ, điểm i, điểm k khoản 5; điểm a khoản 6; khoản 7; điểm b, điểm d khoản 9; điểm a khoản 10; điểm đ khoản 11 Điều này;",
+              "url": "https://luatvietnam.vn/an-ninh-trat-tu/nghi-dinh-168-2024-nd-cp-xu-phat-vi-pham-hanh-chinh-giao-thong-duong-bo-tru-diem-phuc-hoi-diem-giay-phep-lai-xe-382883-d1.html"
+            },
+            "effectiveFrom": "2025-01-01",
+            "verified": true,
+            "checkedOn": "2026-11-23"
+          },
+          "source": {
+            "number": "168/2024/NĐ-CP",
+            "title": "Nghị định quy định xử phạt vi phạm hành chính về trật tự, an toàn giao thông trong lĩnh vực giao thông đường bộ; trừ điểm, phục hồi điểm giấy phép lái xe",
+            "url": "https://storage-vnportal.vnpt.vn/gov-tha/6443/FileQuanTriTinTuc/NĐ%20So%20168_2024%20XU%20PHAT%20VPHC%20GTĐB638714994106201900.pdf"
+          },
+          "amendmentSources": [],
+          "inferred": true,
+          "designParams": [],
+          "scoreOnly": false,
+          "note": {
+            "vi": "Đi thẳng qua vạch kẻ đường khi có người đi bộ: không có điểm riêng, áp dụng điểm a khoản 1 theo suy luận."
+          },
+          "episodeId": "crosswalk-yield-0",
+          "kind": "new"
+        },
+        {
+          "ruleId": "lane-change",
+          "title": {
+            "vi": "Chuyển làn đường không đúng quy định"
+          },
+          "tierIndex": 0,
+          "tick": 1200,
+          "t": 20,
+          "pos": {
+            "x": 120,
+            "z": 0.2
+          },
+          "danger": 2,
+          "deduction": 0.5,
+          "clause": {
+            "id": "D6.2.a",
+            "fineVnd": {
+              "min": 600000,
+              "max": 800000
+            },
+            "licencePoints": 0,
+            "suspensionMonths": null,
+            "citation": {
+              "sourceId": "nd168-2024",
+              "article": "Điều 6",
+              "clause": "2",
+              "point": "a",
+              "quote": "Chuyển làn đường không đúng nơi cho phép hoặc không có tín hiệu báo trước hoặc chuyển làn đường không đúng quy định “mỗi lần chuyển làn đường chỉ được phép chuyển sang một làn đường liền kề”, trừ các hành vi vi phạm quy định tại điểm g khoản 5 Điều này;",
+              "url": "https://luatvietnam.vn/an-ninh-trat-tu/nghi-dinh-168-2024-nd-cp-xu-phat-vi-pham-hanh-chinh-giao-thong-duong-bo-tru-diem-phuc-hoi-diem-giay-phep-lai-xe-382883-d1.html"
+            },
+            "amendments": [
+              {
+                "sourceId": "nd238-2026",
+                "article": "Điều 19",
+                "clause": "2",
+                "quote": "hoặc chuyển làn đường không bảo đảm khoảng cách an toàn với xe phía trước, xe phía sau, xe hai bên",
+                "url": "https://congbaocdn.chinhphu.vn/180507251028987904/2026/7/13/469913-1783914973_v1_1783915444_signed.pdf"
+              }
+            ],
+            "effectiveFrom": "2026-08-15",
+            "verified": true,
+            "checkedOn": "2026-11-23"
+          },
+          "source": {
+            "number": "168/2024/NĐ-CP",
+            "title": "Nghị định quy định xử phạt vi phạm hành chính về trật tự, an toàn giao thông trong lĩnh vực giao thông đường bộ; trừ điểm, phục hồi điểm giấy phép lái xe",
+            "url": "https://storage-vnportal.vnpt.vn/gov-tha/6443/FileQuanTriTinTuc/NĐ%20So%20168_2024%20XU%20PHAT%20VPHC%20GTĐB638714994106201900.pdf"
+          },
+          "amendmentSources": [
+            {
+              "sourceId": "nd238-2026",
+              "number": "238/2026/NĐ-CP",
+              "title": "Nghị định sửa đổi, bổ sung một số điều của Nghị định số 168/2024/NĐ-CP ngày 26 tháng 12 năm 2024 của Chính phủ quy định xử phạt vi phạm hành chính về trật tự, an toàn giao thông trong lĩnh vực giao thông đường bộ; trừ điểm, phục hồi điểm giấy phép lái xe",
+              "url": "https://congbaocdn.chinhphu.vn/180507251028987904/2026/7/13/469913-1783914973_v1_1783915444_signed.pdf"
+            }
+          ],
+          "inferred": false,
+          "designParams": [
+            "signalLeadS"
+          ],
+          "scoreOnly": false,
+          "episodeId": "lane-change-0",
+          "kind": "new"
+        },
+        {
+          "ruleId": "crash",
+          "title": {
+            "vi": "Va chạm"
+          },
+          "tierIndex": 0,
+          "tick": 1500,
+          "t": 25,
+          "pos": {
+            "x": 130,
+            "z": 3.4
+          },
+          "danger": 1,
+          "deduction": 0.25,
+          "clause": null,
+          "source": null,
+          "amendmentSources": [],
+          "inferred": false,
+          "designParams": [],
+          "scoreOnly": true,
+          "note": {
+            "vi": "Va vào lề đường: chỉ trừ điểm trò chơi, không có mức phạt."
+          },
+          "episodeId": "crash-0",
+          "kind": "new"
+        }
+      ],
+      "licence": {
+        "start": 12,
+        "deducted": 2,
+        "remaining": 10
+      },
+      "fineTotalVnd": {
+        "min": 5000000,
+        "max": 7400000
+      },
+      "finished": true,
+      "endedBy": "finish"
+    }
+  }
+}

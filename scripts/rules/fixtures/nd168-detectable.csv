@@ -1,0 +1,102 @@
+id,vehicle,behaviour,cite,fine_min,fine_max,points,susp_months,extra,amended,effective_from
+car_speed_5_10,car,Speeding from 5 to under 10 km/h,D6.3.a,800000,1000000,0,none,,,2025-01-01
+car_speed_10_20,car,Speeding from 10 to 20 km/h,D6.5.đ,4000000,6000000,2,none,,,2025-01-01
+car_speed_20_35,car,Speeding over 20 up to 35 km/h,D6.6.a,6000000,8000000,4,none,,,2025-01-01
+car_speed_35_plus,car,Speeding over 35 km/h,D6.7.a,12000000,14000000,6,none,,,2025-01-01
+car_below_min_speed,car,Below posted minimum speed,D6.3.o,800000,1000000,0,none,,,2025-01-01
+car_slow_not_right,car,Slower than same-direction traffic but not in right lane,D6.3.p,800000,1000000,0,none,,,2025-01-01
+car_red_light,car,Not obeying traffic light,D6.9.b,18000000,20000000,4,none,,,2025-01-01
+car_sign_marking_general,car,Not obeying sign or road marking (STOP sign; no-horn sign; solid line not covered elsewhere),D6.1.a,400000,600000,0,none,,,2025-01-01
+car_turn_no_signal,car,Turning without observing/slowing/signalling or signal not kept on,D6.3.c,800000,1000000,0,none,,,2025-01-01
+car_lane_change_bad,car,Lane change at wrong place / no signal / skipping lanes / unsafe gap (non-expressway),D6.2.a,600000,800000,0,none,,ND238 Đ19.2,2026-08-15
+car_lane_change_bad_expwy,car,Same as above on expressway,D6.5.g,4000000,6000000,2,none,,ND238 Đ19.2,2026-08-15
+car_wrong_side_lane,car,Not keeping right / wrong part of road or lane / crossing fixed median,D6.5.b,4000000,6000000,2,none,,,2025-01-01
+car_wrong_way_oneway,car,Wrong way on one-way road or against No-Entry-Wrong-Way sign,D6.9.d,18000000,20000000,4,none,,,2025-01-01
+car_wrong_way_expwy,car,Wrong way / reversing / U-turn on expressway,D6.11.đ,30000000,40000000,10,none,,,2025-01-01
+car_no_entry,car,Entering prohibited area or road with no-entry sign for this vehicle,D6.5.i,4000000,6000000,2,none,,ND238 Đ19.3,2026-08-15
+car_gap_collision,car,Not keeping safe distance causing collision with vehicle ahead / ignoring minimum-gap sign,D6.4.l,2000000,3000000,0,none,,,2025-01-01
+car_gap_expwy,car,Not keeping safe distance on expressway; bad expressway entry/exit; driving on emergency lane/shoulder,D6.5.d,4000000,6000000,2,none,,,2025-01-01
+car_no_lights,car,No or insufficient lights 18:00-06:00 or in fog/rain/poor visibility,D6.3.g,800000,1000000,0,none,,,2025-01-01
+car_tunnel_no_low_beam,car,No low beam in tunnel,D6.3.n,800000,1000000,0,none,,,2025-01-01
+car_high_beam_misuse,car,High beam toward pedestrians / lit urban road / oncoming / at intersection turn,D6.3.b,800000,1000000,0,none,,,2025-01-01
+car_horn_continuous,car,Continuous horn or revving; air horn,D6.3.b,800000,1000000,0,none,,,2025-01-01
+car_horn_night,car,Horn 22:00-05:00 in residential area or medical zone,D6.1.đ,400000,600000,0,none,,,2025-01-01
+car_turn_prohibited,car,U-turn / left / right turn where a sign prohibits it,D6.4.k,2000000,3000000,0,none,,,2025-01-01
+car_uturn_bad_place,car,U-turn on crossing / bridge / railway crossing / narrow / slope / blind curve / one-way,D6.4.i,2000000,3000000,0,none,,,2025-01-01
+car_stop_uturn_jam,car,Illegal stop / park / U-turn causing congestion,D6.5.k,4000000,6000000,2,none,,,2025-01-01
+car_reverse_bad,car,Reversing on one-way / restricted places or without looking or signalling,D6.4.e,2000000,3000000,0,none,,,2025-01-01
+car_tunnel_reverse_uturn,car,Reversing or U-turn in tunnel; illegal stop in tunnel,D6.4.đ,2000000,3000000,2,none,,,2025-01-01
+car_park_signal,car,No signal when entering or leaving a stop/park position,D6.1.b,400000,600000,0,none,,,2025-01-01
+car_stop_park_rural,car,Stop/park on carriageway outside urban area with wide shoulder / not at right edge / against traffic direction / on fixed median / on slope without chocks,D6.2.d,600000,800000,0,none,,,2025-01-01
+car_stop_park_a,car,Stop not at kerb / on bus lane / on crosswalk / leaving seat without parking brake / under No-Stopping sign (stop) etc.,D6.2.đ,600000,800000,0,none,,,2025-01-01
+car_stop_park_b,car,Stop/park within 5 m of intersection / at bus stop / blocking signs / median opening,D6.3.đ,800000,1000000,0,none,,,2025-01-01
+car_park_c,car,Park under No-Parking or No-Stopping sign; park on sidewalk illegally etc.,D6.3.e,800000,1000000,0,none,,,2025-01-01
+car_stop_park_d,car,Stop/park on left of one-way road / blind curve / on bridge / double parking,D6.4.b,2000000,3000000,2,none,,,2025-01-01
+car_stop_expwy,car,Stopping/parking on expressway outside permitted places or without hazard lights,D6.7.c,12000000,14000000,6,none,,ND238 Đ19.4,2026-08-15
+car_ped_turn_marked,car,Turning without giving priority to pedestrians/wheelchairs on marked crossing,D6.5.l,4000000,6000000,0,none,,,2025-01-01
+car_ped_turn_unmarked,car,Turning without yielding to oncoming vehicles or pedestrians crossing where unmarked,D6.5.m,4000000,6000000,0,none,,,2025-01-01
+car_yield_intersection,car,Not following give-way rules at intersection (general),D6.2.c,600000,800000,0,none,,,2025-01-01
+car_yield_minor_major,car,Not slowing/stopping and yielding from minor road onto priority road,D6.5.n,4000000,6000000,2,none,,,2025-01-01
+car_yield_roundabout,car,Not yielding to the right (no roundabout sign) or to the left (roundabout),D6.5.o,4000000,6000000,2,none,,,2025-01-01
+car_overtake_bad,car,Prohibited overtaking / under No-Overtaking sign / no signal / overtaking on right illegally,D6.5.a,4000000,6000000,2,none,,,2025-01-01
+car_not_yield_overtaker,car,Not giving way to a vehicle asking to overtake when safe,D6.4.d,2000000,3000000,2,none,,,2025-01-01
+car_oncoming_pass_bad,car,Wrong passing of oncoming traffic; not yielding at narrow road/slope/obstacle,D6.5.c,4000000,6000000,2,none,,,2025-01-01
+car_sidewalk,car,Driving on sidewalk (except crossing it to enter a property),D6.6.d,6000000,8000000,4,none,,,2025-01-01
+car_phone,car,Holding and using phone while moving,D6.5.h,4000000,6000000,4,none,,,2025-01-01
+car_seatbelt_driver,car,Driver not wearing seat belt,D6.3.k,800000,1000000,0,none,,,2025-01-01
+car_emergency_vehicle,car,Not yielding to / obstructing priority vehicle with signals on,D6.6.b,6000000,8000000,4,none,,,2025-01-01
+car_door_unsafe,car,Opening or leaving a door open unsafely,D6.5.q,4000000,6000000,0,none,,,2025-01-01
+car_accident_no_stop,car,Directly involved in accident and not stopping / not keeping scene / not helping,D6.4.g,2000000,3000000,2,none,,,2025-01-01
+car_accident_flee,car,Causing accident and fleeing or not reporting,D6.8,16000000,18000000,6,none,,,2025-01-01
+car_accident_caused_a,car,Accident caused by not observing/slowing; speeding; wrong lane/gap; illegal turn/overtake/lane change/stop etc.,D6.10.a,20000000,22000000,10,none,,,2025-01-01
+car_accident_caused_b,car,"Accident caused by listed offences (D6.1.a-đ; 2.c; 3.b,g,h,n,o,p; 4.a,c,d; 5.c,d,e,h,n,o,q; 7.b; 9.b,c,d)",D6.10.b,20000000,22000000,10,none,,,2025-01-01
+car_reckless,car,Weaving (lạng lách đánh võng); racing each other over the limit; steering with feet,D6.12,40000000,50000000,0,10-12,,,2025-01-01
+car_reckless_accident,car,Reckless driving (D6.12) causing accident,D6.13,50000000,70000000,0,22-24,,,2025-01-01
+car_reckless_repeat,car,Repeat weaving,D6.14,,,0,22-24,vehicle confiscated (clause states confiscation only),,2025-01-01
+moto_speed_5_10,moto,Speeding from 5 to under 10 km/h,D7.2.b,400000,600000,0,none,,,2025-01-01
+moto_speed_10_20,moto,Speeding from 10 to 20 km/h,D7.4.a,800000,1000000,0,none,,,2025-01-01
+moto_speed_20_plus,moto,Speeding over 20 km/h,D7.8.a,6000000,8000000,4,none,,,2025-01-01
+moto_group_speeding,moto,Group of 2+ vehicles speeding,D7.9.b,8000000,10000000,0,10-12,,,2025-01-01
+moto_below_min_speed,moto,Below posted minimum speed,D7.1.k,200000,400000,0,none,,,2025-01-01
+moto_slow_not_right,moto,Riding slowly not on right side and obstructing traffic,D7.2.c,400000,600000,0,none,,,2025-01-01
+moto_red_light,moto,Not obeying traffic light,D7.7.c,4000000,6000000,4,none,,,2025-01-01
+moto_sign_marking_general,moto,Not obeying sign or road marking (STOP sign; no-horn sign; solid line not covered elsewhere),D7.1.a,200000,400000,0,none,,,2025-01-01
+moto_turn_bad,moto,Turning without observing/slowing/signalling; left or right turn where sign prohibits,D7.3.a,600000,800000,0,none,,,2025-01-01
+moto_uturn_bad,moto,U-turn where not allowed (except tunnel),D7.2.k,400000,600000,0,none,,,2025-01-01
+moto_tunnel_uturn,moto,U-turn in tunnel,D7.4.d,800000,1000000,0,none,,,2025-01-01
+moto_lane_change_bad,moto,Lane change at wrong place / no signal / skipping lanes / unsafe gap,D7.1.e,200000,400000,0,none,,ND238 Đ19.2,2026-08-15
+moto_wrong_side_lane,moto,Not keeping right / wrong part of road or lane / crossing fixed median,D7.3.d,600000,800000,0,none,,,2025-01-01
+moto_wrong_way_or_sidewalk,moto,Wrong way on one-way road or against sign; riding on sidewalk,D7.7.a,4000000,6000000,2,none,,,2025-01-01
+moto_on_expressway,moto,Entering an expressway,D7.7.b,4000000,6000000,6,none,,,2025-01-01
+moto_no_entry,moto,Entering prohibited area or road with no-entry sign for this vehicle,D7.6.b,2000000,3000000,2,none,,ND238 Đ19.3,2026-08-15
+moto_gap_collision,moto,Not keeping safe distance causing collision / ignoring minimum-gap sign,D7.3.i,600000,800000,0,none,,,2025-01-01
+moto_no_lights,moto,No lights 18:00-06:00 or in fog/rain/poor visibility,D7.1.g,200000,400000,0,none,,,2025-01-01
+moto_tunnel_no_low_beam,moto,No low beam in tunnel,D7.3.h,600000,800000,0,none,,,2025-01-01
+moto_high_beam_misuse,moto,Wrong passing; high beam misuse; not yielding to oncoming at narrow road/slope/obstacle,D7.1.h,200000,400000,0,none,,,2025-01-01
+moto_horn_night,moto,Horn 22:00-05:00 in residential area or medical zone,D7.1.i,200000,400000,0,none,,,2025-01-01
+moto_horn_rev_continuous,moto,Continuous horn or revving (nẹt pô) in residential area or medical zone,D7.9.k,8000000,10000000,0,10-12,,,2025-01-01
+moto_overtake_no_signal,moto,No signal before or during overtaking,D7.1.b,200000,400000,0,none,,,2025-01-01
+moto_overtake_right,moto,Overtaking on the right where not allowed,D7.3.đ,600000,800000,0,none,,,2025-01-01
+moto_overtake_prohibited,moto,Prohibited overtaking / under No-Overtaking sign,D7.4.c,800000,1000000,0,none,,,2025-01-01
+moto_ped_turn_marked,moto,Turning without giving priority to pedestrians/wheelchairs on marked crossing,D7.5.b,1000000,2000000,2,none,,,2025-01-01
+moto_ped_turn_unmarked,moto,Turning without yielding to oncoming vehicles or pedestrians crossing where unmarked,D7.5.c,1000000,2000000,2,none,,,2025-01-01
+moto_yield_intersection,moto,Not following give-way rules at intersection (general),D7.1.đ,200000,400000,0,none,,,2025-01-01
+moto_yield_minor_major,moto,Not slowing/stopping and yielding from minor road onto priority road,D7.6.c,2000000,3000000,2,none,,,2025-01-01
+moto_yield_roundabout,moto,Not yielding to the right (no roundabout sign) or to the left (roundabout),D7.6.d,2000000,3000000,2,none,,,2025-01-01
+moto_phone,moto,Using umbrella / audio device / holding phone while riding,D7.4.đ,800000,1000000,4,none,,,2025-01-01
+moto_helmet,moto,Rider without helmet or unfastened,D7.2.h,400000,600000,0,none,,,2025-01-01
+moto_emergency_vehicle,moto,Not yielding to / obstructing priority vehicle with signals on,D7.7.đ,4000000,6000000,4,none,,,2025-01-01
+moto_abreast,moto,Riding 3+ abreast,D7.3.k,600000,800000,0,none,,,2025-01-01
+moto_stop_rural_lane,moto,Stopping/parking on carriageway outside urban area where there is a shoulder,D7.2.a,400000,600000,0,none,,,2025-01-01
+moto_stop_obstruct,moto,Stopping/parking on carriageway obstructing traffic,D7.2.d,400000,600000,0,none,,,2025-01-01
+moto_stop_park_signs,moto,Stop/park at bus stop / intersection / crosswalk / under No-Stopping or No-Parking signs,D7.2.e,400000,600000,0,none,,,2025-01-01
+moto_stop_bridge,moto,Stopping/parking on a bridge,D7.3.c,600000,800000,0,none,,,2025-01-01
+moto_stop_tunnel,moto,Stopping/parking in tunnel outside permitted places,D7.4.b,800000,1000000,0,none,,,2025-01-01
+moto_accident_no_stop,moto,Directly involved in accident and not stopping / not keeping scene / not helping,D7.5.a,1000000,2000000,2,none,,,2025-01-01
+moto_accident_flee,moto,Causing accident and fleeing or not reporting,D7.9.c,8000000,10000000,6,none,,,2025-01-01
+moto_accident_caused_a,moto,Accident caused by not observing/slowing; speeding; illegal turn/overtake/lane change/stop; wrong lane/gap; wrong way etc.,D7.10.a,10000000,14000000,10,none,,,2025-01-01
+moto_accident_caused_b,moto,"Accident caused by listed offences (D7.1.a,d,đ,g,h,i,k; 2.c,đ,g; 3.b,e,g,h,k; 4.đ; 6.c,d; 7.c,d,đ; 9.a,b,h,k)",D7.10.b,10000000,14000000,10,none,,,2025-01-01
+moto_weaving,moto,Weaving (lạng lách đánh võng); scraping kickstand or objects on road while moving,D7.9.a,8000000,10000000,0,10-12,,,2025-01-01
+moto_no_hands_etc,moto,Both hands off; steering with feet; side-saddle; lying on seat; swapping riders while moving; facing backward; blindfolded,D7.11.a,,,0,22-24,vehicle confiscated (clause states confiscation only),,2025-01-01
+moto_wheelie,moto,Riding on one wheel (two-wheeler) or two wheels (three-wheeler),D7.11.b,,,0,22-24,vehicle confiscated (clause states confiscation only),,2025-01-01
+moto_weaving_repeat,moto,Repeat weaving,D7.11.c,,,0,22-24,vehicle confiscated (clause states confiscation only),,2025-01-01

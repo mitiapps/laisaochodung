@@ -1,0 +1,20 @@
+# Driving on a pavement: the body centre inside a pavement polygon while moving, for sustainS.
+id: pavement
+title: { vi: "Đi trên vỉa hè" }
+description: { vi: "Điều khiển xe đi trên vỉa hè." }
+vehicleClasses: [car, motorbike]
+detection:
+  type: footprint-in-polygon
+  params: { minSpeedMps: 0.5, sustainS: 0.5 }
+  paramBasis: { minSpeedMps: design, sustainS: design }
+obligation:
+  - sourceId: law36-2024
+    article: Điều 33
+    clause: '3'
+    point: b
+    quote: Đi xe vào phần đường dành cho người đi bộ và phương tiện khác
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+tiers:
+  - danger: 3
+    scoreOnly: false
+    clause: { D6: D6.6.d, D7: D7.7.a }

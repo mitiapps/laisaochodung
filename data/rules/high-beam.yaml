@@ -1,0 +1,20 @@
+# High beam held for sustainS in a lit built-up zone, toward an oncoming car or a pedestrian ahead
+# within rangeM (and lateralM to the side), or while turning in a junction.
+id: high-beam
+title: { vi: "Dùng đèn chiếu xa sai quy định" }
+description: { vi: "Bật đèn chiếu xa trên đường có chiếu sáng trong khu đông dân cư, khi gặp xe ngược chiều, người đi bộ, hoặc khi rẽ tại nút giao." }
+vehicleClasses: [car, motorbike]
+detection:
+  type: high-beam-misuse
+  params: { rangeM: 150, lateralM: 10, sustainS: 1, turnMinDeg: 20 }
+  paramBasis: { rangeM: design, lateralM: design, sustainS: design, turnMinDeg: design }
+obligation:
+  - sourceId: law36-2024
+    article: Điều 20
+    clause: '2'
+    quote: phải tắt đèn chiếu xa, bật đèn chiếu gần trong các trường hợp sau đây
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+tiers:
+  - danger: 1
+    scoreOnly: false
+    clause: { D6: D6.3.b, D7: D7.1.h }

@@ -1,0 +1,20 @@
+# STOP line (R.122): the front crosses it without the speed ever reaching stopSpeedMps within the
+# last withinM before it. No dedicated clause exists; it is the sign-and-marking catch-all.
+id: stop-sign
+title: { vi: "Không dừng lại tại biển STOP" }
+description: { vi: "Đi qua vạch dừng của biển \"Dừng lại\" mà không dừng hẳn." }
+vehicleClasses: [car, motorbike]
+detection:
+  type: stop-line-no-stop
+  params: { stopSpeedMps: 0.5, withinM: 3 }
+  paramBasis: { stopSpeedMps: design, withinM: design }
+obligation:
+  - sourceId: qcvn41-2024
+    article: Phụ lục D
+    point: D.1 b)
+    quote: Biển có hiệu lực buộc các loại xe cơ giới và thô sơ kể cả xe được ưu tiên theo quy định dừng lại trước biển hoặc trước vạch ngang đường
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
+tiers:
+  - danger: 3
+    scoreOnly: false
+    clause: { D6: D6.1.a, D7: D7.1.a }

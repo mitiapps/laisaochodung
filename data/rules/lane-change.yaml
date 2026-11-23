@@ -1,0 +1,28 @@
+# Lane change between two lanes of the same direction. Tier 1: no indicator toward the new lane
+# held for signalLeadS before the crossing, a line not crossable from this side, or a second
+# lane line crossed within skipWindowS. Tier 2: a car in the target lane within gapAheadM ahead
+# or gapBehindM behind (the unsafe-gap wording ND 238 added to the same clause).
+id: lane-change
+title: { vi: "Chuyển làn không đúng quy định" }
+description: { vi: "Chuyển làn không xi nhan trước, qua vạch liền, chuyển hai làn một lúc hoặc không bảo đảm khoảng cách an toàn." }
+vehicleClasses: [car, motorbike]
+detection:
+  type: lane-line-cross
+  params: { signalLeadS: 1, skipWindowS: 3, gapAheadM: 5, gapBehindM: 10 }
+  paramBasis: { signalLeadS: design, skipWindowS: design, gapAheadM: design, gapBehindM: design }
+obligation:
+  - sourceId: law36-2024
+    article: Điều 13
+    clause: '2'
+    quote: chỉ được chuyển làn đường ở những nơi cho phép; mỗi lần chuyển làn đường chỉ được phép chuyển sang một làn đường liền kề; khi chuyển làn đường phải có tín hiệu báo trước; phải quan sát bảo đảm khoảng cách an toàn với xe phía trước, phía sau và hai bên mới được chuyển làn.
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+tiers:
+  - when: { fault: true }
+    danger: 2
+    scoreOnly: false
+    clause: { D6: D6.2.a, D7: D7.1.e }
+  - when: { unsafeGap: true }
+    danger: 3
+    scoreOnly: false
+    clause: { D6: D6.2.a, D7: D7.1.e }
+    note: { vi: "Chuyển làn khi có xe ở làn bên cạnh quá gần." }

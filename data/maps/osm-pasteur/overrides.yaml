@@ -1,0 +1,16 @@
+# Curated data the OSM extract lacks. Map data © OpenStreetMap contributors, ODbL 1.0; this file is
+# part of the derived database (see ../LICENSE-ODbL.md). Every entry carries a reason.
+# Positions: `{way, s}` (metres from the way's first node) or `{way, node, offsetM}` (offset along
+# the travel direction, negative = before the node). Only route ways can hold placements.
+
+environment: { startClockMin: 480, weather: clear, surfaceGrip: 1 }
+timeLimitS: 240
+
+signs:
+  - id: s-r420
+    code: R.420
+    at: { way: 329878186, s: 15 }
+    reason: >-
+      Quận 1 lies inside the city's built-up area. R.421 is not in the sign set, so the game places
+      one R.420 at the corridor start and the built-up zone covers the whole map (decision D11).
+      No real P.127 is known on this stretch; the OSM maxspeed tags are not used.

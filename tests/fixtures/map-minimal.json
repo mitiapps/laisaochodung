@@ -1,0 +1,867 @@
+{
+  "schemaVersion": 1,
+  "id": "fixture-minimal",
+  "name": {
+    "vi": "Bản đồ kiểm thử tối giản"
+  },
+  "kind": "tutorial",
+  "environment": {
+    "startClockMin": 600,
+    "weather": "clear",
+    "surfaceGrip": 1
+  },
+  "route": {
+    "start": {
+      "pos": {
+        "x": 5,
+        "z": 1.75
+      },
+      "heading": 0
+    },
+    "checkpoints": [
+      {
+        "pos": {
+          "x": 60,
+          "z": 1.75
+        },
+        "heading": 0
+      },
+      {
+        "pos": {
+          "x": 150,
+          "z": 1.75
+        },
+        "heading": 0
+      }
+    ],
+    "finish": {
+      "polygon": [
+        [
+          185,
+          0
+        ],
+        [
+          195,
+          0
+        ],
+        [
+          195,
+          3.5
+        ],
+        [
+          185,
+          3.5
+        ]
+      ]
+    },
+    "timeLimitS": 120
+  },
+  "roads": [
+    {
+      "id": "rw",
+      "class": "secondary",
+      "divided": false,
+      "oneway": false,
+      "lanes": [
+        {
+          "id": "rw-e",
+          "dir": "forward",
+          "index": 0,
+          "polygon": [
+            [
+              0,
+              0
+            ],
+            [
+              96.5,
+              0
+            ],
+            [
+              96.5,
+              3.5
+            ],
+            [
+              0,
+              3.5
+            ]
+          ],
+          "centerline": [
+            [
+              0,
+              1.75
+            ],
+            [
+              96.5,
+              1.75
+            ]
+          ]
+        },
+        {
+          "id": "rw-w",
+          "dir": "backward",
+          "index": 0,
+          "polygon": [
+            [
+              0,
+              -3.5
+            ],
+            [
+              96.5,
+              -3.5
+            ],
+            [
+              96.5,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "centerline": [
+            [
+              96.5,
+              -1.75
+            ],
+            [
+              0,
+              -1.75
+            ]
+          ]
+        }
+      ],
+      "laneLines": [
+        {
+          "id": "rw-c",
+          "left": "rw-w",
+          "right": "rw-e",
+          "type": "dashed",
+          "polyline": [
+            [
+              0,
+              0
+            ],
+            [
+              96.5,
+              0
+            ]
+          ],
+          "crossable": "both"
+        }
+      ]
+    },
+    {
+      "id": "re",
+      "class": "secondary",
+      "divided": false,
+      "oneway": false,
+      "lanes": [
+        {
+          "id": "re-e",
+          "dir": "forward",
+          "index": 0,
+          "polygon": [
+            [
+              103.5,
+              0
+            ],
+            [
+              200,
+              0
+            ],
+            [
+              200,
+              3.5
+            ],
+            [
+              103.5,
+              3.5
+            ]
+          ],
+          "centerline": [
+            [
+              103.5,
+              1.75
+            ],
+            [
+              200,
+              1.75
+            ]
+          ]
+        },
+        {
+          "id": "re-w",
+          "dir": "backward",
+          "index": 0,
+          "polygon": [
+            [
+              103.5,
+              -3.5
+            ],
+            [
+              200,
+              -3.5
+            ],
+            [
+              200,
+              0
+            ],
+            [
+              103.5,
+              0
+            ]
+          ],
+          "centerline": [
+            [
+              200,
+              -1.75
+            ],
+            [
+              103.5,
+              -1.75
+            ]
+          ]
+        }
+      ],
+      "laneLines": [
+        {
+          "id": "re-c",
+          "left": "re-w",
+          "right": "re-e",
+          "type": "solid",
+          "polyline": [
+            [
+              103.5,
+              0
+            ],
+            [
+              200,
+              0
+            ]
+          ],
+          "crossable": "none"
+        }
+      ]
+    },
+    {
+      "id": "rn",
+      "class": "residential",
+      "divided": false,
+      "oneway": false,
+      "lanes": [
+        {
+          "id": "rn-s",
+          "dir": "forward",
+          "index": 0,
+          "polygon": [
+            [
+              96.5,
+              -43.5
+            ],
+            [
+              100,
+              -43.5
+            ],
+            [
+              100,
+              -3.5
+            ],
+            [
+              96.5,
+              -3.5
+            ]
+          ],
+          "centerline": [
+            [
+              98.25,
+              -43.5
+            ],
+            [
+              98.25,
+              -3.5
+            ]
+          ]
+        },
+        {
+          "id": "rn-n",
+          "dir": "backward",
+          "index": 0,
+          "polygon": [
+            [
+              100,
+              -43.5
+            ],
+            [
+              103.5,
+              -43.5
+            ],
+            [
+              103.5,
+              -3.5
+            ],
+            [
+              100,
+              -3.5
+            ]
+          ],
+          "centerline": [
+            [
+              101.75,
+              -3.5
+            ],
+            [
+              101.75,
+              -43.5
+            ]
+          ]
+        }
+      ],
+      "laneLines": [
+        {
+          "id": "rn-c",
+          "left": "rn-n",
+          "right": "rn-s",
+          "type": "double-solid",
+          "polyline": [
+            [
+              100,
+              -43.5
+            ],
+            [
+              100,
+              -3.5
+            ]
+          ],
+          "crossable": "none"
+        }
+      ]
+    },
+    {
+      "id": "rs",
+      "class": "residential",
+      "divided": false,
+      "oneway": true,
+      "lanes": [
+        {
+          "id": "rs-n",
+          "dir": "forward",
+          "index": 0,
+          "polygon": [
+            [
+              98.25,
+              3.5
+            ],
+            [
+              101.75,
+              3.5
+            ],
+            [
+              101.75,
+              43.5
+            ],
+            [
+              98.25,
+              43.5
+            ]
+          ],
+          "centerline": [
+            [
+              100,
+              43.5
+            ],
+            [
+              100,
+              3.5
+            ]
+          ]
+        }
+      ],
+      "laneLines": []
+    }
+  ],
+  "junctions": [
+    {
+      "id": "j1",
+      "polygon": [
+        [
+          96.5,
+          -3.5
+        ],
+        [
+          103.5,
+          -3.5
+        ],
+        [
+          103.5,
+          3.5
+        ],
+        [
+          96.5,
+          3.5
+        ]
+      ],
+      "roadIds": [
+        "rw",
+        "re",
+        "rn",
+        "rs"
+      ],
+      "signalized": true,
+      "roundabout": false,
+      "priorityRoadIds": []
+    }
+  ],
+  "zones": [
+    {
+      "id": "z-built-up",
+      "type": "built-up",
+      "polygon": [
+        [
+          -5,
+          -50
+        ],
+        [
+          205,
+          -50
+        ],
+        [
+          205,
+          50
+        ],
+        [
+          -5,
+          50
+        ]
+      ],
+      "laneIds": [
+        "rw-e",
+        "rw-w",
+        "re-e",
+        "re-w",
+        "rn-s",
+        "rn-n",
+        "rs-n"
+      ],
+      "signIds": [
+        "s-r420"
+      ],
+      "source": "tutorial"
+    },
+    {
+      "id": "z-p127-50",
+      "type": "speed-limit",
+      "polygon": [
+        [
+          10,
+          0
+        ],
+        [
+          96.5,
+          0
+        ],
+        [
+          96.5,
+          3.5
+        ],
+        [
+          10,
+          3.5
+        ]
+      ],
+      "laneIds": [
+        "rw-e"
+      ],
+      "valueKmh": 50,
+      "signIds": [
+        "s-p127"
+      ],
+      "source": "tutorial"
+    }
+  ],
+  "stopLines": [
+    {
+      "id": "sl-w",
+      "segment": [
+        [
+          88,
+          0
+        ],
+        [
+          88,
+          3.5
+        ]
+      ],
+      "laneIds": [
+        "rw-e"
+      ],
+      "control": "signal",
+      "signalId": "sig-w"
+    },
+    {
+      "id": "sl-e",
+      "segment": [
+        [
+          105,
+          -3.5
+        ],
+        [
+          105,
+          0
+        ]
+      ],
+      "laneIds": [
+        "re-w"
+      ],
+      "control": "signal",
+      "signalId": "sig-e"
+    },
+    {
+      "id": "sl-n",
+      "segment": [
+        [
+          96.5,
+          -5
+        ],
+        [
+          100,
+          -5
+        ]
+      ],
+      "laneIds": [
+        "rn-s"
+      ],
+      "control": "signal",
+      "signalId": "sig-n"
+    },
+    {
+      "id": "sl-s",
+      "segment": [
+        [
+          98.25,
+          5
+        ],
+        [
+          101.75,
+          5
+        ]
+      ],
+      "laneIds": [
+        "rs-n"
+      ],
+      "control": "signal",
+      "signalId": "sig-s"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig-w",
+      "pos": {
+        "x": 87,
+        "z": 4.5
+      },
+      "heading": 0,
+      "stopLineIds": [
+        "sl-w"
+      ],
+      "cycle": {
+        "green": 27,
+        "yellow": 3,
+        "red": 30,
+        "offset": 0
+      }
+    },
+    {
+      "id": "sig-e",
+      "pos": {
+        "x": 106,
+        "z": -4.5
+      },
+      "heading": 3.141592653589793,
+      "stopLineIds": [
+        "sl-e"
+      ],
+      "cycle": {
+        "green": 27,
+        "yellow": 3,
+        "red": 30,
+        "offset": 0
+      }
+    },
+    {
+      "id": "sig-n",
+      "pos": {
+        "x": 95.5,
+        "z": -6
+      },
+      "heading": -1.5707963267948966,
+      "stopLineIds": [
+        "sl-n"
+      ],
+      "cycle": {
+        "green": 27,
+        "yellow": 3,
+        "red": 30,
+        "offset": 30
+      }
+    },
+    {
+      "id": "sig-s",
+      "pos": {
+        "x": 102.75,
+        "z": 6
+      },
+      "heading": 1.5707963267948966,
+      "stopLineIds": [
+        "sl-s"
+      ],
+      "cycle": {
+        "green": 27,
+        "yellow": 3,
+        "red": 30,
+        "offset": 30
+      }
+    }
+  ],
+  "crosswalks": [
+    {
+      "id": "cw-w",
+      "polygon": [
+        [
+          90,
+          -3.5
+        ],
+        [
+          94,
+          -3.5
+        ],
+        [
+          94,
+          3.5
+        ],
+        [
+          90,
+          3.5
+        ]
+      ],
+      "signalId": "sig-w"
+    }
+  ],
+  "restrictions": [
+    {
+      "id": "rx-n-left",
+      "junctionId": "j1",
+      "fromLaneIds": [
+        "rn-s"
+      ],
+      "banned": [
+        "left"
+      ],
+      "signId": "s-p123a"
+    }
+  ],
+  "entries": [
+    {
+      "id": "en-s",
+      "segment": [
+        [
+          98.25,
+          3.5
+        ],
+        [
+          101.75,
+          3.5
+        ]
+      ],
+      "heading": -1.5707963267948966,
+      "bannedClasses": [
+        "all"
+      ],
+      "signId": "s-p102"
+    }
+  ],
+  "pavements": [
+    {
+      "id": "pv-w-south",
+      "polygon": [
+        [
+          0,
+          3.5
+        ],
+        [
+          88,
+          3.5
+        ],
+        [
+          88,
+          6
+        ],
+        [
+          0,
+          6
+        ]
+      ]
+    },
+    {
+      "id": "pv-w-north",
+      "polygon": [
+        [
+          0,
+          -6
+        ],
+        [
+          88,
+          -6
+        ],
+        [
+          88,
+          -3.5
+        ],
+        [
+          0,
+          -3.5
+        ]
+      ]
+    }
+  ],
+  "signs": [
+    {
+      "id": "s-r420",
+      "code": "R.420",
+      "pos": {
+        "x": 1,
+        "z": 5
+      },
+      "heading": 0,
+      "source": "tutorial"
+    },
+    {
+      "id": "s-p127",
+      "code": "P.127",
+      "value": 50,
+      "pos": {
+        "x": 10,
+        "z": 5
+      },
+      "heading": 0,
+      "source": "tutorial"
+    },
+    {
+      "id": "s-p123a",
+      "code": "P.123a",
+      "pos": {
+        "x": 95.5,
+        "z": -10
+      },
+      "heading": -1.5707963267948966,
+      "source": "tutorial"
+    },
+    {
+      "id": "s-p102",
+      "code": "P.102",
+      "pos": {
+        "x": 97.5,
+        "z": 4.5
+      },
+      "heading": -1.5707963267948966,
+      "source": "tutorial"
+    },
+    {
+      "id": "s-i407a",
+      "code": "I.407a",
+      "pos": {
+        "x": 102.5,
+        "z": 42
+      },
+      "heading": 1.5707963267948966,
+      "source": "tutorial"
+    }
+  ],
+  "obstacles": [
+    {
+      "id": "ob-building-1",
+      "kind": "building",
+      "footprint": [
+        [
+          10,
+          8
+        ],
+        [
+          60,
+          8
+        ],
+        [
+          60,
+          20
+        ],
+        [
+          10,
+          20
+        ]
+      ],
+      "height": 12
+    }
+  ],
+  "actors": [
+    {
+      "id": "ped-1",
+      "kind": "pedestrian",
+      "model": "pedestrian",
+      "lengthM": 0.5,
+      "widthM": 0.5,
+      "path": [
+        [
+          92,
+          -5
+        ],
+        [
+          92,
+          5
+        ]
+      ],
+      "speed": 1.4,
+      "trigger": {
+        "polygon": [
+          [
+            40,
+            0
+          ],
+          [
+            60,
+            0
+          ],
+          [
+            60,
+            3.5
+          ],
+          [
+            40,
+            3.5
+          ]
+        ]
+      },
+      "loop": false
+    },
+    {
+      "id": "npc-1",
+      "kind": "car",
+      "model": "npc-sedan",
+      "lengthM": 4.5,
+      "widthM": 1.8,
+      "path": [
+        [
+          195,
+          -1.75
+        ],
+        [
+          5,
+          -1.75
+        ]
+      ],
+      "speed": 10,
+      "trigger": {
+        "atS": 0
+      },
+      "loop": false
+    }
+  ]
+}

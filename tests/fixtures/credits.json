@@ -1,0 +1,21 @@
+[
+  {
+    "file": "models/scooter.glb",
+    "title": "Scooter",
+    "author": "Julien Savoie",
+    "sourceUrl": "https://poly.pizza/m/5FDNl4MP9H3",
+    "licence": "CC BY 3.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "creditLine": "\"Scooter\" by Julien Savoie (https://poly.pizza/m/5FDNl4MP9H3), CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)",
+    "ownWork": false
+  },
+  {
+    "file": "signs/P.127.svg",
+    "title": "Biển P.127 Tốc độ tối đa cho phép",
+    "author": "laisaochodung",
+    "sourceUrl": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf",
+    "licence": "Apache-2.0",
+    "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+    "ownWork": true
+  }
+]

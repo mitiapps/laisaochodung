@@ -1,0 +1,19 @@
+[
+  {
+    "id": "fixture-minimal",
+    "name": {
+      "vi": "Bản đồ kiểm thử tối giản"
+    },
+    "kind": "tutorial",
+    "lengthM": 185
+  },
+  {
+    "id": "fixture-osm",
+    "name": {
+      "vi": "Đoạn phố mô phỏng (dữ liệu OSM)"
+    },
+    "kind": "osm",
+    "lengthM": 1150,
+    "attribution": "© OpenStreetMap contributors, ODbL"
+  }
+]

@@ -1,0 +1,18 @@
+# Horn from 22:00 to 05:00 inside a built-up zone.
+id: night-horn
+title: { vi: "Bấm còi ban đêm trong khu dân cư" }
+description: { vi: "Sử dụng còi từ 22 giờ đến 5 giờ sáng trong khu đông dân cư." }
+vehicleClasses: [car, motorbike]
+detection:
+  type: horn-in-window
+  params: { fromMin: 1320, toMin: 300 }
+  paramBasis: { fromMin: legal, toMin: legal }
+obligation:
+  - sourceId: law36-2024
+    article: Điều 21
+    quote: không sử dụng còi trong thời gian từ 22 giờ ngày hôm trước đến 05 giờ ngày hôm sau trong khu đông dân cư, khu vực cơ sở khám bệnh, chữa bệnh, trừ xe ưu tiên.
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+tiers:
+  - danger: 1
+    scoreOnly: false
+    clause: { D6: D6.1.đ, D7: D7.1.i }

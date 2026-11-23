@@ -1,0 +1,10 @@
+# Synthetic OSM-shaped fixture for converter tests; not real map data.
+kind: osm
+name: { vi: "Đoạn phố kiểm thử (dữ liệu tổng hợp)" }
+bbox: { south: 9.999, west: 105.9995, north: 10.0017, east: 106.0042 }
+route:
+  ways: [1, 2]
+  start: { at: { way: 1, s: 20 }, lane: 0 }
+  checkpoints:
+    - { way: 1, s: 100 }
+  finish: { way: 2, s: 120 }

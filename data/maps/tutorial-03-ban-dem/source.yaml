@@ -1,0 +1,70 @@
+# Tutorial 3: the tutorial-01 layout at night in rain, under street lights. Headlights, high beam
+# and night horn; following distance behind an NPC car; oncoming NPC cars; an NPC car in the
+# kerb lane for the lane-change gap. Everything not set here comes from the layout.
+kind: tutorial
+layout: tutorial-01-co-ban
+name: { vi: "Bài 3: Lái đêm trời mưa" }
+# 22:30, rain; the wet-road grip is a game value.
+environment: { startClockMin: 1350, weather: rain, surfaceGrip: 0.7 }
+timeLimitS: 300
+lit: true
+
+actors:
+  - id: ped-hep
+    kind: pedestrian
+    model: pedestrian
+    lengthM: 0.5
+    widthM: 0.5
+    speed: 1.4
+    # From the far side and triggered late, so the NPC car ahead has passed the crosswalk
+    # before the pedestrian reaches its lane (actors hold only for the player).
+    path: { crosswalk: cw-hep, from: left }
+    trigger: { way: hep, fromS: 100, toS: 110 }
+  # Car ahead in the player's lane, for the following distance.
+  - id: npc-ahead
+    kind: car
+    model: npc-sedan
+    lengthM: 4.5
+    widthM: 1.8
+    speed: 8
+    path:
+      lanes:
+        - { way: hep, index: 0, fromS: 45, toS: 220 }
+        - { way: rong, index: 1, fromS: 0, toS: 300 }
+        - { way: cuoi, index: 1, fromS: 0, toS: 140 }
+    trigger: { atS: 0 }
+  # Car in the kerb lane after the road works, for the lane-change gap.
+  - id: npc-kerb
+    kind: car
+    model: npc-sedan
+    lengthM: 4.5
+    widthM: 1.8
+    speed: 9
+    path:
+      lanes:
+        - { way: rong, index: 0, fromS: 115, toS: 300 }
+        - { way: cuoi, index: 0, fromS: 0, toS: 140 }
+    trigger: { way: rong, fromS: 60, toS: 75 }
+  # Oncoming cars, headlights toward the player.
+  - id: npc-oncoming-1
+    kind: car
+    model: npc-sedan
+    lengthM: 4.5
+    widthM: 1.8
+    speed: 9
+    path:
+      lanes:
+        - { way: cuoi, dir: backward, index: 1, fromS: 140, toS: 0 }
+        - { way: rong, dir: backward, index: 1, fromS: 300, toS: 0 }
+        - { way: hep, dir: backward, index: 0, fromS: 220, toS: 0 }
+    trigger: { atS: 0 }
+  - id: npc-oncoming-2
+    kind: car
+    model: npc-sedan
+    lengthM: 4.5
+    widthM: 1.8
+    speed: 9
+    path:
+      lanes:
+        - { way: rong, dir: backward, index: 0, fromS: 300, toS: 0 }
+    trigger: { atS: 12 }

@@ -1,0 +1,146 @@
+[
+  {
+    "file": "models/car-kit/sedan.glb",
+    "title": "Car Kit 3.1: Sedan",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/car-kit",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/car-kit/taxi.glb",
+    "title": "Car Kit 3.1: Taxi",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/car-kit",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/car-kit/hatchback-sports.glb",
+    "title": "Car Kit 3.1: Hatchback (sports)",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/car-kit",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/car-kit/Textures/colormap.png",
+    "title": "Car Kit 3.1: colour map texture",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/car-kit",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "signs/P.101.svg",
+    "title": "Biển P.101 Đường cấm",
+    "author": "laisaochodung",
+    "sourceUrl": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf",
+    "licence": "Apache-2.0",
+    "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+    "ownWork": true
+  },
+  {
+    "file": "signs/P.102.svg",
+    "title": "Biển P.102 Cấm đi ngược chiều",
+    "author": "laisaochodung",
+    "sourceUrl": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf",
+    "licence": "Apache-2.0",
+    "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+    "ownWork": true
+  },
+  {
+    "file": "signs/P.123a.svg",
+    "title": "Biển P.123a Cấm rẽ trái",
+    "author": "laisaochodung",
+    "sourceUrl": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf",
+    "licence": "Apache-2.0",
+    "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+    "ownWork": true
+  },
+  {
+    "file": "signs/P.124a.svg",
+    "title": "Biển P.124a Cấm quay đầu xe",
+    "author": "laisaochodung",
+    "sourceUrl": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf",
+    "licence": "Apache-2.0",
+    "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+    "ownWork": true
+  },
+  {
+    "file": "signs/P.127.svg",
+    "title": "Biển P.127 Tốc độ tối đa cho phép",
+    "author": "laisaochodung",
+    "sourceUrl": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf",
+    "licence": "Apache-2.0",
+    "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+    "ownWork": true
+  },
+  {
+    "file": "signs/DP.134.svg",
+    "title": "Biển DP.134 Hết tốc độ tối đa cho phép",
+    "author": "laisaochodung",
+    "sourceUrl": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf",
+    "licence": "Apache-2.0",
+    "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+    "ownWork": true
+  },
+  {
+    "file": "signs/P.130.svg",
+    "title": "Biển P.130 Cấm dừng xe và đỗ xe",
+    "author": "laisaochodung",
+    "sourceUrl": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf",
+    "licence": "Apache-2.0",
+    "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+    "ownWork": true
+  },
+  {
+    "file": "signs/R.122.svg",
+    "title": "Biển R.122 Dừng lại",
+    "author": "laisaochodung",
+    "sourceUrl": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf",
+    "licence": "Apache-2.0",
+    "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+    "ownWork": true
+  },
+  {
+    "file": "signs/R.420.svg",
+    "title": "Biển R.420 Bắt đầu khu đông dân cư",
+    "author": "laisaochodung",
+    "sourceUrl": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf",
+    "licence": "Apache-2.0",
+    "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+    "ownWork": true
+  },
+  {
+    "file": "signs/W.208.svg",
+    "title": "Biển W.208 Giao nhau với đường ưu tiên (đường chính)",
+    "author": "laisaochodung",
+    "sourceUrl": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf",
+    "licence": "Apache-2.0",
+    "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+    "ownWork": true
+  },
+  {
+    "file": "signs/I.401.svg",
+    "title": "Biển I.401 Bắt đầu đường ưu tiên",
+    "author": "laisaochodung",
+    "sourceUrl": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf",
+    "licence": "Apache-2.0",
+    "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+    "ownWork": true
+  },
+  {
+    "file": "signs/I.407a.svg",
+    "title": "Biển I.407a Đường một chiều",
+    "author": "laisaochodung",
+    "sourceUrl": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf",
+    "licence": "Apache-2.0",
+    "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+    "ownWork": true
+  }
+]

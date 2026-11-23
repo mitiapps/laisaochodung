@@ -1,0 +1,71 @@
+# Tutorial 1: throttle, brakes, indicators, lane changes, speed and stopping.
+# Coordinates in metres: +x east, +z south. Positions are `{way, s}`: s metres along the way from
+# its first node. `dir` is relative to the way's node order (default forward). Lanes are 3.5 m.
+kind: tutorial
+name: { vi: "Bài 1: Làm quen" }
+environment: { startClockMin: 540, weather: clear, surfaceGrip: 1 }
+timeLimitS: 240
+
+nodes:
+  a: [0, 0]
+  b: [220, 0]
+  c: [520, 0]
+  d: [660, 0]
+  e: [520, 140]
+
+ways:
+  # One lane each way; the yellow centre line is dashed, then solid before the widening.
+  - id: hep
+    nodes: [a, b]
+    lanes: { forward: 1, backward: 1 }
+    centerLine: [{ toS: 150, type: dashed }, { type: solid }]
+  # Two lanes each way: solid centre line; dashed lane lines, solid before the junction.
+  - id: rong
+    nodes: [b, c]
+    lanes: { forward: 2, backward: 2 }
+    centerLine: solid
+    laneLine: [{ toS: 240, type: dashed }, { type: solid }]
+  - id: cuoi
+    nodes: [c, d]
+    lanes: { forward: 2, backward: 2 }
+    centerLine: solid
+  - id: nhanh
+    nodes: [c, e]
+    class: residential
+
+signs:
+  - { id: s-r420, code: R.420, at: { way: hep, s: 3 } }
+  - { id: s-p127-40, code: P.127, value: 40, at: { way: rong, s: 20 } }
+  - { id: s-dp134, code: DP.134, at: { way: rong, s: 200 } }
+  - { id: s-p130, code: P.130, at: { way: rong, s: 230 } }
+
+crosswalks:
+  - { id: cw-hep, at: { way: hep, s: 120 } }
+
+obstacles:
+  # Road works in the kerb lane: change to the inner lane while the lane line is dashed.
+  - { id: ob-barrier, kind: barrier, at: { way: rong, s: 100 }, lateral: -5.25, lengthM: 3, widthM: 1.6, heightM: 1 }
+
+buildings:
+  - { way: hep, side: right, fromS: 10, toS: 105 }
+  - { way: hep, side: left, fromS: 10, toS: 210, heightM: 18 }
+  - { way: rong, side: right, fromS: 10, toS: 290 }
+  - { way: rong, side: left, fromS: 10, toS: 290, heightM: 20 }
+
+actors:
+  - id: ped-hep
+    kind: pedestrian
+    model: pedestrian
+    lengthM: 0.5
+    widthM: 0.5
+    speed: 1.4
+    path: { crosswalk: cw-hep, from: right }
+    trigger: { way: hep, fromS: 70, toS: 85 }
+
+route:
+  start: { way: hep, s: 12, lane: 0 }
+  checkpoints:
+    - { way: hep, s: 160 }
+    - { way: rong, s: 150 }
+    - { way: cuoi, s: 40 }
+  finish: { way: cuoi, s: 90 }

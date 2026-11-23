@@ -1,0 +1,152 @@
+{
+ "version": 0.6,
+ "generator": "hand-written fixture",
+ "elements": [
+  {
+   "type": "node",
+   "id": 3,
+   "lat": 10.0,
+   "lon": 106.003,
+   "tags": {
+    "highway": "traffic_signals"
+   }
+  },
+  {
+   "type": "node",
+   "id": 7,
+   "lat": 10.0,
+   "lon": 106.00285,
+   "tags": {
+    "highway": "crossing",
+    "crossing": "marked"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1,
+   "nodes": [
+    1,
+    2,
+    7,
+    3
+   ],
+   "geometry": [
+    {
+     "lat": 10.0,
+     "lon": 106.0
+    },
+    {
+     "lat": 10.0,
+     "lon": 106.0015
+    },
+    {
+     "lat": 10.0,
+     "lon": 106.00285
+    },
+    {
+     "lat": 10.0,
+     "lon": 106.003
+    }
+   ],
+   "tags": {
+    "highway": "secondary",
+    "oneway": "yes",
+    "lanes": "2",
+    "maxspeed": "50",
+    "name": "Ph\u1ed1 M\u1ed9t"
+   }
+  },
+  {
+   "type": "way",
+   "id": 2,
+   "nodes": [
+    3,
+    4
+   ],
+   "geometry": [
+    {
+     "lat": 10.0,
+     "lon": 106.003
+    },
+    {
+     "lat": 10.0015,
+     "lon": 106.003
+    }
+   ],
+   "tags": {
+    "highway": "tertiary",
+    "lanes": "2",
+    "name": "Ph\u1ed1 Hai"
+   }
+  },
+  {
+   "type": "way",
+   "id": 3,
+   "nodes": [
+    5,
+    2,
+    6
+   ],
+   "geometry": [
+    {
+     "lat": 9.999,
+     "lon": 106.0015
+    },
+    {
+     "lat": 10.0,
+     "lon": 106.0015
+    },
+    {
+     "lat": 10.001,
+     "lon": 106.0015
+    }
+   ],
+   "tags": {
+    "highway": "residential",
+    "name": "Ng\u00f5 Ba"
+   }
+  },
+  {
+   "type": "way",
+   "id": 4,
+   "nodes": [
+    3,
+    8
+   ],
+   "geometry": [
+    {
+     "lat": 10.0,
+     "lon": 106.003
+    },
+    {
+     "lat": 10.0,
+     "lon": 106.004
+    }
+   ],
+   "tags": {
+    "highway": "residential"
+   }
+  },
+  {
+   "type": "way",
+   "id": 5,
+   "nodes": [
+    1,
+    5
+   ],
+   "geometry": [
+    {
+     "lat": 10.0,
+     "lon": 106.0
+    },
+    {
+     "lat": 9.999,
+     "lon": 106.0015
+    }
+   ],
+   "tags": {
+    "highway": "service"
+   }
+  }
+ ]
+}

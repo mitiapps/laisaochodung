@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 600 600">
+<!-- R.122 Dừng lại (octagon D 600) — drawn for laisaochodung (Apache-2.0) from QCVN 41:2024/BGTVT, Điều 12 Bảng 1 sizes. Figure not yet compared with the official annex. -->
+  <polygon points="175.7,0 424.3,0 600,175.7 600,424.3 424.3,600 175.7,600 0,424.3 0,175.7" fill="#ffffff"/>
+  <polygon points="184,20 416,20 580,184 580,416 416,580 184,580 20,416 20,184" fill="#d71920"/>
+  <text x="300" y="360" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="170" fill="#ffffff">STOP</text>
+</svg>

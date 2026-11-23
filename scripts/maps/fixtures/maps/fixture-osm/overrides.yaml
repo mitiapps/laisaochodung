@@ -1,0 +1,5 @@
+environment: { startClockMin: 600, weather: clear, surfaceGrip: 1 }
+timeLimitS: 120
+signs:
+  - { id: s-r420, code: R.420, at: { way: 1, s: 5 }, reason: fixture built-up zone }
+  - { id: s-p127, code: P.127, value: 40, at: { way: 1, node: 2, offsetM: 20 }, reason: fixture speed limit after the side road }

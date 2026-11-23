@@ -1,0 +1,55 @@
+# Stopping (speed below stoppedSpeedMps for minStopS) in a junction, within junctionBufferM of
+# one (cars only: 7.2.e names the junction but no 5 m range), on a crosswalk, or in a P.130 zone
+# bound to the ego lane. A stop for a red or yellow light, a STOP or give-way line, a priority
+# junction entry, an actor ahead within actorAheadM, or (inside a junction) a moving actor within
+# yieldRadiusM is exempt; the timer restarts after it.
+id: stopping
+title: { vi: "Dừng xe sai quy định" }
+description: { vi: "Dừng xe trong nút giao, sát nút giao, trên vạch người đi bộ qua đường hoặc nơi có biển cấm dừng xe và đỗ xe." }
+vehicleClasses: [car, motorbike]
+detection:
+  type: stopped-in-zone
+  params:
+    stoppedSpeedMps: 0.3
+    minStopS: 3
+    junctionBufferM: 5
+    bufferDecreeGroups: [D6]
+    actorAheadM: 10
+    corridorHalfWidthM: 2
+    lineAheadM: 30
+    yieldRadiusM: 15
+  paramBasis:
+    stoppedSpeedMps: design
+    minStopS: design
+    junctionBufferM: legal
+    bufferDecreeGroups: legal
+    actorAheadM: design
+    corridorHalfWidthM: design
+    lineAheadM: design
+    yieldRadiusM: design
+obligation:
+  - sourceId: law36-2024
+    article: Điều 18
+    clause: '4'
+    point: h
+    quote: Nơi đường giao nhau và trong phạm vi 05 mét tính từ mép đường giao nhau
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+  - sourceId: law36-2024
+    article: Điều 18
+    clause: '4'
+    point: g
+    quote: Trên phần đường dành cho người đi bộ qua đường
+    url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf
+tiers:
+  - when: { place: junction }
+    danger: 2
+    scoreOnly: false
+    clause: { D6: D6.3.đ, D7: D7.2.e }
+  - when: { place: buffer, decreeGroups: [D6] }
+    danger: 2
+    scoreOnly: false
+    clause: { D6: D6.3.đ }
+  - when: { place: [crosswalk, no-stopping] }
+    danger: 2
+    scoreOnly: false
+    clause: { D6: D6.2.đ, D7: D7.2.e }

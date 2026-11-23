@@ -1,0 +1,55 @@
+# Clause records (src/contracts/rule.js `Clause`) cited by rule-sample.yaml, plus D6.2.a, the
+# real ND 238 amendment, so the `amendments` field is exercised. Neither speeding clause is
+# amended by ND 238. Values and quotes from the ND 168 research report (S1 signed scan and S2
+# consolidated text agree; ND 238 from the official gazette).
+
+- id: D6.3.a
+  fineVnd: { min: 800000, max: 1000000 }
+  licencePoints: 0
+  suspensionMonths: null
+  citation:
+    sourceId: nd168-2024
+    article: Điều 6
+    clause: '3'
+    point: a
+    quote: Điều khiển xe chạy quá tốc độ quy định từ 05 km/h đến dưới 10 km/h;
+    url: https://luatvietnam.vn/an-ninh-trat-tu/nghi-dinh-168-2024-nd-cp-xu-phat-vi-pham-hanh-chinh-giao-thong-duong-bo-tru-diem-phuc-hoi-diem-giay-phep-lai-xe-382883-d1.html
+  effectiveFrom: '2025-01-01'
+  verified: true
+  checkedOn: '2026-11-23'
+
+- id: D6.5.đ
+  fineVnd: { min: 4000000, max: 6000000 }
+  licencePoints: 2
+  suspensionMonths: null
+  citation:
+    sourceId: nd168-2024
+    article: Điều 6
+    clause: '5'
+    point: đ
+    quote: Điều khiển xe chạy quá tốc độ quy định từ 10 km/h đến 20 km/h;
+    url: https://luatvietnam.vn/an-ninh-trat-tu/nghi-dinh-168-2024-nd-cp-xu-phat-vi-pham-hanh-chinh-giao-thong-duong-bo-tru-diem-phuc-hoi-diem-giay-phep-lai-xe-382883-d1.html
+  effectiveFrom: '2025-01-01'
+  verified: true
+  checkedOn: '2026-11-23'
+
+- id: D6.2.a
+  fineVnd: { min: 600000, max: 800000 }
+  licencePoints: 0
+  suspensionMonths: null
+  citation:
+    sourceId: nd168-2024
+    article: Điều 6
+    clause: '2'
+    point: a
+    quote: Chuyển làn đường không đúng nơi cho phép hoặc không có tín hiệu báo trước hoặc chuyển làn đường không đúng quy định “mỗi lần chuyển làn đường chỉ được phép chuyển sang một làn đường liền kề”, trừ các hành vi vi phạm quy định tại điểm g khoản 5 Điều này;
+    url: https://luatvietnam.vn/an-ninh-trat-tu/nghi-dinh-168-2024-nd-cp-xu-phat-vi-pham-hanh-chinh-giao-thong-duong-bo-tru-diem-phuc-hoi-diem-giay-phep-lai-xe-382883-d1.html
+  amendments:
+    - sourceId: nd238-2026
+      article: Điều 19
+      clause: '2'
+      quote: hoặc chuyển làn đường không bảo đảm khoảng cách an toàn với xe phía trước, xe phía sau, xe hai bên
+      url: https://congbaocdn.chinhphu.vn/180507251028987904/2026/7/13/469913-1783914973_v1_1783915444_signed.pdf
+  effectiveFrom: '2026-08-15'
+  verified: true
+  checkedOn: '2026-11-23'

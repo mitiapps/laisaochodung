@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  /* Turn signals blink at 1.5 Hz: one on/off period every 2/3 s. */
+  --animate-blink: blink 0.6667s steps(1, end) infinite;
+
+  @keyframes blink {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.15;
+    }
+  }
+}
+
+html,
+body {
+  @apply bg-slate-950 text-slate-100;
+}

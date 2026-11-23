@@ -1,0 +1,17 @@
+# OSM corridor map. Map data © OpenStreetMap contributors, ODbL 1.0 (see ../LICENSE-ODbL.md).
+# raw.overpass.json is fetched once by hand with `npm run fetch:osm -- osm-pasteur` and committed;
+# the build never fetches.
+kind: osm
+name: { vi: "Pasteur – Lê Duẩn (Quận 1, TP.HCM)" }
+bbox: { south: 10.7755, west: 106.6955, north: 10.7812, east: 106.7012 }
+# Route ways in driving order (OSM way ids): Pasteur north-west in its one-way direction from Lý
+# Tự Trọng, through Nguyễn Du and Hàn Thuyên, then a right turn onto Lê Duẩn towards Công trường
+# Công xã Paris. Directions come from the extract's node order.
+route:
+  ways: [329878186, 747231131, 678315474, 803279638]
+  start: { at: { way: 329878186, s: 25 }, lane: 1 }
+  checkpoints:
+    - { way: 747231131, s: 70 }
+    - { way: 678315474, s: 40 }
+    - { way: 803279638, s: 100 }
+  finish: { way: 803279638, s: 75 }
