@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 700 700">
-<!-- P.102 Cấm đi ngược chiều — drawn for laisaochodung (Apache-2.0) from QCVN 41:2024/BGTVT, Điều 12 Bảng 1 sizes. Figure not yet compared with the official annex. -->
+<!-- P.102 Cấm đi ngược chiều — drawn for laisaochodung (Apache-2.0) from QCVN 41:2024/BGTVT, Điều 12 Bảng 1 (D 700); bar about 490 x 95 as measured on Hình B.2. Compared with Hình B.2 on 2026-11-23. -->
   <circle cx="350" cy="350" r="350" fill="#d71920"/>
-  <rect x="105" y="290" width="490" height="120" fill="#ffffff"/>
+  <rect x="105" y="302" width="490" height="96" fill="#ffffff"/>
 </svg>

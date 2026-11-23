@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 700 700">
-<!-- P.130 Cấm dừng xe và đỗ xe — drawn for laisaochodung (Apache-2.0) from QCVN 41:2024/BGTVT, Điều 12 Bảng 1 sizes. Figure not yet compared with the official annex. -->
+<!-- P.130 Cấm dừng xe và đỗ xe — drawn for laisaochodung (Apache-2.0) from QCVN 41:2024/BGTVT, Điều 12 Bảng 1 (D 700, border B 100, bars A 50). Compared with Hình B.30 on 2026-11-23. -->
   <circle cx="350" cy="350" r="350" fill="#d71920"/>
   <circle cx="350" cy="350" r="250" fill="#1f5aa6"/>
-  <line x1="173" y1="173" x2="527" y2="527" stroke="#d71920" stroke-width="70"/>
-  <line x1="527" y1="173" x2="173" y2="527" stroke="#d71920" stroke-width="70"/>
+  <line x1="173" y1="173" x2="527" y2="527" stroke="#d71920" stroke-width="50"/>
+  <line x1="527" y1="173" x2="173" y2="527" stroke="#d71920" stroke-width="50"/>
 </svg>

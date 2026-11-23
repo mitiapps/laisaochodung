@@ -43,26 +43,40 @@ error.
 
 Own drawings, Apache-2.0, one SVG per code of `data/signs/signs.yaml`, named by the code as written
 (`public/signs/P.127.svg`). Plate sizes follow QCVN 41:2024/BGTVT Điều 12, Bảng 1 (round D 700 with
-a 100 border, triangle L 700 with a 50 border, octagon D 600); `src/render/sign-art.js` holds the
+a 100 red border, or a 50 blue one on DP.134 per Phụ lục M, triangle L 700 with a 50 border, octagon D 600); `src/render/sign-art.js` holds the
 size and shape per code. P.127 and DP.134 get the map sign `value` painted on at runtime.
 
-Names and codes were checked against the sign table. **No figure has been compared with the
-official annex yet**: that check belongs to the release review.
+Names and codes were checked against the sign table. Each drawing was compared with its figure in
+the official annex (Phụ lục B to E) and, where the annex gives one, the dimensioned drawing in
+Phụ lục M (in units of z; z = 50 or 70 for urban roads). Where neither gives a dimension, the
+proportions were measured on the annex figure. The date is `figureChecked` in
+`data/signs/signs.yaml`.
 
-| Code | Name | Figure compared |
-| --- | --- | --- |
-| P.101 | Đường cấm | not yet |
-| P.102 | Cấm đi ngược chiều | not yet |
-| P.123a | Cấm rẽ trái | not yet |
-| P.124a | Cấm quay đầu xe | not yet |
-| P.127 | Tốc độ tối đa cho phép | not yet |
-| DP.134 | Hết tốc độ tối đa cho phép | not yet |
-| P.130 | Cấm dừng xe và đỗ xe | not yet |
-| R.122 | Dừng lại | not yet |
-| R.420 | Bắt đầu khu đông dân cư | not yet |
-| W.208 | Giao nhau với đường ưu tiên (đường chính) | not yet |
-| I.401 | Bắt đầu đường ưu tiên | not yet |
-| I.407a | Đường một chiều | not yet |
+| Code | Name | Official figure | Figure compared |
+| --- | --- | --- | --- |
+| P.101 | Đường cấm | Hình B.1 | 2026-11-23 |
+| P.102 | Cấm đi ngược chiều | Hình B.2 | 2026-11-23 |
+| P.123a | Cấm rẽ trái | Hình B.23 a) | 2026-11-23 |
+| P.124a | Cấm quay đầu xe | Hình B.24 a) | 2026-11-23 |
+| P.127 | Tốc độ tối đa cho phép | Hình B.27b | 2026-11-23 |
+| DP.134 | Hết tốc độ tối đa cho phép | Hình B.34, Phụ lục M | 2026-11-23 |
+| P.130 | Cấm dừng xe và đỗ xe | Hình B.30 | 2026-11-23 |
+| R.122 | Dừng lại | Hình D.1 | 2026-11-23 |
+| R.420 | Bắt đầu khu đông dân cư | Hình D.19, Phụ lục M | 2026-11-23 |
+| W.208 | Giao nhau với đường ưu tiên (đường chính) | Hình C.10 | 2026-11-23 |
+| I.401 | Bắt đầu đường ưu tiên | Hình E.1 | 2026-11-23 |
+| I.407a | Đường một chiều | Hình E.7 a), Phụ lục M | 2026-11-23 |
+
+R.420 uses the Phụ lục M plate, 24z x 20z at z = 50 (1.2 x 1.0 m). DP.134 paints its runtime value
+black and redraws the stripe band over it (`bandOver` in `src/render/sign-art.js`), as the official
+figure layers it.
+
+Known difference from the official figures:
+
+- **P.127, DP.134**: the runtime value uses bold Arial at 0.4 of the plate height (digits about
+  200 mm tall), not the condensed sign typeface of Phụ lục K; Phụ lục M boxes the DP.134 "50" at
+  5z x 4,6z (350 x 322 mm at z = 70). The SVGs carry no digits, so this does not hold back
+  `figureChecked` for P.127.
 
 ### Adding a sign
 

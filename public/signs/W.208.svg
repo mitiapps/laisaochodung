@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="444" viewBox="0 0 700 607">
-<!-- W.208 Giao nhau với đường ưu tiên (inverted triangle L 700, border 50) — drawn for laisaochodung (Apache-2.0) from QCVN 41:2024/BGTVT, Điều 12 Bảng 1 sizes. Figure not yet compared with the official annex. -->
-  <polygon points="0,0 700,0 350,606.2" fill="#d71920"/>
+<!-- W.208 Giao nhau với đường ưu tiên (inverted triangle) — drawn for laisaochodung (Apache-2.0) from QCVN 41:2024/BGTVT, Điều 12 Bảng 1 (L 700, red border B 50, vertices rounded R 35) and Điều 29.1. Compared with Hình C.10 on 2026-11-23. -->
+  <polygon points="60.6,35 639.4,35 350,536.2" fill="#d71920" stroke="#d71920" stroke-width="70" stroke-linejoin="round"/>
   <polygon points="86.6,50 613.4,50 350,506.2" fill="#ffcc00"/>
 </svg>

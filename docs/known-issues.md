@@ -9,9 +9,6 @@ says what happens and where.
 
 - **Sign figures.** No sign drawing in `public/signs/` has been compared with its figure in the
   official QCVN 41 annex; every `figureChecked` in `data/signs/signs.yaml` is `null`.
-- **Contact and donate settings.** `contactEmail` and `donateUrl` in `src/config/site.js` are
-  `null`. The disclaimer page asks players to report errors on the contact page, which has no
-  contact channel until the maintainer sets one.
 
 ## Legal readings
 

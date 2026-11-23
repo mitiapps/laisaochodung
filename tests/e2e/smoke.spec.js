@@ -71,9 +71,13 @@ test('the app loads, drives, and its pages render without console errors', async
 
   await page.goto('/#/lien-he');
   await expect(page.getByTestId('page-contact')).toBeVisible();
+  await expect(page.getByTestId('contact-github')).toHaveAttribute('href', 'https://github.com/mitiapps/laisaochodung/issues');
+  await expect(page.getByTestId('contact-email')).toHaveAttribute('href', 'mailto:tiennm99@outlook.com');
 
   await page.goto('/#/ung-ho');
   await expect(page.getByTestId('page-donate')).toBeVisible();
+  await expect(page.getByTestId('donate-qr')).toHaveJSProperty('complete', true);
+  expect(await page.getByTestId('donate-qr').evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
 
   await page.goto('/#/ghi-cong');
   await expect(page.getByTestId('page-credits')).toBeVisible();

@@ -5,7 +5,8 @@
  * It fails while any of these holds:
  * - the built rules bundle has an unverified clause, speed default or sign meaning, or a sign
  *   whose drawing was not compared with the official QCVN 41 figure (`figureChecked: null`);
- * - `src/config/site.js` has no contact address or donate link, or a malformed one;
+ * - `src/config/site.js` has no contact channel or donate QR, a malformed one, or a donate QR
+ *   whose image is missing from `public/`;
  * - a file under `public/models/` or `public/signs/` has no entry in `data/credits/credits.json`;
  * - an OSM map has no attribution, or `data/maps/LICENSE-ODbL.md` is missing.
  */
@@ -29,6 +30,7 @@ export const CREDITED_DIRS = Object.freeze(['models', 'signs']);
  * @property {import('../src/contracts/catalog.js').Credit[]} credits Credit entries.
  * @property {{id: string, kind: string, attribution?: string}[]} maps Built maps.
  * @property {boolean} odblLicence `data/maps/LICENSE-ODbL.md` exists.
+ * @property {boolean} donateQrExists The donate QR image exists under `public/`.
  */
 
 /**
@@ -48,8 +50,9 @@ export function releaseProblems(input) {
   }
 
   for (const p of checkSiteConfig(input.site)) problems.push(`src/config/site.js: ${p}`);
-  if (input.site.contactEmail === null) problems.push('src/config/site.js: contactEmail is not set');
-  if (input.site.donateUrl === null) problems.push('src/config/site.js: donateUrl is not set');
+  if (input.site.contacts.length === 0) problems.push('src/config/site.js: no contact channel is set');
+  if (input.site.donateQr === null) problems.push('src/config/site.js: donateQr is not set');
+  else if (!input.donateQrExists) problems.push(`public${input.site.donateQr.src} is missing`);
 
   const credited = new Set(input.credits.map((c) => c.file));
   for (const file of input.assetFiles) {
@@ -121,7 +124,13 @@ export async function loadReleaseInput(root = ROOT) {
     () => true,
     () => false,
   );
-  return { bundle, site: SITE, assetFiles, credits, maps, odblLicence };
+  const donateQrExists =
+    SITE.donateQr !== null &&
+    (await access(path.join(publicDir, SITE.donateQr.src)).then(
+      () => true,
+      () => false,
+    ));
+  return { bundle, site: SITE, assetFiles, credits, maps, odblLicence, donateQrExists };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

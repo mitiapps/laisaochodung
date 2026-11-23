@@ -3,7 +3,8 @@
 # codes, and the map converter rejects any other code. Adding a code goes through the maintainer.
 # Quotes were checked as whitespace-insensitive substrings of the official annex PDF.
 # sourceId `qcvn41-2024` must match the Source record in data/legal/.
-# figureChecked: date the SVG was compared with the official figure in the annex, null until then.
+# figureChecked: date the SVG was compared with the official figure in the annex (Phụ lục B-E, and
+# Phụ lục M where it gives a dimensioned drawing), null until then.
 
 - code: P.101
   name: { vi: Đường cấm }
@@ -14,7 +15,7 @@
     quote: Để báo đường cấm các loại phương tiện đi lại cả hai hướng, trừ các xe được ưu tiên theo quy định
     url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
   verified: true
-  figureChecked: null
+  figureChecked: '2026-11-23'
 
 - code: P.102
   name: { vi: Cấm đi ngược chiều }
@@ -25,7 +26,7 @@
     quote: Để báo đường cấm các loại xe (cơ giới và thô sơ) đi vào theo chiều đặt biển
     url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
   verified: true
-  figureChecked: null
+  figureChecked: '2026-11-23'
 
 - code: P.123a
   name: { vi: Cấm rẽ trái }
@@ -36,7 +37,7 @@
     quote: Biển không có giá trị cấm quay đầu xe.
     url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
   verified: true
-  figureChecked: null
+  figureChecked: '2026-11-23'
 
 - code: P.124a
   name: { vi: Cấm quay đầu xe }
@@ -47,7 +48,7 @@
     quote: Để báo cấm các loại xe quay đầu (theo kiểu chữ U), đặt biển số P.124a
     url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
   verified: true
-  figureChecked: null
+  figureChecked: '2026-11-23'
 
 - code: P.127
   name: { vi: Tốc độ tối đa cho phép }
@@ -58,7 +59,7 @@
     quote: Biển có hiệu lực cấm các loại xe cơ giới chạy với tốc độ tối đa vượt quá trị số ghi trên biển trừ các xe được ưu tiên theo quy định
     url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
   verified: true
-  figureChecked: null
+  figureChecked: '2026-11-23'
 
 - code: DP.134
   name: { vi: Hết tốc độ tối đa cho phép }
@@ -69,7 +70,7 @@
     quote: Kể từ biển này, các xe được phép chạy với tốc độ tối đa đã quy định trong Luật Đường bộ và Luật Trật tự, An toàn giao thông đường bộ.
     url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
   verified: true
-  figureChecked: null
+  figureChecked: '2026-11-23'
 
 # The meaning is Phụ lục B, B.30 a); its scope (from the sign to the next junction or to a place
 # where stopping and parking is allowed) is B.30 b).
@@ -82,7 +83,7 @@
     quote: Biển có hiệu lực cấm các loại xe cơ giới dừng và đỗ ở phía đường có đặt biển trừ các xe được ưu tiên theo quy định.
     url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
   verified: true
-  figureChecked: null
+  figureChecked: '2026-11-23'
 
 - code: R.122
   name: { vi: Dừng lại }
@@ -93,7 +94,7 @@
     quote: Biển có hiệu lực buộc các loại xe cơ giới và thô sơ kể cả xe được ưu tiên theo quy định dừng lại trước biển hoặc trước vạch ngang đường
     url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
   verified: true
-  figureChecked: null
+  figureChecked: '2026-11-23'
 
 - code: R.420
   name: { vi: Bắt đầu khu đông dân cư }
@@ -104,7 +105,7 @@
     quote: Đoạn đường qua khu vực đông dân cư được xác định bắt đầu bằng biển số R.420 “Bắt đầu khu đông dân cư” và kết thúc bằng biển số R.421 “Hết khu đông dân cư”.
     url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
   verified: true
-  figureChecked: null
+  figureChecked: '2026-11-23'
 
 - code: W.208
   name: { vi: Giao nhau với đường ưu tiên (đường chính) }
@@ -115,7 +116,7 @@
     quote: Các xe đi trên đường có đặt biển số W.208 phải nhường đường cho xe đi trên đường ưu tiên khi qua nơi giao nhau
     url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
   verified: true
-  figureChecked: null
+  figureChecked: '2026-11-23'
 
 - code: I.401
   name: { vi: Bắt đầu đường ưu tiên }
@@ -126,7 +127,7 @@
     quote: Nếu ở chỗ giao nhau có điều khiển giao thông thì nguyên tắc chạy xe ưu tiên hết tác dụng
     url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
   verified: true
-  figureChecked: null
+  figureChecked: '2026-11-23'
 
 - code: I.407a
   name: { vi: Đường một chiều }
@@ -137,4 +138,4 @@
     quote: chỉ cho phép các loại phương tiện giao thông đi theo chiều vào theo mũi tên chỉ, cấm quay đầu ngược lại
     url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf
   verified: true
-  figureChecked: null
+  figureChecked: '2026-11-23'

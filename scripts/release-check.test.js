@@ -13,7 +13,10 @@ async function passing() {
   for (const s of bundle.signs) s.figureChecked = '2026-11-23';
   return {
     bundle,
-    site: { contactEmail: 'contact@example.com', donateUrl: 'https://example.com/donate' },
+    site: {
+      contacts: [{ id: 'email', label: 'Email', text: 'contact@example.com', href: 'mailto:contact@example.com' }],
+      donateQr: { src: '/donate/qr.jpg', alt: 'QR' },
+    },
     assetFiles: ['models/car-kit/sedan.glb', 'signs/P.101.svg'],
     credits: [
       { file: 'models/car-kit/sedan.glb', title: 'Sedan', author: 'Kenney', sourceUrl: 'https://kenney.nl/assets/car-kit', licence: 'CC0 1.0', licenceUrl: 'https://creativecommons.org/publicdomain/zero/1.0/', ownWork: false },
@@ -24,6 +27,7 @@ async function passing() {
       { id: 'tutorial-a', kind: 'tutorial' },
     ],
     odblLicence: true,
+    donateQrExists: true,
   };
 }
 
@@ -38,7 +42,8 @@ describe('releaseProblems', () => {
     input.bundle.speedDefaults[0].verified = false;
     input.bundle.signs[0].verified = false;
     input.bundle.signs[0].figureChecked = null;
-    input.site = { contactEmail: null, donateUrl: 'http://example.com' };
+    input.site = { contacts: [], donateQr: { src: 'qr.jpg', alt: 'QR' } };
+    input.donateQrExists = false;
     input.assetFiles.push('models/extra.glb');
     input.maps[0].attribution = undefined;
     input.odblLicence = false;
@@ -48,8 +53,9 @@ describe('releaseProblems', () => {
       'unverified TT 38 speed defaults: 1',
       `unverified sign meanings: ${sign}`,
       `sign drawings not compared with the QCVN 41 figure (figureChecked: null): ${sign}`,
-      'src/config/site.js: donateUrl must be null or an https URL',
-      'src/config/site.js: contactEmail is not set',
+      'src/config/site.js: donateQr.src must be a root-relative path under public/',
+      'src/config/site.js: no contact channel is set',
+      'publicqr.jpg is missing',
       'public/models/extra.glb has no entry in data/credits/credits.json',
       'map osm-a: OSM map without an OpenStreetMap attribution',
       'data/maps/LICENSE-ODbL.md is missing',

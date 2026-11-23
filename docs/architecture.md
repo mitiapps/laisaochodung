@@ -66,6 +66,6 @@ applies the same file, so the Playwright smoke test runs under the policy. The b
 
 `npm run deploy` first runs `predeploy`: `npm run build`, then `npm run release:check`
 (`scripts/release-check.js`). The gate fails on unverified legal data, unchecked sign figures,
-unset contact or donate settings (`src/config/site.js`), uncredited files in `public/models/` or
+missing contact channels or donate QR (`src/config/site.js`), uncredited files in `public/models/` or
 `public/signs/`, an OSM map without attribution, or a missing `data/maps/LICENSE-ODbL.md`. It is
 not part of CI; `npx wrangler deploy --dry-run` skips it.

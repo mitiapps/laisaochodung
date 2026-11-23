@@ -149,9 +149,9 @@ describe('validateRules', () => {
 describe('countUnverified', () => {
   it('counts every unchecked sign figure and no clause, speed default or sign meaning', async () => {
     const bundle = await realBundle();
-    const figures = bundle.signs.map((s) => s.code);
-    expect(figures).toHaveLength(12);
-    expect(countUnverified(bundle)).toEqual({ clauses: [], speedDefaults: 0, signs: [], figures, total: 12 });
+    expect(bundle.signs).toHaveLength(12);
+    const figures = bundle.signs.filter((s) => s.figureChecked === null).map((s) => s.code);
+    expect(countUnverified(bundle)).toEqual({ clauses: [], speedDefaults: 0, signs: [], figures, total: figures.length });
   });
 
   it('counts unverified speed defaults and sign meanings', async () => {

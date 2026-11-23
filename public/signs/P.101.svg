@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 700 700">
-<!-- P.101 Đường cấm — drawn for laisaochodung (Apache-2.0) from QCVN 41:2024/BGTVT, Điều 12 Bảng 1 sizes. Figure not yet compared with the official annex. -->
+<!-- P.101 Đường cấm — drawn for laisaochodung (Apache-2.0) from QCVN 41:2024/BGTVT, Điều 12 Bảng 1 (D 700, red border B 100). Compared with Hình B.1 on 2026-11-23. -->
   <circle cx="350" cy="350" r="350" fill="#d71920"/>
   <circle cx="350" cy="350" r="250" fill="#ffffff"/>
 </svg>

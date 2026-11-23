@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { SITE, checkSiteConfig, isEmail, isHttpsUrl, mailtoHref } from './site.js';
+import { SITE, checkSiteConfig, isContactHref, isEmail, isHttpsUrl } from './site.js';
 
 describe('site config', () => {
-  it('ships a valid config (nulls allowed until the owner supplies values)', () => {
+  it('ships a valid config with contacts in preference order and a donate QR', () => {
     expect(checkSiteConfig(SITE)).toEqual([]);
+    expect(SITE.contacts.map((c) => c.id)).toEqual(['github', 'email', 'facebook', 'telegram']);
+    expect(SITE.donateQr?.src).toBe('/donate/zalopay-vietqr.jpg');
   });
 
   it('accepts plain addresses and rejects malformed ones', () => {
@@ -13,20 +15,27 @@ describe('site config', () => {
     expect(isEmail(null)).toBe(false);
   });
 
-  it('accepts only https donation links', () => {
+  it('accepts only https links', () => {
     expect(isHttpsUrl('https://example.com/donate')).toBe(true);
     expect(isHttpsUrl('http://example.com/donate')).toBe(false);
-    expect(isHttpsUrl('javascript:alert(1)')).toBe(false);
     expect(isHttpsUrl('not a url')).toBe(false);
   });
 
-  it('reports each malformed field', () => {
-    expect(checkSiteConfig({ contactEmail: 'bad', donateUrl: 'http://x.example' })).toHaveLength(2);
+  it('accepts https and mailto contacts only', () => {
+    expect(isContactHref('mailto:someone@example.com')).toBe(true);
+    expect(isContactHref('mailto:bad')).toBe(false);
+    expect(isContactHref('javascript:alert(1)')).toBe(false);
+    expect(isContactHref('https://t.me/example')).toBe(true);
   });
 
-  it('builds mailto links only for valid addresses', () => {
-    expect(mailtoHref('someone@example.com')).toBe('mailto:someone@example.com');
-    expect(mailtoHref(null)).toBeNull();
-    expect(mailtoHref('bad')).toBeNull();
+  it('reports each malformed field', () => {
+    const bad = {
+      contacts: [
+        { id: 'a', label: 'A', text: 'a', href: 'http://x.example' },
+        { id: 'a', label: '', text: 'a', href: 'https://x.example' },
+      ],
+      donateQr: { src: '../secret.jpg', alt: '' },
+    };
+    expect(checkSiteConfig(bad)).toHaveLength(5);
   });
 });

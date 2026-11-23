@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 600 600">
-<!-- R.122 Dừng lại (octagon D 600) — drawn for laisaochodung (Apache-2.0) from QCVN 41:2024/BGTVT, Điều 12 Bảng 1 sizes. Figure not yet compared with the official annex. -->
+<!-- R.122 Dừng lại — drawn for laisaochodung (Apache-2.0) from QCVN 41:2024/BGTVT, Điều 12 Bảng 1 (octagon D 600, white border B 30); STOP lettering box about 362 x 163 as measured on Hình D.1. Compared with Hình D.1 on 2026-11-23. -->
   <polygon points="175.7,0 424.3,0 600,175.7 600,424.3 424.3,600 175.7,600 0,424.3 0,175.7" fill="#ffffff"/>
-  <polygon points="184,20 416,20 580,184 580,416 416,580 184,580 20,416 20,184" fill="#d71920"/>
-  <text x="300" y="360" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="170" fill="#ffffff">STOP</text>
+  <polygon points="188.1,30 411.9,30 570,188.1 570,411.9 411.9,570 188.1,570 30,411.9 30,188.1" fill="#d71920"/>
+  <text transform="translate(300 379) scale(0.584 1)" x="0" y="0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="228" fill="#ffffff">STOP</text>
 </svg>

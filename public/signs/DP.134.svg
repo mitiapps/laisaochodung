@@ -1,9 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 700 700">
-<!-- DP.134 Hết tốc độ tối đa cho phép (the value, when the map gives one, is drawn at runtime) — drawn for laisaochodung (Apache-2.0) from QCVN 41:2024/BGTVT, Điều 12 Bảng 1 sizes. Figure not yet compared with the official annex. -->
-  <circle cx="350" cy="350" r="345" fill="#ffffff" stroke="#000000" stroke-width="10"/>
-  <line x1="90" y1="490" x2="490" y2="90" stroke="#000000" stroke-width="12"/>
-  <line x1="120" y1="520" x2="520" y2="120" stroke="#000000" stroke-width="12"/>
-  <line x1="150" y1="550" x2="550" y2="150" stroke="#000000" stroke-width="12"/>
-  <line x1="180" y1="580" x2="580" y2="180" stroke="#000000" stroke-width="12"/>
-  <line x1="210" y1="610" x2="610" y2="210" stroke="#000000" stroke-width="12"/>
+<!-- DP.134 Hết tốc độ tối đa cho phép (the value, when the map gives one, is drawn at runtime) — drawn for laisaochodung (Apache-2.0) from QCVN 41:2024/BGTVT, Phụ lục M (z = 70: D 10z, blue border 0,71z, band of five 0,14z lines with 0,14z gaps, 1,29z wide and 8,57z long). Compared with Hình B.34 and Phụ lục M on 2026-11-23. -->
+  <circle cx="350" cy="350" r="350" fill="#1f5aa6"/>
+  <circle cx="350" cy="350" r="300" fill="#ffffff"/>
+  <g stroke="#000000" stroke-width="10">
+    <line x1="109.6" y1="533.8" x2="533.8" y2="109.6"/>
+    <line x1="123.7" y1="548.0" x2="548.0" y2="123.7"/>
+    <line x1="137.9" y1="562.1" x2="562.1" y2="137.9"/>
+    <line x1="152.0" y1="576.3" x2="576.3" y2="152.0"/>
+    <line x1="166.1" y1="590.4" x2="590.4" y2="166.1"/>
+  </g>
 </svg>

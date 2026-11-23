@@ -66,6 +66,18 @@ export function createSignTexture(code, value) {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(text, canvas.width / 2, canvas.height / 2 + size * 0.05);
+        const band = art.value.bandOver;
+        if (band) {
+          const k = canvas.width / band.viewBox;
+          ctx.strokeStyle = band.color;
+          ctx.lineWidth = band.strokeWidth * k;
+          ctx.beginPath();
+          for (const [x1, y1, x2, y2] of band.lines) {
+            ctx.moveTo(x1 * k, y1 * k);
+            ctx.lineTo(x2 * k, y2 * k);
+          }
+          ctx.stroke();
+        }
       }
       texture.needsUpdate = true;
     })
