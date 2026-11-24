@@ -30,6 +30,25 @@
  * @property {import('./vehicle.js').LocalText} label Help text.
  */
 
+/**
+ * Control preset, chosen on the home page and fixed for a run. `simple` (Đơn giản) turns the
+ * assists on; `real` (Thực tế) is the game without assists. Presets never change scoring.
+ * @typedef {'simple' | 'real'} ControlPreset
+ */
+
+/**
+ * Driving assists a preset turns on. No assist performs a scored duty.
+ * @typedef {object} ControlAssists
+ * @property {boolean} autoGearbox Car: the selector R ← N ← D on the gear keys, ratios shift
+ *   automatically.
+ * @property {null | {turnMinDeg: number, clearM: number}} signalAutoCancel Cancel the indicator after
+ *   a signalled junction turn of at least `turnMinDeg`, once no junction lies within `clearM` ahead;
+ *   null when off.
+ */
+
+/** @type {readonly ControlPreset[]} */
+export const CONTROL_PRESETS = Object.freeze(['simple', 'real']);
+
 /** @type {readonly KeyBinding[]} */
 export const KEY_BINDINGS = Object.freeze([
   { action: 'throttle', keys: ['KeyW', 'ArrowUp'], mode: 'hold', label: { vi: 'Ga' } },

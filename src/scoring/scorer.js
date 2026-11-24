@@ -17,15 +17,23 @@
  * 4. Episodes: a rule turning active opens an episode (a `new` breach); a worse severity inside it
  *    emits an `escalated` breach with the same episode id; it closes after `rearmS` inactive. The
  *    report deducts once per episode, at its worst tier.
- * 5. Collisions take as cause the worst other episode active within `crashCauseWindowS` (not
- *    across a reset, nor across a fall before this step) and resolve their clause through the
- *    collision policy. A pedestrian hit ends the run with score 0.
- * 6. `finish`, `timeout` and a pedestrian crash end the run; later frames are ignored.
+ * 5. Contacts are decided per event (`fault.js`) after every other rule's episodes of the step
+ *    are applied: each collision or fall is either charged or a `Notice`. Notices open no
+ *    episode, deduct nothing, are debounced per other party for `rearmS` and kept in the state.
+ *    A notice from the fault table opens the aftermath window: for `aftermathWindowS` after it
+ *    (from the next step on) every further contact is a notice, and the line-crossing and
+ *    pavement detectors start over each step, as after a reset, without closing any episode.
+ * 6. Only the charged contacts reach the collision detector. They take as cause the worst
+ *    contributing episode active within `crashCauseWindowS` (not across a reset, nor across a fall
+ *    before this step), or the rear-end cause of the fault table, and resolve their clause through
+ *    the collision policy. A pedestrian hit ends the run with score 0.
+ * 7. `finish`, `timeout` and a pedestrian crash end the run; later frames are ignored.
  */
 
 import { decreeGroupOf } from '../contracts/vehicle.js';
-import { initialCore, stepCore } from './context.js';
+import { actorRangeOf, initialCore, stepCore } from './context.js';
 import { DETECTORS } from './detectors/index.js';
+import { bothSidesNote, contactFields, decideFault, noticeText } from './fault.js';
 import { resolveBreach, resolveCrash } from './resolve.js';
 import { selectTier } from './tiers.js';
 
@@ -35,6 +43,10 @@ import { selectTier } from './tiers.js';
 /** @typedef {import('../contracts/index.js').Frame} Frame */
 /** @typedef {import('../contracts/index.js').Rule} Rule */
 /** @typedef {import('../contracts/index.js').Breach} Breach */
+/** @typedef {import('../contracts/index.js').Notice} Notice */
+/** @typedef {import('../contracts/index.js').FrameEvent} FrameEvent */
+/** @typedef {import('../contracts/index.js').CollisionEvent} CollisionEvent */
+/** @typedef {import('../contracts/index.js').FallEvent} FallEvent */
 /** @typedef {import('../contracts/index.js').ScoreContext} ScoreContext */
 /** @typedef {import('../contracts/index.js').ScoreReport} ScoreReport */
 /** @typedef {import('../contracts/index.js').Scorer} Scorer */
@@ -61,7 +73,43 @@ import { selectTier } from './tiers.js';
  * @property {null | 'finish' | 'timeout' | 'crash'} ended How the run ended, once it has.
  * @property {boolean} pedestrianHit A pedestrian was hit: the score is 0.
  * @property {ScoreContext} context Last context.
+ * @property {Notice[]} notices Every notice of the run so far, oldest first.
+ * @property {FaultState} fault Aftermath and notice debounce tracking.
  */
+
+/**
+ * @typedef {object} FaultState
+ * @property {number | null} aftermathFromT Time of the last fault-table notice contact, null when
+ *   none is recent (cleared by a reset).
+ * @property {Record<string, number>} noticeT Last notice time per debounce key, younger than
+ *   `rearmS`.
+ */
+
+/**
+ * Detector types that start over on every step of the aftermath window: a shove is not a line
+ * crossing, a pass onto the pavement or a drive against the lane.
+ */
+const AFTERMATH_RESET_DETECTORS = Object.freeze([
+  'lane-line-cross',
+  'against-lane-dir',
+  'stop-line-on-red',
+  'stop-line-no-stop',
+  'stop-line-no-slow',
+  'entry-cross',
+  'footprint-in-polygon',
+]);
+
+/** Tolerance for comparisons of times built from `tick · DT`. */
+const EPS_T = 1e-9;
+
+/**
+ * Debounce key of a contact: one per other party, kerbs and unnamed statics by kind.
+ * @param {CollisionEvent | FallEvent} e Event.
+ * @returns {string} Key.
+ */
+function noticeKey(e) {
+  return e.type === 'fall' ? 'fall' : `${e.otherKind}:${e.otherId ?? ''}`;
+}
 
 /** @type {ScoreContext} */
 const EMPTY_CONTEXT = Object.freeze({
@@ -113,6 +161,7 @@ export function createScorer(bundle, map, vehicleInfo) {
     group,
     clausesById: new Map(bundle.clauses.map((c) => [c.id, c])),
     sourcesById: new Map(bundle.sources.map((s) => [s.id, s])),
+    actorRangeM: actorRangeOf(bundle),
   };
   const rules = orderedRules(bundle, vehicleInfo);
   for (const r of rules) {
@@ -140,6 +189,13 @@ export function createScorer(bundle, map, vehicleInfo) {
   const accidentClauses = new Set([...Object.values(policy.accidentA), ...Object.values(policy.accidentB)]);
   const collisionRuleIds = new Set(rules.filter(isCollisionRule).map((r) => r.id));
   const freshDetectors = () => Object.fromEntries(rules.map((r) => [r.id, DETECTORS[r.detection.type].init()]));
+  const plainRules = rules.filter((r) => !isCollisionRule(r));
+  const collisionRules = rules.filter(isCollisionRule);
+  const nonContributing = new Set(policy.nonContributingRules ?? []);
+  const rearEndRules = new Set(policy.rearEndContributingRules ?? []);
+  const aftermathS = policy.aftermathWindowS ?? 0;
+  /** Rows that open the aftermath window when they give a notice (every row but `aftermath`). */
+  const anchorRows = new Set((policy.faultRows ?? []).filter((r) => r.when !== 'aftermath').map((r) => r.id));
 
   /** @type {ScorerState} */
   const initial = {
@@ -151,6 +207,8 @@ export function createScorer(bundle, map, vehicleInfo) {
     ended: null,
     pedestrianHit: false,
     context: EMPTY_CONTEXT,
+    notices: [],
+    fault: { aftermathFromT: null, noticeT: {} },
   };
 
   /**
@@ -161,7 +219,7 @@ export function createScorer(bundle, map, vehicleInfo) {
   function step(rawState, frame) {
     const state = /** @type {ScorerState} */ (rawState);
     if (state.ended !== null) {
-      return { state, breaches: [], context: state.context, runEnded: state.ended === 'crash' ? 'crash' : null };
+      return { state, breaches: [], notices: [], context: state.context, runEnded: state.ended === 'crash' ? 'crash' : null };
     }
     const { core, ctx } = stepCore(env, state.core, frame);
     const { rearmS, crashCauseWindowS } = bundle.scoring;
@@ -171,6 +229,7 @@ export function createScorer(bundle, map, vehicleInfo) {
     let causeFloorT = state.causeFloorT;
     // A crash on this step may take a cause from before a fall on the same step, not before a reset.
     let stepCauseFloorT = causeFloorT;
+    let aftermathFromT = state.fault.aftermathFromT;
 
     if (ctx.discontinuity) {
       const reset = frame.events.some((e) => e.type === 'reset');
@@ -184,27 +243,43 @@ export function createScorer(bundle, map, vehicleInfo) {
       openIndex = kept;
       detectors = freshDetectors();
       causeFloorT = frame.t;
-      if (reset) stepCauseFloorT = frame.t;
+      if (reset) {
+        stepCauseFloorT = frame.t;
+        aftermathFromT = null;
+      }
     }
+    const inAftermath =
+      aftermathFromT !== null && frame.t > aftermathFromT + EPS_T && frame.t - aftermathFromT <= aftermathS + EPS_T;
 
     /** @type {Record<string, unknown>} */
     const nextDetectors = {};
     /** @type {{rule: Rule, tierIndex: number, severity: number, input: Record<string, unknown>, basisVerified: boolean}[]} */
     const active = [];
-    for (const rule of rules) {
-      const det = DETECTORS[rule.detection.type];
-      const res = det.detect(
-        /** @type {never} */ (detectors[rule.id]),
-        frame,
-        ctx,
-        /** @type {never} */ (rule.detection.params),
-      );
-      nextDetectors[rule.id] = res.detectorState;
-      if (!res.active) continue;
-      const tierIndex = selectTier(rule, res.tierInput, group);
-      if (tierIndex < 0) continue;
-      active.push({ rule, tierIndex, severity: res.severity ?? tierIndex, input: res.tierInput, basisVerified: res.basisVerified ?? true });
-    }
+    /**
+     * Runs the detectors of some rules and adds the active ones to `active`.
+     * @param {Rule[]} list Rules.
+     * @param {import('./context.js').StepContext} c Context.
+     * @returns {typeof active} The rules of `list` that are active.
+     */
+    const detectRules = (list, c) => {
+      /** @type {typeof active} */
+      const found = [];
+      for (const rule of list) {
+        const det = DETECTORS[rule.detection.type];
+        if (inAftermath && AFTERMATH_RESET_DETECTORS.includes(rule.detection.type)) {
+          nextDetectors[rule.id] = det.init();
+          continue;
+        }
+        const res = det.detect(/** @type {never} */ (detectors[rule.id]), frame, c, /** @type {never} */ (rule.detection.params));
+        nextDetectors[rule.id] = res.detectorState;
+        if (!res.active) continue;
+        const tierIndex = selectTier(rule, res.tierInput, group);
+        if (tierIndex < 0) continue;
+        found.push({ rule, tierIndex, severity: res.severity ?? tierIndex, input: res.tierInput, basisVerified: res.basisVerified ?? true });
+      }
+      active.push(...found);
+      return found;
+    };
     /**
      * Whether a superseding rule is active or open now, and the clause ids it cites: its active
      * tier and its open episode.
@@ -220,52 +295,125 @@ export function createScorer(bundle, map, vehicleInfo) {
       if (open !== undefined) ids.add(episodes[open].breach.clause?.id ?? null);
       return { any: act !== undefined || open !== undefined, ids };
     };
-    const kept = active.filter((a) => {
-      const own = tierClauseId(a.rule.tiers[a.tierIndex], group);
-      return !(supersededBy.get(a.rule.id) ?? []).some((s) => {
-        const now = citedNow(s.ruleId);
-        return s.byClause ? own !== null && now.ids.has(own) : now.any;
+    /**
+     * Drops detections a superseding rule covers.
+     * @param {typeof active} found Active rules.
+     * @returns {typeof active} Kept rules.
+     */
+    const unsuperseded = (found) =>
+      found.filter((a) => {
+        const own = tierClauseId(a.rule.tiers[a.tierIndex], group);
+        return !(supersededBy.get(a.rule.id) ?? []).some((s) => {
+          const now = citedNow(s.ruleId);
+          return s.byClause ? own !== null && now.ids.has(own) : now.any;
+        });
       });
-    });
 
     /** @type {Breach[]} */
     const breaches = [];
     let pedestrianHit = state.pedestrianHit;
     let ended = /** @type {ScorerState['ended']} */ (null);
-    if (kept.length > 0) {
-      episodes = [...episodes];
-      openIndex = { ...openIndex };
-    }
-    for (const a of kept) {
-      const idx = openIndex[a.rule.id];
-      const existing = idx === undefined ? null : episodes[idx];
-      if (existing && a.severity <= existing.severity) {
-        episodes[/** @type {number} */ (idx)] = { ...existing, lastActiveT: frame.t };
-        continue;
+    /** Decisions of the charged contacts, by their index in the collision detector's list. */
+    /** @type {import('./fault.js').FaultDecision[]} */
+    const chargedDecisions = [];
+    /** @type {(CollisionEvent | FallEvent)[]} */
+    const charged = [];
+    /**
+     * Opens or escalates the episodes of kept detections.
+     * @param {typeof active} kept Kept rules.
+     */
+    const apply = (kept) => {
+      if (kept.length > 0) {
+        if (episodes === state.episodes) episodes = [...episodes];
+        if (openIndex === state.openIndex) openIndex = { ...openIndex };
       }
-      const meta = existing
-        ? { episodeId: existing.episodeId, kind: /** @type {const} */ ('escalated') }
-        : { episodeId: `${a.rule.id}@${frame.tick}`, kind: /** @type {const} */ ('new') };
-      let breach;
-      if (a.rule.detection.type === 'collision') {
-        const outcome = /** @type {import('./detectors/collision.js').CollisionOutcome} */ (a.input.collision);
-        breach = resolveCrash(env, a.rule, a.tierIndex, outcome, findCause(episodes, a.rule.id, frame.t - crashCauseWindowS, stepCauseFloorT, group), frame, meta);
-        if (outcome.kind === 'pedestrian') {
-          pedestrianHit = true;
-          ended = 'crash';
+      for (const a of kept) {
+        const idx = openIndex[a.rule.id];
+        const existing = idx === undefined ? null : episodes[idx];
+        if (existing && a.severity <= existing.severity) {
+          episodes[/** @type {number} */ (idx)] = { ...existing, lastActiveT: frame.t };
+          continue;
         }
-      } else {
-        breach = resolveBreach(env, a.rule, a.tierIndex, frame, meta, a.basisVerified);
+        const meta = existing
+          ? { episodeId: existing.episodeId, kind: /** @type {const} */ ('escalated') }
+          : { episodeId: `${a.rule.id}@${frame.tick}`, kind: /** @type {const} */ ('new') };
+        let breach;
+        if (a.rule.detection.type === 'collision') {
+          const outcome = /** @type {import('./detectors/collision.js').CollisionOutcome} */ (a.input.collision);
+          const decision = chargedDecisions[outcome.index];
+          const event = charged[outcome.index];
+          const sides =
+            event.type === 'collision' && outcome.kind !== 'pedestrian' ? bothSidesNote(decision.cause, contactFields(event).otherViolations) : null;
+          breach = resolveCrash(env, a.rule, a.tierIndex, outcome, decision.cause, frame, meta, sides);
+          if (outcome.kind === 'pedestrian') {
+            pedestrianHit = true;
+            ended = 'crash';
+          }
+        } else {
+          breach = resolveBreach(env, a.rule, a.tierIndex, frame, meta, a.basisVerified);
+        }
+        breaches.push(breach);
+        /** @type {Episode} */
+        const ep = { episodeId: meta.episodeId, ruleId: a.rule.id, severity: a.severity, lastActiveT: frame.t, open: true, breach };
+        if (existing) episodes[/** @type {number} */ (idx)] = ep;
+        else {
+          openIndex[a.rule.id] = episodes.length;
+          episodes.push(ep);
+        }
       }
-      breaches.push(breach);
-      /** @type {Episode} */
-      const ep = { episodeId: meta.episodeId, ruleId: a.rule.id, severity: a.severity, lastActiveT: frame.t, open: true, breach };
-      if (existing) episodes[/** @type {number} */ (idx)] = ep;
-      else {
-        openIndex[a.rule.id] = episodes.length;
-        episodes.push(ep);
+    };
+
+    // Every rule but the collision rules first, so the contacts see this step's episodes.
+    apply(unsuperseded(detectRules(plainRules, ctx)));
+
+    // Fault by law, per contact.
+    /** @type {Notice[]} */
+    const notices = [];
+    let noticeT = state.fault.noticeT;
+    const contacts = /** @type {(CollisionEvent | FallEvent)[]} */ (frame.events.filter((e) => e.type === 'collision' || e.type === 'fall'));
+    if (contacts.length > 0) {
+      const fromT = frame.t - crashCauseWindowS;
+      const cause = findCause(episodes, collisionRuleIds, fromT, stepCauseFloorT, group, (id) => !nonContributing.has(id));
+      const rearEndCause = findCause(episodes, collisionRuleIds, fromT, stepCauseFloorT, group, (id) => rearEndRules.has(id));
+      const anyCause = findCause(episodes, collisionRuleIds, fromT, stepCauseFloorT, group, () => true);
+      const facts = { aftermath: inAftermath, cause, anyCause, rearEndCause };
+      let anchored = false;
+      for (const e of contacts) {
+        const d = decideFault(policy, e, facts);
+        if (d.result === 'deduction') {
+          charged.push(e);
+          chargedDecisions.push(d);
+          continue;
+        }
+        if (d.rowId !== null && anchorRows.has(d.rowId)) anchored = true;
+        const key = noticeKey(e);
+        const last = noticeT[key];
+        if (noticeT === state.fault.noticeT) noticeT = { ...noticeT };
+        noticeT[key] = frame.t;
+        if (last !== undefined && frame.t - last < rearmS - EPS_T) continue;
+        notices.push({
+          kind: 'npc-fault',
+          tick: frame.tick,
+          t: frame.t,
+          pos: { x: frame.ego.pos.x, z: frame.ego.pos.z },
+          otherKind: e.type === 'collision' ? e.otherKind : null,
+          otherModel: e.type === 'collision' ? contactFields(e).otherModel : null,
+          violations: e.type === 'collision' ? [...contactFields(e).otherViolations] : [],
+          text: noticeText(policy, e, d.rowId !== null && !anchorRows.has(d.rowId)),
+        });
+      }
+      if (anchored) aftermathFromT = frame.t;
+    }
+    // Forget debounce entries older than rearmS, so the state stays small.
+    for (const [key, at] of Object.entries(noticeT)) {
+      if (frame.t - at >= rearmS - EPS_T) {
+        if (noticeT === state.fault.noticeT) noticeT = { ...noticeT };
+        delete noticeT[key];
       }
     }
+
+    // The collision rules, on the charged contacts only.
+    apply(unsuperseded(detectRules(collisionRules, { ...ctx, contacts: charged })));
 
     // Close episodes that stayed inactive for rearmS.
     for (const [ruleId, idx] of Object.entries(openIndex)) {
@@ -294,8 +442,19 @@ export function createScorer(bundle, map, vehicleInfo) {
       wrongWay: ctx.against,
     };
     /** @type {ScorerState} */
-    const next = { core, detectors: nextDetectors, episodes, openIndex, causeFloorT, ended, pedestrianHit, context };
-    return { state: next, breaches, context, runEnded: ended === 'crash' ? 'crash' : null };
+    const next = {
+      core,
+      detectors: nextDetectors,
+      episodes,
+      openIndex,
+      causeFloorT,
+      ended,
+      pedestrianHit,
+      context,
+      notices: notices.length > 0 ? [...state.notices, ...notices] : state.notices,
+      fault: { aftermathFromT, noticeT },
+    };
+    return { state: next, breaches, notices, context, runEnded: ended === 'crash' ? 'crash' : null };
   }
 
   /**
@@ -312,19 +471,21 @@ export function createScorer(bundle, map, vehicleInfo) {
 }
 
 /**
- * Worst other episode active since `fromT` (and not before the last discontinuity).
+ * Worst other episode active since `fromT` (and not before the last discontinuity) of a rule the
+ * filter accepts.
  * @param {Episode[]} episodes Episodes.
- * @param {string} crashRuleId Crash rule id, excluded.
+ * @param {Set<string>} crashRuleIds Collision rule ids, excluded.
  * @param {number} fromT Window start.
  * @param {number} floorT Last discontinuity.
  * @param {import('../contracts/index.js').DecreeGroup} group Decree group.
+ * @param {(ruleId: string) => boolean} accept Rules that may be the cause.
  * @returns {import('./resolve.js').CrashCause | null} Cause.
  */
-function findCause(episodes, crashRuleId, fromT, floorT, group) {
+function findCause(episodes, crashRuleIds, fromT, floorT, group, accept) {
   /** @type {Episode | null} */
   let best = null;
   for (const e of episodes) {
-    if (e.ruleId === crashRuleId || e.lastActiveT < Math.max(fromT, floorT) - 1e-9) continue;
+    if (crashRuleIds.has(e.ruleId) || !accept(e.ruleId) || e.lastActiveT < Math.max(fromT, floorT) - 1e-9) continue;
     if (!best || causeRank(e, best, group) >= 0) best = e;
   }
   if (!best) return null;
@@ -418,6 +579,7 @@ function buildReport(state, options, accidentClauses) {
   return {
     score,
     breaches,
+    notices: state.notices,
     licence: { start: 12, deducted: licenceDeducted, remaining: 12 - licenceDeducted },
     fineTotalVnd,
     finished: endedBy === 'finish',
@@ -426,17 +588,19 @@ function buildReport(state, options, accidentClauses) {
 }
 
 /**
- * Folds a scorer over frames; equals the live fold.
+ * Folds a scorer over frames; equals the live fold. With `options.initialState` (a state saved
+ * at a checkpoint, as plain JSON) it folds only the frames after that checkpoint and still gives
+ * the report of the whole run.
  * @param {RulesBundle} bundle Bundle.
  * @param {GameMap} map Map.
  * @param {VehicleInfo} vehicleInfo Vehicle.
  * @param {Frame[]} frames Frames in tick order.
- * @param {{quit: boolean}} options Whether the player quit after the last frame.
+ * @param {import('../contracts/index.js').ScoreRunOptions} options Quit flag and an optional start state.
  * @returns {ScoreReport} Report.
  */
 export function scoreRun(bundle, map, vehicleInfo, frames, options) {
   const scorer = createScorer(bundle, map, vehicleInfo);
-  let state = scorer.initial;
+  let state = options.initialState ?? scorer.initial;
   for (const frame of frames) state = scorer.step(state, frame).state;
   return scorer.report(state, options);
 }

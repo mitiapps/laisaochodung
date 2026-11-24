@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { assertFrame, checkFrame, DT } from '../contracts/index.js';
+import { ACTOR_LIGHTS, assertFrame, checkFrame, DT } from '../contracts/index.js';
 import { pointInPolygon } from '../geometry/index.js';
 import { buildFrames, laneCenterline, scriptValue } from './index.js';
 
@@ -149,5 +149,52 @@ describe('buildFrames', () => {
   it('rejects a missing path and an unknown lane', () => {
     expect(() => buildFrames({ map: MAP, vehicle: CAR, speed: 1 })).toThrow();
     expect(() => buildFrames({ map: MAP, vehicle: CAR, laneId: 'nope', speed: 1 })).toThrow(/Unknown lane/);
+  });
+
+  it('appends extra traffic poses and events, and holds scripted actors behind them', () => {
+    // A stopped motorbike in the westbound lane 6 m ahead of the scripted NPC car.
+    /** @type {import('../contracts/index.js').ActorPose} */
+    const moto = {
+      id: 'npc-0',
+      kind: 'motorbike',
+      pos: { x: 195 - 2.25 - 6 - 0.95, z: -1.75 },
+      heading: Math.PI,
+      speed: 0,
+      active: true,
+      model: 'motorbike',
+      variant: 1,
+      lengthM: 1.9,
+      widthM: 0.8,
+      lights: ACTOR_LIGHTS.hazard,
+      state: 'fallen',
+      violations: Object.freeze(/** @type {import('../contracts/index.js').NpcViolation[]} */ (['red-light'])),
+    };
+    /** @type {import('../contracts/index.js').FrameEvent} */
+    const hit = {
+      type: 'collision',
+      otherKind: 'motorbike',
+      otherId: 'npc-0',
+      impulse: 300,
+      egoSpeed: 5,
+      relSpeed: 5,
+      sameLaneAhead: false,
+      otherModel: 'motorbike',
+      striker: 'other',
+      otherFromBehind: false,
+      otherViolations: moto.violations,
+    };
+    const frames = buildFrames({
+      ...STRAIGHT,
+      extraActors: (t) => (t < 1 ? [moto] : []),
+      extraEvents: (t) => (Math.abs(t - 0.5) < DT / 2 ? [hit] : []),
+    });
+    frames.forEach((f) => assertFrame(f));
+    const early = frames[10];
+    expect(early.actors.map((a) => a.id)).toEqual(['ped-1', 'npc-1', 'npc-0']);
+    expect(early.actors.find((a) => a.id === 'npc-1')?.speed).toBe(0);
+    expect(frames[90].actors.map((a) => a.id)).toEqual(['ped-1', 'npc-1']);
+    expect(frames[90].actors.find((a) => a.id === 'npc-1')?.speed).toBe(10);
+    expect(frames[30].events).toEqual([hit]);
+    expect(frames.flatMap((f) => f.events).filter((e) => e.type === 'collision')).toHaveLength(1);
   });
 });

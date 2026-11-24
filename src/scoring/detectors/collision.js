@@ -1,7 +1,10 @@
 /**
- * `collision`: this step's collision and fall events, classified for the collision policy. A
- * collision whose own `egoSpeed` is below the scoring table's `contactMinEgoSpeed` is ignored,
- * so an NPC driving into a stopped player is never a breach.
+ * `collision`: this step's charged collision and fall events, classified for the collision policy.
+ * The scorer decides fault first (`src/scoring/fault.js`) and hands over only the contacts it
+ * charges in `ctx.contacts`; notices never reach this detector. Without that list the detector
+ * reads every event of the frame. A collision whose own `egoSpeed` is below the scoring table's
+ * `contactMinEgoSpeed` is ignored, so an NPC driving into a stopped player is never a breach.
+ * Motorbikes count as vehicles exactly like cars; the clause follows the ego's decree group.
  *
  * Each outcome is light or heavy; the crash rule's tiers key on `heavy`. Heavy: a pedestrian hit,
  * an NPC car hit at a closing speed of at least `accidentRelSpeed` (an accident), a static object
@@ -23,6 +26,7 @@
  * @property {string | null} otherId Other body.
  * @property {number} relSpeed Closing speed in m/s, 0 for a fall.
  * @property {number} impulse Impulse, 0 for a fall.
+ * @property {number} index Index of the event in the list the detector read.
  */
 
 /** @typedef {Record<string, never>} State */
@@ -50,9 +54,10 @@ export function init() {
 /**
  * @param {CollisionEvent} e Event.
  * @param {number} accidentRelSpeed Closing speed of an accident or a heavy static hit, in m/s.
+ * @param {number} index Index of the event in the list read.
  * @returns {CollisionOutcome} Outcome.
  */
-function classify(e, accidentRelSpeed) {
+function classify(e, accidentRelSpeed, index) {
   const fast = e.relSpeed >= accidentRelSpeed;
   /** @type {CollisionOutcome['kind']} */
   let kind = 'static';
@@ -60,11 +65,11 @@ function classify(e, accidentRelSpeed) {
   if (e.otherKind === 'pedestrian') {
     kind = 'pedestrian';
     heavy = true;
-  } else if (e.otherKind === 'car') {
+  } else if (e.otherKind === 'car' || e.otherKind === 'motorbike') {
     if (fast) kind = 'car-accident';
     else kind = e.sameLaneAhead ? 'same-lane-ahead' : 'car-contact';
   }
-  return { kind, heavy, otherId: e.otherId, relSpeed: e.relSpeed, impulse: e.impulse };
+  return { kind, heavy, otherId: e.otherId, relSpeed: e.relSpeed, impulse: e.impulse, index };
 }
 
 /**
@@ -77,11 +82,13 @@ export function detect(state, frame, ctx) {
   const { contactMinEgoSpeed, accidentRelSpeed } = ctx.env.bundle.scoring;
   /** @type {CollisionOutcome | null} */
   let worst = null;
-  for (const e of frame.events) {
+  const events = ctx.contacts ?? frame.events;
+  for (let i = 0; i < events.length; i += 1) {
+    const e = events[i];
     /** @type {CollisionOutcome | null} */
     let o = null;
-    if (e.type === 'fall') o = { kind: 'fall', heavy: true, otherId: null, relSpeed: 0, impulse: 0 };
-    else if (e.type === 'collision' && e.egoSpeed >= contactMinEgoSpeed) o = classify(e, accidentRelSpeed);
+    if (e.type === 'fall') o = { kind: 'fall', heavy: true, otherId: null, relSpeed: 0, impulse: 0, index: i };
+    else if (e.type === 'collision' && e.egoSpeed >= contactMinEgoSpeed) o = classify(e, accidentRelSpeed, i);
     if (o && (!worst || severityOf(o) > severityOf(worst))) worst = o;
   }
   if (!worst) return { detectorState: state, active: false, tierInput: {} };

@@ -47,6 +47,9 @@ export function hudStateOf({ frame, context, score, breaches, runStatus, report 
     headingRad: ego.heading,
     nav: { distanceM: frame.route.distanceM, bearingRad: frame.route.bearingRad },
     toasts: breaches.slice(-HUD_TOAST_WINDOW),
+    // Filled once the scorer raises notices and the session applies a preset.
+    notices: [],
+    controlPreset: 'real',
     runStatus,
   };
   if (report) state.report = report;

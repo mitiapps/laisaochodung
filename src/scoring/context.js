@@ -6,8 +6,9 @@
 
 import { DISCONTINUITY_EVENTS } from '../contracts/telemetry.js';
 import { DT, mpsToKmh } from '../contracts/units.js';
-import { angleDiff, headingVector } from '../geometry/index.js';
+import { angleDiff, headingVector, leftVector } from '../geometry/index.js';
 import { crossedLines, laneById, laneHeadingAt, locate, zonesAt } from '../map-query/index.js';
+import { actorInfo } from './detectors/common.js';
 
 /** @typedef {import('../contracts/index.js').Frame} Frame */
 /** @typedef {import('../contracts/index.js').GameMap} GameMap */
@@ -24,6 +25,43 @@ import { crossedLines, laneById, laneHeadingAt, locate, zonesAt } from '../map-q
 export const TRACE_SPAN_M = 60;
 
 /**
+ * Margin added to the largest detector distance when filtering actors: covers half the length
+ * of the longest vehicle and the lateral reach of a range measured ahead.
+ */
+export const ACTOR_RANGE_MARGIN_M = 20;
+
+/** Pose states of a wreck, which stands still whatever its pose speed says. */
+const WRECK_STATES = Object.freeze(['crashed', 'fallen']);
+
+/**
+ * Radius around the ego inside which actors enter the per-step actor list: the largest distance
+ * parameter of any rule (a detection parameter whose name ends in `M`, metres by convention; today
+ * the high-beam `rangeM`) plus `ACTOR_RANGE_MARGIN_M`.
+ * @param {RulesBundle} bundle Bundle.
+ * @returns {number} Radius in metres.
+ */
+export function actorRangeOf(bundle) {
+  let max = 0;
+  for (const rule of bundle.rules) {
+    for (const [k, v] of Object.entries(rule.detection.params)) {
+      if (k.endsWith('M') && typeof v === 'number' && Number.isFinite(v)) max = Math.max(max, v);
+    }
+  }
+  return max + ACTOR_RANGE_MARGIN_M;
+}
+
+/**
+ * An active actor near the ego, in the ego frame.
+ * @typedef {object} NearActor
+ * @property {import('../contracts/index.js').ActorPose} pose Pose.
+ * @property {number} along Distance ahead of the ego centre along its heading (negative behind).
+ * @property {number} lateral Distance to the left of the ego centre.
+ * @property {number} lengthM Length, from the pose (or the map actor for frames without sizes).
+ * @property {number} widthM Width.
+ * @property {number} speed Speed in m/s; 0 for a wreck (`crashed`, `fallen`).
+ */
+
+/**
  * Static inputs of one scorer.
  * @typedef {object} ScorerEnv
  * @property {RulesBundle} bundle Rules bundle.
@@ -32,6 +70,7 @@ export const TRACE_SPAN_M = 60;
  * @property {DecreeGroup} group Decree group of the vehicle.
  * @property {Map<string, import('../contracts/index.js').Clause>} clausesById Clauses.
  * @property {Map<string, import('../contracts/index.js').Source>} sourcesById Sources.
+ * @property {number} actorRangeM Radius of the per-step actor list (`actorRangeOf`).
  */
 
 /**
@@ -102,7 +141,49 @@ export const TRACE_SPAN_M = 60;
  * @property {boolean} junctionEntered Entered a junction this step.
  * @property {JunctionPass | null} junctionExit Junction pass completed this step.
  * @property {JunctionPass | null} lastExit Last completed junction pass.
+ * @property {NearActor[]} actors Active actors within `env.actorRangeM` of the ego, in frame
+ *   order; detectors read actors only from this list.
+ * @property {import('../contracts/index.js').FrameEvent[]} [contacts] Collision and fall events
+ *   the scorer charges this step, set for the collision detector only.
  */
+
+/**
+ * Active actors near the ego with their ego-frame coordinates, sizes and effective speed.
+ * @param {ScorerEnv} env Static inputs.
+ * @param {Frame} frame Frame.
+ * @returns {NearActor[]} Actors in frame order.
+ */
+function nearActors(env, frame) {
+  const { pos, heading } = frame.ego;
+  const [fx, fz] = headingVector(heading);
+  const [lx, lz] = leftVector(heading);
+  const r2 = env.actorRangeM * env.actorRangeM;
+  /** @type {NearActor[]} */
+  const out = [];
+  for (const pose of frame.actors) {
+    if (!pose.active) continue;
+    const dx = pose.pos.x - pos.x;
+    const dz = pose.pos.z - pos.z;
+    if (dx * dx + dz * dz > r2) continue;
+    let lengthM = pose.lengthM;
+    let widthM = pose.widthM;
+    if (lengthM === undefined || widthM === undefined) {
+      const info = actorInfo(env.map, pose.id);
+      if (!info) continue;
+      lengthM = info.lengthM;
+      widthM = info.widthM;
+    }
+    out.push({
+      pose,
+      along: dx * fx + dz * fz,
+      lateral: dx * lx + dz * lz,
+      lengthM,
+      widthM,
+      speed: WRECK_STATES.includes(pose.state) ? 0 : Math.abs(pose.speed),
+    });
+  }
+  return out;
+}
 
 /**
  * @returns {CoreState} Fresh core state.
@@ -280,6 +361,7 @@ export function stepCore(env, core, frame) {
     junctionEntered,
     junctionExit,
     lastExit,
+    actors: nearActors(env, frame),
   };
   return { core: next, ctx };
 }

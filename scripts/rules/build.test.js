@@ -128,6 +128,23 @@ describe('validateRules', () => {
     ['a duplicate rule id', (b) => { b.rules.push(clone(b.rules[0])); }, /duplicate id/],
     ['a sign figure date that is not a date', (b) => { b.signs[0].figureChecked = 'soon'; }, /signs\[0\]\.figureChecked/],
     ['a source URL that is not https', (b) => { b.sources[0].url = 'javascript:alert(1)'; }, /sources\[0\]\.url: expected an https URL/],
+    ['an unknown fault condition', (b) => { (b.collisionPolicy.faultRows ?? [])[1].when = /** @type {never} */ ('moon-phase'); }, /faultRows\[1\]\.when: unknown condition "moon-phase"/],
+    ['a fault table not ending in otherwise', (b) => { b.collisionPolicy.faultRows?.pop(); }, /last row must be 'otherwise'/],
+    ['a fault row with a bad result', (b) => { (b.collisionPolicy.faultRows ?? [])[0].result = /** @type {never} */ ('fine'); }, /faultRows\[0\]\.result/],
+    ['a rear-end flag on a deduction row', (b) => { (b.collisionPolicy.faultRows ?? [])[2].unlessRearEndContributing = true; }, /only a notice row/],
+    ['a duplicate fault row id', (b) => { const rows = b.collisionPolicy.faultRows ?? []; rows[1].id = rows[0].id; }, /faultRows\[1\]: duplicate id/],
+    ['an unknown non-contributing rule', (b) => { b.collisionPolicy.nonContributingRules?.push('teleport'); }, /nonContributingRules: unknown rule "teleport"/],
+    ['an unknown rear-end rule', (b) => { b.collisionPolicy.rearEndContributingRules?.push('nope'); }, /rearEndContributingRules: unknown rule "nope"/],
+    ['a rear-end rule that never contributes', (b) => { b.collisionPolicy.rearEndContributingRules?.push('night-horn'); }, /also non-contributing/],
+    ['an unknown excusing violation', (b) => { /** @type {string[]} */ (b.collisionPolicy.excusingViolations).push('rudeness'); }, /unknown violation "rudeness"/],
+    ['a negative aftermath window', (b) => { b.collisionPolicy.aftermathWindowS = -1; }, /aftermathWindowS: expected a number/],
+    ['a missing none notice', (b) => { delete b.collisionPolicy.noticeTexts?.none; }, /noticeTexts\.none: missing/],
+    ['an unknown notice key', (b) => { if (b.collisionPolicy.noticeTexts) b.collisionPolicy.noticeTexts.moon = { vi: 'x' }; }, /noticeTexts\.moon: not a violation/],
+    ['an unknown notice placeholder', (b) => { if (b.collisionPolicy.noticeTexts) b.collisionPolicy.noticeTexts.none = { vi: '{driver} va vào bạn.' }; }, /unknown placeholder "\{driver\}"/],
+    ['a fault-table choice without a basis', (b) => { delete b.collisionPolicy.paramBasis?.aftermathWindowS; }, /aftermathWindowS: has no paramBasis/],
+    ['a basis that is neither legal nor design', (b) => { if (b.collisionPolicy.paramBasis) b.collisionPolicy.paramBasis.excusingViolations = /** @type {never} */ ('vibes'); }, /paramBasis\.excusingViolations: expected 'legal' or 'design'/],
+    ['a basis for a key that is not a choice', (b) => { if (b.collisionPolicy.paramBasis) /** @type {Record<string, string>} */ (b.collisionPolicy.paramBasis).faultRows = 'design'; }, /paramBasis\.faultRows: not a fault-table choice/],
+    ['fault rows without their keys', (b) => { delete b.collisionPolicy.excusingViolations; }, /excusingViolations: required with faultRows/],
     ['a missing accident closing speed', (b) => { delete (/** @type {Record<string, unknown>} */ (b.scoring)).accidentRelSpeed; }, /scoring\.accidentRelSpeed/],
   ];
   for (const [name, edit, pattern] of broken) {
@@ -137,6 +154,13 @@ describe('validateRules', () => {
       expect(validateRules(b).join('\n')).toMatch(pattern);
     });
   }
+
+  it('accepts a policy without the fault keys (every contact charged)', async () => {
+    const b = clone(await realBundle());
+    const p = /** @type {Record<string, unknown>} */ (b.collisionPolicy);
+    for (const k of ['faultRows', 'nonContributingRules', 'rearEndContributingRules', 'excusingViolations', 'aftermathWindowS', 'noticeTexts', 'paramBasis']) delete p[k];
+    expect(validateRules(b)).toEqual([]);
+  });
 
   it('lets a tier limited to one decree group name only that clause', async () => {
     const b = await realBundle();

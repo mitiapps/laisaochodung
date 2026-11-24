@@ -2,11 +2,14 @@
  * Map validation: shape, globally unique ids and resolvable references.
  */
 
-import { Checker, ContractError } from './check.js';
+import { Checker, ContractError, isObject } from './check.js';
 
 /** @typedef {import('./check.js').UntrustedJson} UntrustedJson */
 import {
   ACTOR_KINDS,
+  BUILDING_USES,
+  CONFLICT_KINDS,
+  CONNECTOR_TURNS,
   CROSSABLE,
   ENTRY_CLASSES,
   LANE_LINE_TYPES,
@@ -14,6 +17,8 @@ import {
   MAP_COLLECTIONS,
   MAP_SCHEMA_VERSION,
   OBSTACLE_KINDS,
+  OPTIONAL_MAP_COLLECTIONS,
+  PROP_KINDS,
   SIGN_SOURCES,
   STOP_CONTROLS,
   ZONE_SOURCES,
@@ -64,7 +69,18 @@ export function checkMap(map, options = {}) {
   checkRoute(c, m.route);
 
   for (const key of MAP_COLLECTIONS) c.array(m[key], key);
-  if (c.problems.some((p) => MAP_COLLECTIONS.some((k) => p.startsWith(`${k}:`)))) return c.problems;
+  for (const key of OPTIONAL_MAP_COLLECTIONS) if (m[key] !== undefined) c.array(m[key], key);
+  if (m.laneJoins !== undefined) c.array(m.laneJoins, 'laneJoins');
+  const collections = [...MAP_COLLECTIONS, ...OPTIONAL_MAP_COLLECTIONS, 'laneJoins'];
+  if (c.problems.some((p) => collections.some((k) => p.startsWith(`${k}:`)))) return c.problems;
+  /** @type {UntrustedJson[]} */
+  const connectors = m.connectors ?? [];
+  /** @type {UntrustedJson[]} */
+  const conflicts = m.conflicts ?? [];
+  /** @type {UntrustedJson[]} */
+  const props = m.props ?? [];
+  /** @type {UntrustedJson[]} */
+  const laneJoins = m.laneJoins ?? [];
 
   /** @type {Map<string, string>} id → kind */
   const ids = new Map();
@@ -231,6 +247,7 @@ export function checkMap(map, options = {}) {
     c.oneOf(o.kind, OBSTACLE_KINDS, `${p}.kind`);
     c.polygon(o.footprint, `${p}.footprint`);
     c.number(o.height, `${p}.height`, { min: 0 });
+    checkBuildingFields(c, o, p);
   });
 
   m.actors.forEach((a, i) => {
@@ -252,6 +269,70 @@ export function checkMap(map, options = {}) {
       else c.number(a.trigger.atS, `${p}.trigger.atS`, { min: 0 });
     }
   });
+
+  connectors.forEach((k, i) => {
+    const p = `connectors[${i}]`;
+    if (!c.object(k, p)) return;
+    claim(k.id, p, 'connector');
+    c.string(k.fromLaneId, `${p}.fromLaneId`);
+    c.string(k.toLaneId, `${p}.toLaneId`);
+    c.string(k.junctionId, `${p}.junctionId`);
+    c.polyline(k.centerline, `${p}.centerline`);
+    c.oneOf(k.turn, CONNECTOR_TURNS, `${p}.turn`);
+    if (k.stopLineId !== null) c.string(k.stopLineId, `${p}.stopLineId`);
+  });
+
+  conflicts.forEach((k, i) => {
+    const p = `conflicts[${i}]`;
+    if (!c.object(k, p)) return;
+    claim(k.id, p, 'conflict');
+    c.string(k.a, `${p}.a`);
+    c.string(k.b, `${p}.b`);
+    if (k.a === k.b) c.fail(p, 'a connector cannot conflict with itself');
+    for (const side of ['a', 'b']) {
+      const from = k[`${side}FromS`];
+      const to = k[`${side}ToS`];
+      const okFrom = c.number(from, `${p}.${side}FromS`, { min: 0 });
+      const okTo = c.number(to, `${p}.${side}ToS`, { min: 0 });
+      if (okFrom && okTo && to < from) c.fail(`${p}.${side}ToS`, `must not be below ${side}FromS`);
+    }
+    c.oneOf(k.kind, CONFLICT_KINDS, `${p}.kind`);
+  });
+
+  /** @type {Set<string>} */
+  const joinFrom = new Set();
+  /** @type {Set<string>} */
+  const joinTo = new Set();
+  laneJoins.forEach((k, i) => {
+    const p = `laneJoins[${i}]`;
+    if (!c.object(k, p)) return;
+    const okFrom = c.string(k.fromLaneId, `${p}.fromLaneId`);
+    const okTo = c.string(k.toLaneId, `${p}.toLaneId`);
+    if (okFrom && okTo && k.fromLaneId === k.toLaneId) c.fail(p, 'a lane cannot join itself');
+    if (okFrom) {
+      if (joinFrom.has(k.fromLaneId)) c.fail(`${p}.fromLaneId`, `lane "${k.fromLaneId}" already ends at a join`);
+      joinFrom.add(k.fromLaneId);
+      if (connectors.some((x) => x?.fromLaneId === k.fromLaneId)) {
+        c.fail(`${p}.fromLaneId`, `lane "${k.fromLaneId}" also starts a connector`);
+      }
+    }
+    if (okTo) {
+      if (joinTo.has(k.toLaneId)) c.fail(`${p}.toLaneId`, `lane "${k.toLaneId}" already starts at a join`);
+      joinTo.add(k.toLaneId);
+    }
+  });
+
+  props.forEach((k, i) => {
+    const p = `props[${i}]`;
+    if (!c.object(k, p)) return;
+    claim(k.id, p, 'prop');
+    c.oneOf(k.kind, PROP_KINDS, `${p}.kind`);
+    c.pos2(k.pos, `${p}.pos`);
+    c.number(k.heading, `${p}.heading`);
+    c.boolean(k.solid, `${p}.solid`);
+  });
+
+  if (m.traffic !== undefined) checkTraffic(c, m.traffic);
 
   // References.
   /**
@@ -307,8 +388,112 @@ export function checkMap(map, options = {}) {
     ref(r?.signId, 'sign', `restrictions[${i}].signId`);
   });
   m.entries.forEach((e, i) => ref(e?.signId, 'sign', `entries[${i}].signId`));
+  connectors.forEach((k, i) => {
+    ref(k?.fromLaneId, 'lane', `connectors[${i}].fromLaneId`);
+    ref(k?.toLaneId, 'lane', `connectors[${i}].toLaneId`);
+    ref(k?.junctionId, 'junction', `connectors[${i}].junctionId`);
+    if (k?.stopLineId !== null) ref(k?.stopLineId, 'stopLine', `connectors[${i}].stopLineId`);
+  });
+  conflicts.forEach((k, i) => {
+    ref(k?.a, 'connector', `conflicts[${i}].a`);
+    ref(k?.b, 'connector', `conflicts[${i}].b`);
+  });
+  laneJoins.forEach((k, i) => {
+    ref(k?.fromLaneId, 'lane', `laneJoins[${i}].fromLaneId`);
+    ref(k?.toLaneId, 'lane', `laneJoins[${i}].toLaneId`);
+  });
+  if (isObject(m.traffic)) {
+    const t = m.traffic;
+    if (Array.isArray(t.sources)) {
+      t.sources.forEach((/** @type {UntrustedJson} */ src, /** @type {number} */ i) =>
+        ref(src?.laneId, 'lane', `traffic.sources[${i}].laneId`),
+      );
+    }
+    refs(t.sinks, 'lane', 'traffic.sinks');
+    if (isObject(t.densityPerKm)) {
+      for (const roadId of Object.keys(t.densityPerKm)) ref(roadId, 'road', `traffic.densityPerKm.${roadId}`);
+    }
+  }
 
   return c.problems;
+}
+
+/** Tolerance on the sum of `traffic.mix` shares. */
+const MIX_SUM_TOLERANCE = 1e-6;
+
+/**
+ * Optional building fields of an obstacle.
+ * @param {Checker} c Checker.
+ * @param {UntrustedJson} o Obstacle (untrusted).
+ * @param {string} p Path.
+ * @returns {void}
+ */
+function checkBuildingFields(c, o, p) {
+  const present = ['use', 'floors', 'frontEdge'].filter((k) => o[k] !== undefined);
+  if (present.length === 0) return;
+  if (o.kind !== 'building') {
+    c.fail(p, `only buildings carry ${present.join(', ')}`);
+    return;
+  }
+  if (o.use !== undefined) c.oneOf(o.use, BUILDING_USES, `${p}.use`);
+  if (o.floors !== undefined) c.number(o.floors, `${p}.floors`, { integer: true, min: 1 });
+  if (o.frontEdge !== undefined) {
+    const edges = Array.isArray(o.footprint) ? o.footprint.length - 1 : 0;
+    c.number(o.frontEdge, `${p}.frontEdge`, { integer: true, min: 0, max: Math.max(0, edges) });
+  }
+}
+
+/**
+ * Per-map traffic block; references are checked with the other references.
+ * @param {Checker} c Checker.
+ * @param {unknown} traffic Traffic block (untrusted).
+ * @returns {void}
+ */
+function checkTraffic(c, traffic) {
+  if (!c.object(traffic, 'traffic')) return;
+  const t = /** @type {UntrustedJson} */ (traffic);
+  c.number(t.seed, 'traffic.seed', { integer: true, min: 0, max: 0xffffffff });
+  c.number(t.maxAgents, 'traffic.maxAgents', { integer: true, min: 0 });
+  if (c.array(t.spawnRingM, 'traffic.spawnRingM')) {
+    if (t.spawnRingM.length !== 2) c.fail('traffic.spawnRingM', 'expected [inner, outer]');
+    else {
+      const okInner = c.number(t.spawnRingM[0], 'traffic.spawnRingM[0]', { min: 0 });
+      const okOuter = c.number(t.spawnRingM[1], 'traffic.spawnRingM[1]', { min: 0 });
+      if (okInner && okOuter && t.spawnRingM[1] <= t.spawnRingM[0]) {
+        c.fail('traffic.spawnRingM', 'outer radius must exceed the inner one');
+      }
+    }
+  }
+  if (c.object(t.densityPerKm, 'traffic.densityPerKm')) {
+    for (const [roadId, d] of Object.entries(t.densityPerKm)) c.number(d, `traffic.densityPerKm.${roadId}`, { min: 0 });
+  }
+  if (c.array(t.sources, 'traffic.sources')) {
+    t.sources.forEach((/** @type {UntrustedJson} */ src, /** @type {number} */ i) => {
+      const p = `traffic.sources[${i}]`;
+      if (!c.object(src, p)) return;
+      c.string(src.laneId, `${p}.laneId`);
+      c.number(src.ratePerH, `${p}.ratePerH`, { min: 0 });
+    });
+  }
+  c.stringArray(t.sinks, 'traffic.sinks');
+  if (c.array(t.mix, 'traffic.mix')) {
+    if (t.mix.length === 0) c.fail('traffic.mix', 'expected at least one model');
+    let sum = 0;
+    let ok = true;
+    t.mix.forEach((/** @type {UntrustedJson} */ e, /** @type {number} */ i) => {
+      const p = `traffic.mix[${i}]`;
+      if (!c.object(e, p)) {
+        ok = false;
+        return;
+      }
+      c.string(e.model, `${p}.model`);
+      if (c.number(e.share, `${p}.share`, { min: 0, max: 1 })) sum += e.share;
+      else ok = false;
+    });
+    if (ok && t.mix.length > 0 && Math.abs(sum - 1) > MIX_SUM_TOLERANCE) {
+      c.fail('traffic.mix', `shares sum to ${Number(sum.toFixed(6))}, expected 1`);
+    }
+  }
 }
 
 /**

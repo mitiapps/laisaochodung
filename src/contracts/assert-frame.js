@@ -1,5 +1,10 @@
 /**
  * Frame validation: shape, enums and finite numbers.
+ *
+ * By default a frame is checked as the sim and the frame builder emit it: every pose's `lights`
+ * must be one of the frozen `ACTOR_LIGHTS` entries itself, and every `violations` list a frozen
+ * array, so no producer allocates them per pose. A frame read back from JSON has neither
+ * property; pass `{parsed: true}` to check those fields by value only.
  */
 
 import { Checker, ContractError } from './check.js';
@@ -7,21 +12,35 @@ import { Checker, ContractError } from './check.js';
 /** @typedef {import('./check.js').UntrustedJson} UntrustedJson */
 import { LEGAL_CLASSES } from './vehicle.js';
 import {
+  ACTOR_LIGHTS,
+  ACTOR_POSE_KINDS,
+  ACTOR_POSE_STATES,
   COLLISION_KINDS,
   EVENT_TYPES,
   GEARS,
   INDICATORS,
   LIGHT_STATES,
   LIGHTS,
+  NPC_VIOLATIONS,
   WEATHERS,
 } from './telemetry.js';
 
 /**
+ * @typedef {object} FrameCheckOptions
+ * @property {boolean} [parsed] The frame was parsed from JSON: check `lights` and `violations` by
+ *   value instead of requiring the shared frozen objects.
+ */
+
+/** @type {readonly import('./telemetry.js').ActorLights[]} */
+const LAMP_ENTRIES = Object.freeze(Object.values(ACTOR_LIGHTS));
+
+/**
  * Lists every problem of a frame; empty when valid.
  * @param {unknown} frame Candidate frame.
+ * @param {FrameCheckOptions} [options] Options.
  * @returns {string[]} Problems.
  */
-export function checkFrame(frame) {
+export function checkFrame(frame, options = {}) {
   const c = new Checker();
   if (!c.object(frame, 'frame')) return c.problems;
   const f = /** @type {UntrustedJson} */ (frame);
@@ -34,12 +53,7 @@ export function checkFrame(frame) {
     f.actors.forEach((a, i) => {
       const p = `actors[${i}]`;
       if (!c.object(a, p)) return;
-      c.string(a.id, `${p}.id`);
-      c.oneOf(a.kind, ['pedestrian', 'car'], `${p}.kind`);
-      c.pos2(a.pos, `${p}.pos`);
-      c.number(a.heading, `${p}.heading`);
-      c.number(a.speed, `${p}.speed`, { min: 0 });
-      c.boolean(a.active, `${p}.active`);
+      checkPose(c, a, p, options.parsed === true);
     });
   }
 
@@ -63,6 +77,49 @@ export function checkFrame(frame) {
     f.events.forEach((e, i) => checkEvent(c, e, `events[${i}]`));
   }
   return c.problems;
+}
+
+/**
+ * @param {Checker} c Checker.
+ * @param {UntrustedJson} a Actor pose (untrusted).
+ * @param {string} p Path.
+ * @param {boolean} parsed Check `lights` and `violations` by value only.
+ * @returns {void}
+ */
+function checkPose(c, a, p, parsed) {
+  c.string(a.id, `${p}.id`);
+  c.oneOf(a.kind, ACTOR_POSE_KINDS, `${p}.kind`);
+  c.pos2(a.pos, `${p}.pos`);
+  c.number(a.heading, `${p}.heading`);
+  c.number(a.speed, `${p}.speed`, { min: 0 });
+  c.boolean(a.active, `${p}.active`);
+  c.string(a.model, `${p}.model`);
+  c.number(a.variant, `${p}.variant`, { integer: true, min: 0 });
+  c.number(a.lengthM, `${p}.lengthM`, { min: 0.1 });
+  c.number(a.widthM, `${p}.widthM`, { min: 0.1 });
+  if (parsed) {
+    const l = a.lights;
+    const known = LAMP_ENTRIES.some((e) => l?.brake === e.brake && l?.left === e.left && l?.right === e.right);
+    if (!known || Object.keys(l).length !== 3) c.fail(`${p}.lights`, 'expected an ACTOR_LIGHTS entry');
+  } else if (!LAMP_ENTRIES.includes(a.lights)) {
+    c.fail(`${p}.lights`, 'expected one of the shared ACTOR_LIGHTS objects');
+  }
+  c.oneOf(a.state, ACTOR_POSE_STATES, `${p}.state`);
+  checkViolations(c, a.violations, `${p}.violations`, parsed);
+}
+
+/**
+ * @param {Checker} c Checker.
+ * @param {unknown} v Violation list (untrusted).
+ * @param {string} p Path.
+ * @param {boolean} parsed Skip the frozen-array requirement (event copies need not be shared).
+ * @returns {void}
+ */
+function checkViolations(c, v, p, parsed) {
+  if (!c.array(v, p)) return;
+  v.forEach((flag, i) => c.oneOf(flag, NPC_VIOLATIONS, `${p}[${i}]`));
+  if (new Set(v).size !== v.length) c.fail(p, 'lists a flag twice');
+  if (!parsed && !Object.isFrozen(v)) c.fail(p, 'expected a shared frozen array');
 }
 
 /**
@@ -129,6 +186,10 @@ function checkEvent(c, e, p) {
     c.number(e.egoSpeed, `${p}.egoSpeed`, { min: 0 });
     c.number(e.relSpeed, `${p}.relSpeed`, { min: 0 });
     c.boolean(e.sameLaneAhead, `${p}.sameLaneAhead`);
+    if (e.otherModel !== undefined && e.otherModel !== null) c.string(e.otherModel, `${p}.otherModel`);
+    if (e.striker !== undefined) c.oneOf(e.striker, ['ego', 'other', 'both'], `${p}.striker`);
+    if (e.otherFromBehind !== undefined) c.boolean(e.otherFromBehind, `${p}.otherFromBehind`);
+    if (e.otherViolations !== undefined) checkViolations(c, e.otherViolations, `${p}.otherViolations`, true);
   } else if (e.type === 'checkpoint') {
     c.number(e.index, `${p}.index`, { integer: true, min: 0 });
   }
@@ -137,9 +198,10 @@ function checkEvent(c, e, p) {
 /**
  * Throws a `ContractError` listing every problem unless the frame is valid.
  * @param {unknown} frame Candidate frame.
+ * @param {FrameCheckOptions} [options] Options.
  * @returns {asserts frame is import('./telemetry.js').Frame} Narrowed frame.
  */
-export function assertFrame(frame) {
-  const problems = checkFrame(frame);
+export function assertFrame(frame, options) {
+  const problems = checkFrame(frame, options);
   if (problems.length > 0) throw new ContractError('frame', problems);
 }

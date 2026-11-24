@@ -54,7 +54,7 @@ export function detect(state, frame, ctx, params) {
     const litStreet = ctx.builtUp && ctx.lit;
     const road = ctx.loc.roadId === null ? null : roadById(map, ctx.loc.roadId);
     const divided = road !== null && road.divided;
-    const facing = actorsAround(frame, ctx, null).some(
+    const facing = actorsAround(ctx, null).some(
       (a) =>
         a.along > 0 &&
         a.along <= params.rangeM &&

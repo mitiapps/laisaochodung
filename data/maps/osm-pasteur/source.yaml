@@ -18,3 +18,19 @@ route:
     - { way: 678315474, s: 40, lane: 0 }
     - { way: 803279638, s: 100, lane: 0 }
   finish: { way: 803279638, s: 75 }
+# Side-road stubs reach 120 m where the street continues in the extract, so traffic enters out
+# of sight of the junctions (the far plane is 300 m). The build logs every stub kept shorter.
+stubM: 120
+# NPC traffic, full inner-city density (agents per lane-km, design). maxAgents and the traffic
+# time limit are derived by the build.
+traffic:
+  densityPerKm: 30
+  spawnRingM: [60, 150]
+  # Vietnamese mix (design, inside the user's 70–80% motorbikes): taxis, buses and small trucks
+  # are cars by law.
+  mix:
+    - { model: motorbike, share: 0.75 }
+    - { model: car, share: 0.12 }
+    - { model: taxi, share: 0.06 }
+    - { model: bus, share: 0.02 }
+    - { model: truck, share: 0.05 }

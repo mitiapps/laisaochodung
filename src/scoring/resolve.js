@@ -128,9 +128,11 @@ export function resolveBreach(env, rule, tierIndex, frame, meta, basisVerified =
  * @param {CrashCause | null} cause Cause, if any.
  * @param {Frame} frame Frame.
  * @param {BreachMeta} meta Episode data.
+ * @param {string | null} [sidesNote] Two-sided note naming the other party's violation too
+ *   (`bothSidesNote` in `fault.js`); appended to the breach note.
  * @returns {Breach} Breach.
  */
-export function resolveCrash(env, rule, tierIndex, outcome, cause, frame, meta) {
+export function resolveCrash(env, rule, tierIndex, outcome, cause, frame, meta, sidesNote = null) {
   const policy = env.bundle.collisionPolicy;
   const g = env.group;
   /** @type {string | null} */
@@ -177,7 +179,8 @@ export function resolveCrash(env, rule, tierIndex, outcome, cause, frame, meta) 
     scoreOnly: clause === null,
     basisVerified: true,
   };
-  if (note) breach.note = { vi: note };
+  const fullNote = [note, sidesNote].filter((x) => x !== null).join(' ');
+  if (fullNote) breach.note = { vi: fullNote };
   if (cause) {
     breach.cause = cause.ruleId;
     breach.causeEpisodeId = cause.episodeId;

@@ -1,15 +1,20 @@
 # Lane change between two lanes of the same direction. Tier 1: no indicator toward the new lane
 # held for signalLeadS before the crossing, a line not crossable from this side, or a second
-# lane line crossed within skipWindowS. Tier 2: a car in the target lane within gapAheadM ahead
-# or gapBehindM behind (the unsafe-gap wording ND 238 added to the same clause).
+# lane line crossed within skipWindowS. Tier 2 (the unsafe-gap wording ND 238 added to the same
+# clause): a vehicle the ego moves in front of or behind too closely. A car counts when its centre
+# is in the target lane, a motorbike only when it overlaps the strip the ego moves into. A vehicle
+# below stoppedSpeedMps is too close within gapAheadM ahead or gapBehindM behind; a moving one
+# when the follower's time gap after the change would be under gapTimeS (ego speed for a vehicle
+# ahead, the vehicle's speed for one behind). gapTimeS 0.5 s is a design value: at the stopped gap of 5 m it
+# matches a 36 km/h move, and it keeps a cut-in into dense motorbike traffic possible.
 id: lane-change
 title: { vi: "Chuyển làn không đúng quy định" }
 description: { vi: "Chuyển làn không xi nhan trước, qua vạch liền, chuyển hai làn một lúc hoặc không bảo đảm khoảng cách an toàn." }
 vehicleClasses: [car, motorbike]
 detection:
   type: lane-line-cross
-  params: { signalLeadS: 1, skipWindowS: 3, gapAheadM: 5, gapBehindM: 10 }
-  paramBasis: { signalLeadS: design, skipWindowS: design, gapAheadM: design, gapBehindM: design }
+  params: { signalLeadS: 1, skipWindowS: 3, gapAheadM: 5, gapBehindM: 10, gapTimeS: 0.5, stoppedSpeedMps: 0.5 }
+  paramBasis: { signalLeadS: design, skipWindowS: design, gapAheadM: design, gapBehindM: design, gapTimeS: design, stoppedSpeedMps: design }
 obligation:
   - sourceId: law36-2024
     article: Điều 13

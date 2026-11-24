@@ -9,12 +9,15 @@ deductionByDanger:
   '5': 4
 # Seconds a rule must stay clear before it can open a new episode.
 rearmS: 3
-# A collision takes as its cause the worst rule breach active in this many seconds before it.
+# A collision takes as its cause the worst rule breach active in this many seconds before it. The
+# same window decides fault in a contact with a vehicle (collision-policy.yaml, faultRows), and
+# traffic agents latch their violation flags for it.
 crashCauseWindowS: 3
 # Closing speed (m/s) from which a collision with an NPC car counts as an accident (tai nạn)
 # rather than a va chạm, and a static or kerb hit counts as heavy. 4.2 m/s is about 15 km/h.
 # Closing speed is used instead of impulse because impulse scales with the player's mass (the car
 # is about 7 times the scooter). The game's own line ("ngưỡng của trò chơi").
 accidentRelSpeed: 4.2
-# Below this ego speed (m/s) a contact is never a breach and never ends the run.
+# Below this ego speed (m/s) a contact is never a breach and never ends the run. It never blocks
+# a notice: a stopped player who is struck still sees one.
 contactMinEgoSpeed: 0.5

@@ -2,11 +2,14 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import YAML from 'yaml';
 import {
+  ACTOR_LIGHTS,
   assertFrame,
   assertMap,
   checkFrame,
   checkMap,
   CLAUSE_ID_PATTERN,
+  COLLISION_KINDS,
+  CONTROL_PRESETS,
   ContractError,
   decreeGroupOf,
   DT,
@@ -15,6 +18,8 @@ import {
   LICENCE_POINT_VALUES,
   mpsToKmh,
   neutralInput,
+  NO_VIOLATIONS,
+  NPC_VIOLATIONS,
 } from './index.js';
 
 /** @typedef {import('./check.js').UntrustedJson} UntrustedJson Parsed fixture JSON. */
@@ -38,6 +43,7 @@ const json = (path) => JSON.parse(read(path));
 const clone = (v) => structuredClone(v);
 
 const MAP = json('tests/fixtures/map-minimal.json');
+const JUNCTION = json('tests/fixtures/map-junction.json');
 const FRAMES = json('tests/fixtures/frames-straight.json');
 const SIGNS = YAML.parse(read('data/signs/signs.yaml'));
 const SIGN_CODES = SIGNS.map((/** @type {{code: string}} */ s) => s.code);
@@ -61,6 +67,24 @@ describe('key bindings', () => {
     expect(new Set(keys).size).toBe(keys.length);
     expect(KEY_BINDINGS.every((b) => b.label.vi.length > 0)).toBe(true);
     expect(neutralInput()).toMatchObject({ throttle: 0, steer: 0, gearCmd: null, horn: false });
+  });
+
+  it('fixes the two control presets', () => {
+    expect(CONTROL_PRESETS).toEqual(['simple', 'real']);
+    expect(Object.isFrozen(CONTROL_PRESETS)).toBe(true);
+  });
+});
+
+describe('shared pose constants', () => {
+  it('freezes the lamp table, its entries and the empty violation list', () => {
+    expect(Object.keys(ACTOR_LIGHTS)).toEqual(['off', 'brake', 'left', 'right', 'brake-left', 'brake-right', 'hazard']);
+    expect(Object.isFrozen(ACTOR_LIGHTS)).toBe(true);
+    for (const e of Object.values(ACTOR_LIGHTS)) expect(Object.isFrozen(e)).toBe(true);
+    expect(ACTOR_LIGHTS.hazard).toEqual({ brake: false, left: true, right: true });
+    expect(NO_VIOLATIONS).toEqual([]);
+    expect(Object.isFrozen(NO_VIOLATIONS)).toBe(true);
+    expect(NPC_VIOLATIONS).not.toContain('inattentive');
+    expect(COLLISION_KINDS).toContain('motorbike');
   });
 });
 
@@ -86,6 +110,7 @@ describe('assertMap', () => {
     ['unknown sign code', (m) => (m.signs[0].code = 'P.999'), /unknown sign code/],
     ['OSM map without attribution', (m) => (m.kind = 'osm'), /attribution/],
     ['missing collection', (m) => delete m.entries, /entries/],
+    ['building fields on a barrier', (m) => Object.assign(m.obstacles.find((/** @type {UntrustedJson} */ o) => o.kind !== 'building') ?? m.obstacles[0], { kind: 'barrier', floors: 2 }), /only buildings carry floors/],
   ];
   it.each(broken)('rejects %s', (_, mutate, pattern) => {
     const m = clone(MAP);
@@ -96,10 +121,112 @@ describe('assertMap', () => {
   });
 });
 
+describe('assertMap with a lane graph and traffic', () => {
+  it('accepts the junction fixture', () => {
+    expect(checkMap(JUNCTION, { signCodes: SIGN_CODES })).toEqual([]);
+  });
+
+  it('junction fixture geometry: connectors join lane ends, conflict zones lie on their connectors', () => {
+    /** @type {Map<string, UntrustedJson>} */
+    const lanes = new Map(JUNCTION.roads.flatMap((/** @type {UntrustedJson} */ r) => r.lanes.map((/** @type {UntrustedJson} */ l) => [l.id, l])));
+    /**
+     * @param {number[][]} pts Polyline.
+     * @returns {number} Length.
+     */
+    const length = (pts) => pts.slice(1).reduce((s, p, i) => s + Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]), 0);
+    /** @type {Map<string, number>} */
+    const lengths = new Map();
+    for (const k of JUNCTION.connectors) {
+      expect(k.centerline[0]).toEqual(lanes.get(k.fromLaneId).centerline.at(-1));
+      expect(k.centerline.at(-1)).toEqual(lanes.get(k.toLaneId).centerline[0]);
+      lengths.set(k.id, length(k.centerline));
+    }
+    for (const c of JUNCTION.conflicts) {
+      expect(c.aToS).toBeLessThanOrEqual(/** @type {number} */ (lengths.get(c.a)) + 1e-3);
+      expect(c.bToS).toBeLessThanOrEqual(/** @type {number} */ (lengths.get(c.b)) + 1e-3);
+    }
+    expect(new Set(JUNCTION.conflicts.map((/** @type {UntrustedJson} */ c) => c.kind))).toEqual(new Set(['cross', 'merge']));
+    const kerbArm = JUNCTION.roads.find((/** @type {UntrustedJson} */ r) => r.id === 'rw');
+    expect(kerbArm.lanes.filter((/** @type {UntrustedJson} */ l) => l.dir === 'forward')).toHaveLength(2);
+    const sourced = new Set(JUNCTION.traffic.sources.map((/** @type {UntrustedJson} */ s) => s.laneId));
+    for (const id of JUNCTION.traffic.sinks) expect(sourced.has(id)).toBe(false);
+  });
+
+  it('accepts plain lane joins from lanes that start no connector', () => {
+    const m = clone(JUNCTION);
+    const starts = new Set(m.connectors.map((/** @type {UntrustedJson} */ k) => k.fromLaneId));
+    const free = m.roads.flatMap((/** @type {UntrustedJson} */ r) => r.lanes).filter((/** @type {UntrustedJson} */ l) => !starts.has(l.id));
+    m.laneJoins = [{ fromLaneId: free[0].id, toLaneId: free[1].id }];
+    expect(checkMap(m, { signCodes: SIGN_CODES })).toEqual([]);
+  });
+
+  it('accepts building fields on a building', () => {
+    const m = clone(MAP);
+    const b = m.obstacles.find((/** @type {UntrustedJson} */ o) => o.kind === 'building');
+    if (b) Object.assign(b, { use: 'shophouse', floors: 4, frontEdge: 0 });
+    expect(checkMap(m)).toEqual([]);
+  });
+
+  /** @type {[string, (m: UntrustedJson) => void, RegExp][]} */
+  const broken = [
+    ['connector to an unknown lane', (m) => (m.connectors[0].toLaneId = 'nope'), /connectors\[0\]\.toLaneId: unknown lane "nope"/],
+    ['connector in an unknown junction', (m) => (m.connectors[0].junctionId = 'j-x'), /unknown junction "j-x"/],
+    ['connector with a bad turn', (m) => (m.connectors[0].turn = 'sideways'), /connectors\[0\]\.turn/],
+    ['conflict with an unknown connector', (m) => (m.conflicts[0].b = 'c-x'), /conflicts\[0\]\.b: unknown connector "c-x"/],
+    ['conflict range reversed', (m) => (m.conflicts[0].aToS = m.conflicts[0].aFromS - 1), /aToS: must not be below aFromS/],
+    ['conflict with itself', (m) => (m.conflicts[0].b = m.conflicts[0].a), /cannot conflict with itself/],
+    ['mix shares not summing to 1', (m) => (m.traffic.mix[0].share = 0.5), /traffic\.mix: shares sum/],
+    ['source on an unknown lane', (m) => (m.traffic.sources[0].laneId = 'nope'), /traffic\.sources\[0\]\.laneId: unknown lane/],
+    ['sink on an unknown lane', (m) => m.traffic.sinks.push('nope'), /traffic\.sinks\[\d+\]: unknown lane/],
+    ['density for an unknown road', (m) => (m.traffic.densityPerKm.nope = 10), /densityPerKm\.nope: unknown road/],
+    ['inverted spawn ring', (m) => (m.traffic.spawnRingM = [150, 60]), /outer radius/],
+    ['negative seed', (m) => (m.traffic.seed = -1), /traffic\.seed/],
+    ['prop with an unknown kind', (m) => m.props.push({ id: 'p-x', kind: 'statue', pos: { x: 0, z: 0 }, heading: 0, solid: true }), /props\[\d+\]\.kind/],
+    ['duplicate id across new collections', (m) => (m.conflicts[0].id = m.connectors[0].id), /duplicate id/],
+    ['connectors that is not a list', (m) => (m.connectors = {}), /connectors: expected an array/],
+    ['lane join from an unknown lane', (m) => (m.laneJoins = [{ fromLaneId: 'nope', toLaneId: m.connectors[0].toLaneId }]), /laneJoins\[0\]\.fromLaneId: unknown lane "nope"/],
+    ['lane join to itself', (m) => (m.laneJoins = [{ fromLaneId: m.connectors[0].toLaneId, toLaneId: m.connectors[0].toLaneId }]), /cannot join itself/],
+    ['lane join from a connector approach', (m) => (m.laneJoins = [{ fromLaneId: m.connectors[0].fromLaneId, toLaneId: m.connectors[0].toLaneId }]), /also starts a connector/],
+    [
+      'two lane joins into one lane',
+      (m) => {
+        const starts = new Set(m.connectors.map((/** @type {UntrustedJson} */ k) => k.fromLaneId));
+        const free = m.roads.flatMap((/** @type {UntrustedJson} */ r) => r.lanes).filter((/** @type {UntrustedJson} */ l) => !starts.has(l.id));
+        m.laneJoins = [{ fromLaneId: free[0].id, toLaneId: free[2].id }, { fromLaneId: free[1].id, toLaneId: free[2].id }];
+      },
+      /already starts at a join/,
+    ],
+    ['lane joins that is not a list', (m) => (m.laneJoins = {}), /laneJoins: expected an array/],
+  ];
+  it.each(broken)('rejects %s', (_, mutate, pattern) => {
+    const m = clone(JUNCTION);
+    mutate(m);
+    expect(checkMap(m).join('\n')).toMatch(pattern);
+  });
+});
+
 describe('assertFrame', () => {
-  it('accepts every committed straight-run frame', () => {
+  it('accepts every committed straight-run frame, read from JSON', () => {
     expect(FRAMES).toHaveLength(120);
-    for (const f of FRAMES) assertFrame(f);
+    for (const f of FRAMES) assertFrame(f, { parsed: true });
+  });
+
+  it('requires the shared lamp and violation objects unless the frame was parsed', () => {
+    const f = clone(FRAMES[0]);
+    expect(checkFrame(f).join('\n')).toMatch(/actors\[0\]\.lights: expected one of the shared ACTOR_LIGHTS objects/);
+    expect(checkFrame(f).join('\n')).toMatch(/actors\[0\]\.violations: expected a shared frozen array/);
+    for (const a of f.actors) {
+      a.lights = ACTOR_LIGHTS.off;
+      a.violations = NO_VIOLATIONS;
+    }
+    expect(checkFrame(f)).toEqual([]);
+  });
+
+  it('accepts collision events with and without the traffic fields', () => {
+    const f = clone(FRAMES[0]);
+    const base = { type: 'collision', otherKind: 'motorbike', otherId: 'npc-3', impulse: 1, egoSpeed: 2, relSpeed: 2, sameLaneAhead: false };
+    f.events.push(base, { ...base, otherModel: 'motorbike', striker: 'both', otherFromBehind: true, otherViolations: ['red-light', 'speeding'] });
+    expect(checkFrame(f, { parsed: true })).toEqual([]);
   });
 
   /** @type {[string, (f: UntrustedJson) => void, RegExp][]} */
@@ -113,12 +240,20 @@ describe('assertFrame', () => {
     ['collision without speeds', (f) => f.events.push({ type: 'collision', otherKind: 'car', otherId: 'npc-1', impulse: 1, sameLaneAhead: false }), /egoSpeed/],
     ['clock at 1440', (f) => (f.env.clockMin = 1440), /clockMin/],
     ['throttle above 1', (f) => (f.ego.input.throttle = 2), /throttle/],
+    ['unknown pose kind', (f) => (f.actors[0].kind = 'bicycle'), /actors\[0\]\.kind/],
+    ['pose without a model', (f) => delete f.actors[0].model, /actors\[0\]\.model/],
+    ['fractional variant', (f) => (f.actors[0].variant = 0.5), /actors\[0\]\.variant/],
+    ['lamp state outside the table', (f) => (f.actors[0].lights = { brake: true, left: true, right: true }), /actors\[0\]\.lights/],
+    ['unknown pose state', (f) => (f.actors[0].state = 'parked'), /actors\[0\]\.state/],
+    ['inattention as a violation', (f) => (f.actors[0].violations = ['inattentive']), /actors\[0\]\.violations\[0\]/],
+    ['a flag listed twice', (f) => (f.actors[0].violations = ['speeding', 'speeding']), /lists a flag twice/],
+    ['unknown striker', (f) => f.events.push({ type: 'collision', otherKind: 'car', otherId: 'npc-1', impulse: 1, egoSpeed: 1, relSpeed: 1, sameLaneAhead: false, striker: 'nobody' }), /events\[1\]\.striker/],
   ];
   it.each(broken)('rejects %s', (_, mutate, pattern) => {
     const f = clone(FRAMES[0]);
     mutate(f);
-    expect(checkFrame(f).join('\n')).toMatch(pattern);
-    expect(() => assertFrame(f)).toThrow(ContractError);
+    expect(checkFrame(f, { parsed: true }).join('\n')).toMatch(pattern);
+    expect(() => assertFrame(f, { parsed: true })).toThrow(ContractError);
   });
 });
 
@@ -211,7 +346,12 @@ describe('catalog and HUD fixtures', () => {
     const deducted = report.breaches.reduce((/** @type {number} */ s, /** @type {UntrustedJson} */ b) => s + b.deduction, 0);
     expect(report.score).toBeCloseTo(10 - deducted);
     expect(report.licence.remaining).toBe(report.licence.start - report.licence.deducted);
+    expect(hud.withToasts.notices).toHaveLength(1);
+    expect(hud.withToasts.notices[0]).toMatchObject({ kind: 'npc-fault', otherKind: 'motorbike', violations: ['red-light'] });
+    expect(report.notices).toEqual(hud.withToasts.notices);
     for (const state of Object.values(hud)) {
+      expect(Array.isArray(state.notices)).toBe(true);
+      expect(CONTROL_PRESETS).toContain(state.controlPreset);
       expect(typeof state.headingRad).toBe('number');
       expect(Object.keys(state.controls).sort()).toEqual(['brakeFront', 'brakeRear', 'handbrake', 'steer', 'throttle']);
     }

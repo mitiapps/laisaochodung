@@ -23,7 +23,9 @@
       "bearingRad": 0
     },
     "toasts": [],
-    "runStatus": "ready"
+    "notices": [],
+    "runStatus": "ready",
+    "controlPreset": "real"
   },
   "running": {
     "speedKmh": 42,
@@ -49,7 +51,9 @@
       "bearingRad": 0.12
     },
     "toasts": [],
-    "runStatus": "running"
+    "notices": [],
+    "runStatus": "running",
+    "controlPreset": "real"
   },
   "withToasts": {
     "speedKmh": 63,
@@ -316,7 +320,27 @@
         "kind": "new"
       }
     ],
-    "runStatus": "running"
+    "notices": [
+      {
+        "kind": "npc-fault",
+        "tick": 420,
+        "t": 7,
+        "pos": {
+          "x": 104,
+          "z": 1.75
+        },
+        "otherKind": "motorbike",
+        "otherModel": "motorbike",
+        "violations": [
+          "red-light"
+        ],
+        "text": {
+          "vi": "Xe máy vượt đèn đỏ va vào bạn. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm."
+        }
+      }
+    ],
+    "runStatus": "running",
+    "controlPreset": "real"
   },
   "paused": {
     "speedKmh": 0,
@@ -342,7 +366,27 @@
       "bearingRad": 0
     },
     "toasts": [],
-    "runStatus": "paused"
+    "notices": [
+      {
+        "kind": "npc-fault",
+        "tick": 420,
+        "t": 7,
+        "pos": {
+          "x": 104,
+          "z": 1.75
+        },
+        "otherKind": "motorbike",
+        "otherModel": "motorbike",
+        "violations": [
+          "red-light"
+        ],
+        "text": {
+          "vi": "Xe máy vượt đèn đỏ va vào bạn. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm."
+        }
+      }
+    ],
+    "runStatus": "paused",
+    "controlPreset": "real"
   },
   "finished": {
     "speedKmh": 0,
@@ -368,6 +412,25 @@
       "bearingRad": 0
     },
     "toasts": [],
+    "notices": [
+      {
+        "kind": "npc-fault",
+        "tick": 420,
+        "t": 7,
+        "pos": {
+          "x": 104,
+          "z": 1.75
+        },
+        "otherKind": "motorbike",
+        "otherModel": "motorbike",
+        "violations": [
+          "red-light"
+        ],
+        "text": {
+          "vi": "Xe máy vượt đèn đỏ va vào bạn. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm."
+        }
+      }
+    ],
     "runStatus": "finished",
     "report": {
       "score": 6.5,
@@ -564,6 +627,25 @@
           "kind": "new"
         }
       ],
+      "notices": [
+        {
+          "kind": "npc-fault",
+          "tick": 420,
+          "t": 7,
+          "pos": {
+            "x": 104,
+            "z": 1.75
+          },
+          "otherKind": "motorbike",
+          "otherModel": "motorbike",
+          "violations": [
+            "red-light"
+          ],
+          "text": {
+            "vi": "Xe máy vượt đèn đỏ va vào bạn. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm."
+          }
+        }
+      ],
       "licence": {
         "start": 12,
         "deducted": 2,
@@ -575,6 +657,7 @@
       },
       "finished": true,
       "endedBy": "finish"
-    }
+    },
+    "controlPreset": "real"
   }
 }

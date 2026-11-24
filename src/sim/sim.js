@@ -7,7 +7,8 @@
  * 1. Sanitise the input; on the first step emit `run-start`; apply a pending reset (fall or
  *    `reset()`) by placing the ego at the last passed checkpoint, or the start, and emit `reset`.
  * 2. `stepActors` with the ego footprint before the step; mirror the poses onto kinematic bodies.
- * 3. Electrics, `vehicle.prepare` (gearbox, steering, wheels, `updateVehicle`), `world.step`.
+ * 3. With the auto-cancel assist, `stepSignalCancel` on the pre-step pose, which may switch the
+ *    indicator off; then electrics, `vehicle.prepare` (gearbox, steering, wheels, `updateVehicle`), `world.step`.
  * 4. Drain contact forces into `collision` events; read the ego; a scripted fall emits `fall`
  *    and schedules the reset for the next step.
  * 5. `stepRoute`, `trafficLightStates` and `clockAt` at `t = tick · DT`; build the frame.
@@ -23,7 +24,8 @@ import { footprint } from '../geometry/index.js';
 import { clockAt, createActorState, createRouteState, stepActors, stepRoute, trafficLightStates } from '../world/index.js';
 import { createVehicle } from '../physics/vehicle.js';
 import { vehicleTuning } from '../physics/vehicles/index.js';
-import { createElectrics, stepElectrics } from './electrics.js';
+import { cancelIndicators, createElectrics, stepElectrics } from './electrics.js';
+import { createSignalCancel, stepSignalCancel } from './signal-cancel.js';
 import { buildWorldColliders, drainCollisions } from './world-colliders.js';
 import { createActorBodies } from './actors.js';
 
@@ -34,6 +36,8 @@ import { createActorBodies } from './actors.js';
 /** @typedef {import('../contracts/telemetry.js').Frame} Frame */
 /** @typedef {import('../contracts/telemetry.js').FrameEvent} FrameEvent */
 /** @typedef {import('../contracts/modules.js').Sim} Sim */
+/** @typedef {import('../contracts/modules.js').SimOptions} SimOptions */
+/** @typedef {import('../contracts/controls.js').ControlAssists} ControlAssists */
 
 /** Physics steps run at creation and after each reset so the ego rests on its suspension. */
 export const SETTLE_STEPS = 30;
@@ -72,13 +76,39 @@ export function sanitizeInput(input) {
 }
 
 /**
+ * Validates the assists of the sim options; absent means all off.
+ * @param {unknown} raw `options.assists`.
+ * @returns {ControlAssists} Assists.
+ */
+export function parseAssists(raw) {
+  if (raw === undefined) return { autoGearbox: false, signalAutoCancel: null };
+  if (raw === null || typeof raw !== 'object') throw new TypeError('options.assists must be an object');
+  const a = /** @type {Record<string, unknown>} */ (raw);
+  const autoGearbox = a.autoGearbox ?? false;
+  if (typeof autoGearbox !== 'boolean') throw new TypeError('options.assists.autoGearbox must be a boolean');
+  const cancel = a.signalAutoCancel ?? null;
+  if (cancel === null) return { autoGearbox, signalAutoCancel: null };
+  if (typeof cancel !== 'object') throw new TypeError('options.assists.signalAutoCancel must be an object or null');
+  const c = /** @type {Record<string, unknown>} */ (cancel);
+  const { turnMinDeg, clearM } = c;
+  if (typeof turnMinDeg !== 'number' || !(turnMinDeg > 0 && turnMinDeg < 180)) {
+    throw new RangeError(`options.assists.signalAutoCancel.turnMinDeg must be in (0, 180), got ${String(turnMinDeg)}`);
+  }
+  if (typeof clearM !== 'number' || !Number.isFinite(clearM) || clearM < 0) {
+    throw new RangeError(`options.assists.signalAutoCancel.clearM must be a finite number ≥ 0, got ${String(clearM)}`);
+  }
+  return { autoGearbox, signalAutoCancel: { turnMinDeg, clearM } };
+}
+
+/**
  * Creates the simulation.
  * @param {unknown} rapier Initialised `@dimforge/rapier3d-compat` module.
  * @param {GameMap} map Map.
  * @param {VehicleInfo} vehicleInfo Vehicle.
+ * @param {SimOptions} [options] Options; only `assists` is read here.
  * @returns {Sim} Simulation.
  */
-export function createSim(rapier, map, vehicleInfo) {
+export function createSim(rapier, map, vehicleInfo, options = {}) {
   const R = /** @type {Rapier} */ (rapier);
   if (!R || typeof R.World !== 'function' || typeof R.EventQueue !== 'function') {
     throw new TypeError('createSim needs the initialised @dimforge/rapier3d-compat module');
@@ -90,6 +120,9 @@ export function createSim(rapier, map, vehicleInfo) {
   if (tuning.rig !== expectedRig) {
     throw new Error(`Vehicle ${vehicleInfo.id} is a ${vehicleInfo.legalClass} but its tuning uses ${tuning.rig}`);
   }
+  if (options === null || typeof options !== 'object') throw new TypeError('createSim options must be an object');
+  const assists = parseAssists(options.assists);
+  const cancelCfg = assists.signalAutoCancel;
 
   const world = new R.World({ x: 0, y: -9.81, z: 0 });
   world.timestep = DT;
@@ -97,7 +130,9 @@ export function createSim(rapier, map, vehicleInfo) {
   const tags = buildWorldColliders(R, world, map);
   const actorBodies = createActorBodies(R, world, map, tags);
   const { start } = map.route;
-  const vehicle = createVehicle(R, world, tuning, map.environment.surfaceGrip, start.pos, start.heading);
+  const vehicle = createVehicle(R, world, tuning, map.environment.surfaceGrip, start.pos, start.heading, {
+    autoGearbox: assists.autoGearbox,
+  });
   const egoHandle = vehicle.collider.handle;
 
   const settle = () => {
@@ -117,6 +152,7 @@ export function createSim(rapier, map, vehicleInfo) {
   let actorState = createActorState(map);
   let routeState = createRouteState();
   let electrics = createElectrics();
+  let signalCancel = createSignalCancel();
   let pendingReset = false;
   let disposed = false;
   /** @type {import('./world-colliders.js').ContactMemory} */
@@ -138,16 +174,23 @@ export function createSim(rapier, map, vehicleInfo) {
         vehicle.place(p.pos, p.heading);
         settle();
         contacts.clear();
+        signalCancel = createSignalCancel();
         pendingReset = false;
         events.push({ type: 'reset' });
       }
 
       const pre = vehicle.pose();
       const preFootprint = footprint(pre.pos, pre.heading, vehicleInfo.lengthM, vehicleInfo.widthM);
-      const actors = stepActors(actorState, map, preFootprint, Math.abs(pre.speed), DT);
+      const actors = stepActors(actorState, map, [preFootprint], Math.abs(pre.speed), DT);
       actorState = actors.state;
       actorBodies.update(actors.poses);
 
+      if (cancelCfg !== null) {
+        const sc = stepSignalCancel(signalCancel, map, pre, electrics.indicators, cancelCfg, DT);
+        signalCancel = sc.state;
+        // A press on the same step wins over the cancel.
+        if (sc.cancel && input.signalCmd === null) electrics = cancelIndicators(electrics);
+      }
       const el = stepElectrics(electrics, input);
       electrics = el.state;
 

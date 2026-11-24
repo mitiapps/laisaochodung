@@ -1,12 +1,12 @@
 /**
- * Scripted actors with hold-when-blocked. Deterministic in its own state, the map, the ego
- * footprint and DT; no physics.
+ * Scripted actors with hold-when-blocked. Deterministic in its own state, the map, the blocker
+ * footprints (the ego first, then traffic agents) and DT; no physics.
  *
  * Each call to `stepActors` returns the poses at the state's current time and the state one DT
  * later, so the frame of tick k shows the poses after k steps of motion:
  * 1. Triggers: an idle actor starts when the ego footprint overlaps its trigger polygon, or when
  *    the state time reaches `trigger.atS`.
- * 2. Hold: an active actor holds (speed 0) while the ego footprint overlaps its path corridor
+ * 2. Hold: an active actor holds (speed 0) while any blocker footprint overlaps its path corridor
  *    ahead: the stretch of path from its centre to `stoppingDistance + lengthM / 2 + HOLD_MARGIN_M`,
  *    `widthM` wide. It resumes at full speed as soon as the corridor is clear; there is no
  *    acceleration model.
@@ -15,6 +15,7 @@
  *    inactive.
  */
 
+import { ACTOR_LIGHTS, NO_VIOLATIONS } from '../contracts/telemetry.js';
 import {
   offsetPolyline,
   pointAtDistance,
@@ -111,32 +112,39 @@ function corridor(path, length, loop, s, ahead, width) {
 }
 
 /**
- * Whether the ego footprint overlaps the actor's trigger.
+ * Whether the actor's trigger fires: its time has come, or the ego footprint overlaps it.
  * @param {MapActor} actor Actor.
  * @param {number} t State time.
- * @param {Vec2[]} egoFootprint Ego footprint.
+ * @param {Vec2[] | null} egoFootprint Ego footprint, or null without an ego.
  * @returns {boolean} Trigger fires.
  */
 function triggerFires(actor, t, egoFootprint) {
   const trig = actor.trigger;
   if ('atS' in trig) return t >= trig.atS;
-  return polygonsIntersect(trig.polygon, egoFootprint);
+  return egoFootprint !== null && polygonsIntersect(trig.polygon, egoFootprint);
 }
 
 /**
  * Advances every actor by one DT.
  * @param {ActorState} actorState Current state.
  * @param {GameMap} map Map.
- * @param {Vec2[]} egoFootprint Ego footprint now.
+ * @param {Vec2[][]} blockers Footprints now: the ego first, then traffic agents. Only the ego
+ *   fires polygon triggers; every blocker holds an actor whose corridor it overlaps. An empty
+ *   list means no ego, so only time triggers fire.
  * @param {number} egoSpeed Ego speed now (m/s). Accepted for the contract; the hold test depends
- *   only on the footprint, so an ego cutting across a path also holds the actor.
+ *   only on the footprints, so an ego cutting across a path also holds the actor.
  * @param {number} dt Step in seconds.
  * @returns {{state: ActorState, poses: ActorPose[]}} Poses now and the next state.
  */
-export function stepActors(actorState, map, egoFootprint, egoSpeed, dt) {
+export function stepActors(actorState, map, blockers, egoSpeed, dt) {
   if (actorState.actors.length !== map.actors.length) {
     throw new Error('Actor state does not match the map actors');
   }
+  // A single footprint passed where the list belongs would read its corners as footprints.
+  if (!Array.isArray(blockers) || (blockers.length > 0 && !Array.isArray(blockers[0]?.[0]))) {
+    throw new TypeError('stepActors needs a list of blocker footprints, the ego first');
+  }
+  const ego = blockers.length > 0 ? blockers[0] : null;
   /** @type {ActorPose[]} */
   const poses = [];
   /** @type {ActorRuntime[]} */
@@ -145,14 +153,13 @@ export function stepActors(actorState, map, egoFootprint, egoSpeed, dt) {
     const rt = actorState.actors[i];
     const path = travelPath(actor);
     const length = polylineLength(path);
-    const triggered = rt.triggered || triggerFires(actor, actorState.t, egoFootprint);
+    const triggered = rt.triggered || triggerFires(actor, actorState.t, ego);
     const active = triggered && !rt.done;
     let speed = 0;
     if (active) {
       const ahead = actorStoppingDistance(actor) + actor.lengthM / 2 + HOLD_MARGIN_M;
-      const blocked = corridor(path, length, actor.loop, rt.s, ahead, actor.widthM).some((poly) =>
-        polygonsIntersect(poly, egoFootprint),
-      );
+      const pieces = corridor(path, length, actor.loop, rt.s, ahead, actor.widthM);
+      const blocked = pieces.some((poly) => blockers.some((fp) => polygonsIntersect(poly, fp)));
       speed = blocked ? 0 : actor.speed;
     }
     const here = pointAtDistance(path, rt.s);
@@ -163,6 +170,13 @@ export function stepActors(actorState, map, egoFootprint, egoSpeed, dt) {
       heading: here.heading,
       speed,
       active,
+      model: actor.model,
+      variant: 0,
+      lengthM: actor.lengthM,
+      widthM: actor.widthM,
+      lights: ACTOR_LIGHTS.off,
+      state: speed > 0 ? 'moving' : 'stopped',
+      violations: NO_VIOLATIONS,
     });
     let s = rt.s + speed * dt;
     let done = rt.done;

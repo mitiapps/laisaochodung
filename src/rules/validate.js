@@ -6,6 +6,7 @@
  */
 
 import { CLAUSE_ID_PATTERN, LICENCE_POINT_VALUES } from '../contracts/rule.js';
+import { NPC_VIOLATIONS } from '../contracts/telemetry.js';
 import { decreeGroupOf } from '../contracts/vehicle.js';
 import { DETECTOR_TYPES } from '../scoring/detectors/index.js';
 
@@ -16,6 +17,14 @@ const RULE_CLASSES = Object.freeze(['car', 'motorbike']);
 const DECREE_GROUPS = Object.freeze(['D6', 'D7']);
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const BASES = Object.freeze(['legal', 'design']);
+/** Collision-policy keys that are game choices and carry a `paramBasis` entry. */
+const POLICY_BASIS_KEYS = Object.freeze(['nonContributingRules', 'rearEndContributingRules', 'excusingViolations', 'aftermathWindowS']);
+const FAULT_CONDITIONS = Object.freeze(['aftermath', 'from-behind', 'contributing-episode', 'same-lane-ahead', 'ego-strikes', 'otherwise']);
+const FAULT_RESULTS = Object.freeze(['notice', 'deduction']);
+/** Notice text keys besides the violations. */
+const NOTICE_KEYS = Object.freeze(['from-behind', 'none', 'aftermath']);
+/** The only placeholder a notice text may hold. */
+const NOTICE_PLACEHOLDER = /\{([^}]*)\}/gu;
 
 /**
  * @param {unknown} v Value.
@@ -271,10 +280,97 @@ export function validateRules(bundle) {
       }
     }
     if (policy.staticAndFall !== 'scoreOnly') p.add('collisionPolicy.staticAndFall', "expected 'scoreOnly'");
+    checkFaultPolicy(p, policy, ruleIds);
   }
 
   rules.forEach((r, i) => checkRule(p, r, `rules[${i}]`, { sourceIds, clauseIds, ruleIds }));
   return p.list;
+}
+
+/**
+ * Checks the optional fault-by-law keys of the collision policy. Absent keys keep the policy of
+ * charging every contact; when `faultRows` is present, the keys it relies on must be present too.
+ * @param {Problems} p Problems.
+ * @param {Record<string, unknown>} policy Collision policy.
+ * @param {Set<string>} ruleIds Known rule ids.
+ */
+function checkFaultPolicy(p, policy, ruleIds) {
+  const path = 'collisionPolicy';
+  if (policy.faultRows !== undefined) {
+    const rows = uniqueItems(p, policy.faultRows, `${path}.faultRows`, (r) => r.id);
+    if (Array.isArray(policy.faultRows) && policy.faultRows.length === 0) p.add(`${path}.faultRows`, 'expected at least one row');
+    rows.forEach((r, i) => {
+      const rp = `${path}.faultRows[${i}]`;
+      if (!isStr(r.id)) p.add(`${rp}.id`, 'missing');
+      if (!FAULT_CONDITIONS.includes(/** @type {never} */ (r.when))) p.add(`${rp}.when`, `unknown condition "${String(r.when)}"`);
+      if (!FAULT_RESULTS.includes(/** @type {never} */ (r.result))) p.add(`${rp}.result`, "expected 'notice' or 'deduction'");
+      if (r.unlessRearEndContributing !== undefined) {
+        if (typeof r.unlessRearEndContributing !== 'boolean') p.add(`${rp}.unlessRearEndContributing`, 'expected a boolean');
+        else if (r.unlessRearEndContributing && r.result !== 'notice') p.add(`${rp}.unlessRearEndContributing`, 'only a notice row can turn into a deduction');
+      }
+      for (const k of Object.keys(r)) {
+        if (!['id', 'when', 'result', 'unlessRearEndContributing'].includes(k)) p.add(rp, `unexpected key "${k}"`);
+      }
+    });
+    if (rows.length > 0 && rows[rows.length - 1].when !== 'otherwise') p.add(`${path}.faultRows`, "the last row must be 'otherwise' so every contact resolves");
+    for (const k of ['nonContributingRules', 'rearEndContributingRules', 'excusingViolations', 'aftermathWindowS', 'noticeTexts', 'paramBasis']) {
+      if (policy[k] === undefined) p.add(`${path}.${k}`, 'required with faultRows');
+    }
+  }
+  const basis = policy.paramBasis;
+  if (basis !== undefined) {
+    if (!isObj(basis)) p.add(`${path}.paramBasis`, 'expected an object');
+    else {
+      for (const [k, v] of Object.entries(basis)) {
+        if (!POLICY_BASIS_KEYS.includes(k)) p.add(`${path}.paramBasis.${k}`, 'not a fault-table choice');
+        else if (policy[k] === undefined) p.add(`${path}.paramBasis.${k}`, 'names a key the policy lacks');
+        if (!BASES.includes(/** @type {never} */ (v))) p.add(`${path}.paramBasis.${k}`, "expected 'legal' or 'design'");
+      }
+      for (const k of POLICY_BASIS_KEYS) {
+        if (policy[k] !== undefined && !(k in basis)) p.add(`${path}.${k}`, 'has no paramBasis');
+      }
+    }
+  }
+  for (const k of ['nonContributingRules', 'rearEndContributingRules']) {
+    const list = policy[k];
+    if (list === undefined) continue;
+    if (!Array.isArray(list)) {
+      p.add(`${path}.${k}`, 'expected an array of rule ids');
+      continue;
+    }
+    for (const id of list) if (!ruleIds.has(String(id))) p.add(`${path}.${k}`, `unknown rule "${String(id)}"`);
+  }
+  if (Array.isArray(policy.nonContributingRules) && Array.isArray(policy.rearEndContributingRules)) {
+    for (const id of policy.rearEndContributingRules) {
+      if (policy.nonContributingRules.includes(id)) p.add(`${path}.rearEndContributingRules`, `rule "${String(id)}" is also non-contributing`);
+    }
+  }
+  if (policy.excusingViolations !== undefined) {
+    if (!Array.isArray(policy.excusingViolations)) p.add(`${path}.excusingViolations`, 'expected an array');
+    else {
+      for (const v of policy.excusingViolations) {
+        if (!NPC_VIOLATIONS.includes(/** @type {never} */ (v))) p.add(`${path}.excusingViolations`, `unknown violation "${String(v)}"`);
+      }
+    }
+  }
+  if (policy.aftermathWindowS !== undefined && !(Number.isFinite(policy.aftermathWindowS) && /** @type {number} */ (policy.aftermathWindowS) >= 0)) {
+    p.add(`${path}.aftermathWindowS`, 'expected a number ≥ 0');
+  }
+  const texts = policy.noticeTexts;
+  if (texts !== undefined) {
+    if (!isObj(texts)) p.add(`${path}.noticeTexts`, 'expected a mapping of texts');
+    else {
+      for (const [k, t] of Object.entries(texts)) {
+        const tp = `${path}.noticeTexts.${k}`;
+        if (!NPC_VIOLATIONS.includes(/** @type {never} */ (k)) && !NOTICE_KEYS.includes(k)) p.add(tp, 'not a violation, from-behind, none or aftermath');
+        checkText(p, t, tp);
+        if (isObj(t) && typeof t.vi === 'string') {
+          for (const m of t.vi.matchAll(NOTICE_PLACEHOLDER)) if (m[1] !== 'vehicle') p.add(tp, `unknown placeholder "{${m[1]}}"`);
+        }
+      }
+      for (const k of NOTICE_KEYS) if (!(k in texts)) p.add(`${path}.noticeTexts.${k}`, 'missing');
+    }
+  }
 }
 
 /**

@@ -81,6 +81,31 @@ describe('purity guard', () => {
     ).toEqual([]);
   });
 
+  it('keeps the dependency direction in nested src/world directories', async () => {
+    expect(
+      await ruleIds(
+        'src/world/traffic/probe.js',
+        "import * as s from './state.js';\nimport * as r from '../random.js';\nimport * as g from '../../geometry/index.js';\nimport * as c from '../../contracts/index.js';\nexport const a = [s, r, g, c];\n",
+      ),
+    ).toEqual([]);
+    for (const path of ['../../sim/index.js', '../../testing/index.js', '../../map-query/index.js', '../../rules/x.js']) {
+      const code = `import * as x from '${path}';\nexport const a = x;\n`;
+      expect(await ruleIds('src/world/traffic/probe.js', code), path).toContain('no-restricted-imports');
+    }
+    expect(await ruleIds('src/world/traffic/probe.js', 'export const a = Math.random();\n')).toContain(
+      'no-restricted-properties',
+    );
+  });
+
+  it('exempts colocated benches', async () => {
+    expect(
+      await ruleIds(
+        'src/world/traffic/probe.bench.js',
+        "import fs from 'node:fs';\nimport { test } from 'vitest';\nexport const a = [fs, test];\n",
+      ),
+    ).toEqual([]);
+  });
+
   it('leaves non-pure modules free to import the engine', async () => {
     expect(await ruleIds('src/render/probe.js', "import * as T from 'three';\nexport const a = T;\n")).toEqual([]);
   });

@@ -177,6 +177,72 @@
  * @property {'building' | 'parked-car' | 'barrier'} kind Obstacle kind.
  * @property {Polygon} footprint Ground footprint.
  * @property {number} height Height in metres.
+ * @property {'shophouse' | 'civic' | 'tower' | 'landmark' | 'compound'} [use] Buildings only: what
+ *   the renderer builds (`shophouse` is a nhà ống row).
+ * @property {number} [floors] Buildings only: storeys above ground, an integer from 1.
+ * @property {number} [frontEdge] Buildings only: index of the footprint edge facing the street
+ *   (edge `i` runs from point `i` to point `i + 1`, the last one back to point 0).
+ */
+
+/**
+ * Street furniture and greenery placed beside the road. Solid props are static colliders.
+ * @typedef {object} Prop
+ * @property {string} id Prop id.
+ * @property {'tree' | 'lamp' | 'power-pole' | 'cabinet' | 'bus-stop' | 'parked-motorbikes' | 'bin' | 'stall'} kind Prop kind.
+ * @property {Pos2} pos Ground position.
+ * @property {number} heading Facing, in the heading convention.
+ * @property {boolean} solid The ego collides with it.
+ */
+
+/**
+ * Path through a junction from the end of one lane to the start of another, built at map-build
+ * time. `centerline` runs in the direction of travel.
+ * @typedef {object} Connector
+ * @property {string} id Connector id.
+ * @property {string} fromLaneId Approach lane; the connector starts at its centreline end.
+ * @property {string} toLaneId Exit lane; the connector ends at its centreline start.
+ * @property {string} junctionId Junction it crosses.
+ * @property {Polyline} centerline Path through the junction.
+ * @property {'straight' | 'left' | 'right' | 'uturn'} turn Manoeuvre.
+ * @property {string | null} stopLineId Stop line controlling the approach, or null.
+ */
+
+/**
+ * Plain join: a lane whose centreline end coincides (within 0.1 m) with the start of a lane of
+ * another road, which it runs straight on into with no junction, e.g. where a road widens. Built at
+ * map-build time like the connectors; a lane with a join starts no connector.
+ * @typedef {object} LaneJoin
+ * @property {string} fromLaneId Lane that ends at the join.
+ * @property {string} toLaneId Lane that starts there.
+ */
+
+/**
+ * Where two connectors share road space. `aFromS..aToS` is the stretch of connector `a`, measured
+ * along its centreline, inside the shared area; likewise `b`.
+ * @typedef {object} Conflict
+ * @property {string} id Conflict id.
+ * @property {string} a Connector id.
+ * @property {string} b Connector id.
+ * @property {number} aFromS Start of the zone along `a`, metres.
+ * @property {number} aToS End of the zone along `a`.
+ * @property {number} bFromS Start of the zone along `b`.
+ * @property {number} bToS End of the zone along `b`.
+ * @property {'cross' | 'merge'} kind Paths cross, or join into one exit lane.
+ */
+
+/**
+ * Per-map traffic values. Driver and vehicle parameters are not here: they are compiled once from
+ * `data/traffic/params.yaml` (`TrafficParams`). A lane end that is neither a sink, the start of a
+ * connector nor the start of a `laneJoins` entry is a dead end, where agents stop and despawn once
+ * out of view.
+ * @typedef {object} TrafficConfig
+ * @property {number} seed Map seed, a 32-bit unsigned integer, mixed into every run seed.
+ * @property {number} maxAgents Most agents alive at once, an integer from 0.
+ * @property {[number, number]} spawnRingM Inner and outer radius around the ego of the ring spawner.
+ * @property {Record<string, number>} densityPerKm Agents per lane-kilometre, keyed by road id.
+ * @property {{laneId: string, ratePerH: number}[]} sources Lane ends where agents enter.
+ * @property {string[]} sinks Lanes whose end lets agents leave the map.
+ * @property {{model: string, share: number}[]} mix Model shares of new agents; the shares sum to 1.
  */
 
 /** @typedef {{polygon: Polygon}} PolygonTrigger Starts when the ego footprint overlaps the polygon. */
@@ -221,6 +287,12 @@
  * @property {MapSign[]} signs Placed signs.
  * @property {Obstacle[]} obstacles Static obstacles.
  * @property {MapActor[]} actors Scripted actors.
+ * @property {Connector[]} [connectors] Junction paths; absent on maps without a lane graph.
+ * @property {Conflict[]} [conflicts] Connector conflict zones.
+ * @property {LaneJoin[]} [laneJoins] Plain joins, sorted by `fromLaneId`; absent on maps without a
+ *   lane graph.
+ * @property {TrafficConfig} [traffic] Traffic values; without it the map has no traffic.
+ * @property {Prop[]} [props] Street furniture.
  */
 
 /** Current map schema version. */
@@ -242,6 +314,12 @@ export const MAP_COLLECTIONS = Object.freeze([
   'actors',
 ]);
 
+/**
+ * Optional map collections whose elements carry an id: validated, and their ids claimed, only
+ * when present.
+ */
+export const OPTIONAL_MAP_COLLECTIONS = Object.freeze(['connectors', 'conflicts', 'props']);
+
 export const ZONE_TYPES = Object.freeze(['speed-limit', 'built-up', 'no-stopping', 'junction-buffer', 'lit']);
 export const ZONE_SOURCES = Object.freeze(['override', 'default', 'tutorial']);
 export const LANE_LINE_TYPES = Object.freeze(['dashed', 'solid', 'double-solid', 'mixed']);
@@ -252,3 +330,16 @@ export const ENTRY_CLASSES = Object.freeze(['car', 'motorbike', 'moped', 'all'])
 export const SIGN_SOURCES = Object.freeze(['osm', 'override', 'tutorial']);
 export const OBSTACLE_KINDS = Object.freeze(['building', 'parked-car', 'barrier']);
 export const ACTOR_KINDS = Object.freeze(['pedestrian', 'car']);
+export const BUILDING_USES = Object.freeze(['shophouse', 'civic', 'tower', 'landmark', 'compound']);
+export const PROP_KINDS = Object.freeze([
+  'tree',
+  'lamp',
+  'power-pole',
+  'cabinet',
+  'bus-stop',
+  'parked-motorbikes',
+  'bin',
+  'stall',
+]);
+export const CONNECTOR_TURNS = Object.freeze(['straight', 'left', 'right', 'uturn']);
+export const CONFLICT_KINDS = Object.freeze(['cross', 'merge']);

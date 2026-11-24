@@ -1,0 +1,489 @@
+# Traffic parameters (TrafficParams, src/contracts/traffic.js), compiled by
+# `npm run build:traffic` to src/generated/traffic-params.json.
+#
+# Every number carries a `paramBasis` entry beside it: `design` for a value the game chose, or
+# `{sourced: <id>}` naming an entry of `sources` below. The build fails on a number without one.
+# Sourced values cite the `sources` table; everything else is a game choice, tuned by watching
+# traffic in the game. Record the reason for each tuned value in a comment beside it.
+
+sources:
+  tfd-errata:
+    description: Treiber and Kesting, Traffic Flow Dynamics, Table 11.2 as corrected in the official errata
+    url: https://traffic-flow-dynamics.org/res/ErrataTrafficFlowDynamics.pdf
+  hdm-2006:
+    description: Treiber, Kesting and Helbing 2006, Delays, inaccuracies and anticipation in microscopic traffic models (HDM)
+    url: https://arxiv.org/abs/cond-mat/0404736
+  minh-2007:
+    description: Minh, Sano and Cao 2007, motorcycle reaction time and dynamic lane width at Vietnamese signalised intersections (J. EASTS 7)
+    url: https://www.jstage.jst.go.jp/article/easts/7/0/7_0_2396/_article/-char/en
+  minh-2005:
+    description: Minh, Sano and Matsumoto 2005, lateral clearance of passing motorcycles in Hanoi (J. EASTS 6)
+    url: https://www.jstage.jst.go.jp/article/easts/6/0/6_0_186/_article/-char/en
+  easts-p357:
+    description: Nguyen and Hanaoka, HCMC Cong Hoa motorcycle study (EASTS Proc. 9, P357)
+    url: https://easts.info/on-line/proceedings/vol9/PDF/P357.pdf
+  nchrp-14396:
+    description: NCHRP, change interval deceleration (NAP 14396, chapter 37)
+    url: https://nap.nationalacademies.org/read/14396/chapter/37
+  movsim-varcoeff:
+    description: Treiber's traffic simulator default driver_varcoeff (reference only, GPL code not copied)
+    url: https://github.com/movsim/traffic-simulation-de
+
+# IDM row per class for the "normal" personality.
+classes:
+  car:
+    v0Kmh: 54
+    v0LimitFactor: 1.0
+    timeGapS: 1.0
+    minGapM: 2.0
+    accelMps2: 1.5
+    comfortDecelMps2: 2.0
+    delta: 4
+    maxDecelMps2: 8
+    reactionMeanS: 1.0
+    reactionSdS: 0.25
+    criticalGapS: 4.5
+    followUpGapS: 2.5
+    tailgatingGapS: 0.5
+    paramBasis:
+      v0Kmh: { sourced: tfd-errata }
+      v0LimitFactor: design
+      timeGapS: { sourced: tfd-errata }
+      minGapM: { sourced: tfd-errata }
+      accelMps2: { sourced: tfd-errata }
+      comfortDecelMps2: { sourced: tfd-errata }
+      delta: { sourced: tfd-errata }
+      maxDecelMps2: design
+      reactionMeanS: design
+      reactionSdS: design
+      criticalGapS: design
+      followUpGapS: design
+      tailgatingGapS: design
+  taxi:
+    v0Kmh: 54
+    v0LimitFactor: 1.0
+    timeGapS: 0.9
+    minGapM: 2.0
+    accelMps2: 1.6
+    comfortDecelMps2: 2.2
+    delta: 4
+    maxDecelMps2: 8
+    reactionMeanS: 1.0
+    reactionSdS: 0.25
+    criticalGapS: 4.0
+    followUpGapS: 2.3
+    tailgatingGapS: 0.5
+    paramBasis:
+      v0Kmh: design
+      v0LimitFactor: design
+      timeGapS: design
+      minGapM: design
+      accelMps2: design
+      comfortDecelMps2: design
+      delta: design
+      maxDecelMps2: design
+      reactionMeanS: design
+      reactionSdS: design
+      criticalGapS: design
+      followUpGapS: design
+      tailgatingGapS: design
+  truck:
+    v0Kmh: 50
+    v0LimitFactor: 0.9
+    timeGapS: 1.5
+    minGapM: 2.5
+    accelMps2: 1.0
+    comfortDecelMps2: 1.5
+    delta: 4
+    maxDecelMps2: 6
+    reactionMeanS: 1.0
+    reactionSdS: 0.25
+    criticalGapS: 5.5
+    followUpGapS: 3.0
+    tailgatingGapS: 0.6
+    paramBasis:
+      v0Kmh: design
+      v0LimitFactor: design
+      timeGapS: design
+      minGapM: design
+      accelMps2: design
+      comfortDecelMps2: design
+      delta: design
+      maxDecelMps2: design
+      reactionMeanS: design
+      reactionSdS: design
+      criticalGapS: design
+      followUpGapS: design
+      tailgatingGapS: design
+  bus:
+    v0Kmh: 45
+    v0LimitFactor: 0.85
+    timeGapS: 1.5
+    minGapM: 3.0
+    accelMps2: 0.8
+    comfortDecelMps2: 1.5
+    delta: 4
+    maxDecelMps2: 5
+    reactionMeanS: 1.0
+    reactionSdS: 0.25
+    criticalGapS: 6.0
+    followUpGapS: 3.5
+    tailgatingGapS: 0.6
+    paramBasis:
+      v0Kmh: design
+      v0LimitFactor: design
+      timeGapS: design
+      minGapM: design
+      accelMps2: design
+      comfortDecelMps2: design
+      delta: design
+      maxDecelMps2: design
+      reactionMeanS: design
+      reactionSdS: design
+      criticalGapS: design
+      followUpGapS: design
+      tailgatingGapS: design
+  motorbike:
+    v0Kmh: 40
+    v0LimitFactor: 1.0
+    timeGapS: 0.7
+    minGapM: 1.0
+    accelMps2: 2.0
+    comfortDecelMps2: 2.5
+    delta: 4
+    maxDecelMps2: 6.5
+    reactionMeanS: 0.79
+    reactionSdS: 0.24
+    criticalGapS: 2.5
+    followUpGapS: 1.5
+    tailgatingGapS: 0.3
+    paramBasis:
+      v0Kmh: design
+      v0LimitFactor: design
+      timeGapS: design
+      minGapM: design
+      accelMps2: design
+      comfortDecelMps2: design
+      delta: design
+      maxDecelMps2: design
+      reactionMeanS: { sourced: minh-2007 }
+      reactionSdS: { sourced: minh-2007 }
+      criticalGapS: design
+      followUpGapS: design
+      tailgatingGapS: design
+
+# Models named by GameMap.traffic.mix. Sizes and masses include the driver; masses are design.
+models:
+  car:
+    class: car
+    kind: car
+    lengthM: 4.5
+    widthM: 1.8
+    massKg: 1300
+    variants: 3
+    paramBasis: { lengthM: design, widthM: design, massKg: design, variants: design }
+  taxi:
+    class: taxi
+    kind: car
+    lengthM: 4.5
+    widthM: 1.8
+    massKg: 1350
+    variants: 2
+    paramBasis: { lengthM: design, widthM: design, massKg: design, variants: design }
+  bus:
+    class: bus
+    kind: car
+    lengthM: 10.5
+    widthM: 2.5
+    massKg: 11000
+    variants: 1
+    paramBasis: { lengthM: design, widthM: design, massKg: design, variants: design }
+  truck:
+    class: truck
+    kind: car
+    lengthM: 6.0
+    widthM: 2.1
+    massKg: 4000
+    variants: 3
+    paramBasis: { lengthM: design, widthM: design, massKg: design, variants: design }
+  motorbike:
+    class: motorbike
+    kind: motorbike
+    lengthM: 1.9
+    widthM: 0.8
+    massKg: 180
+    variants: 3
+    paramBasis:
+      lengthM: { sourced: easts-p357 }
+      widthM: { sourced: easts-p357 }
+      massKg: design
+      variants: design
+
+# Personality rows (all design except the normal HDM errors and b_stop).
+# Shares sum to 1. Violation rates are motorbike values; other classes scale some by
+# violations.carScale.
+personalities:
+  careful:
+    share: 0.25
+    v0Factor: [0.85, 0.95]
+    speedingV0Factor: [1.0, 1.0]
+    timeGapFactor: 1.3
+    minGapFactor: 1.2
+    accelFactor: 0.8
+    comfortDecelFactor: 0.9
+    reactionFactor: 1.0
+    distractedReactionFactor: 2.0
+    distanceErr: 0.03
+    approachErr: 0.007
+    mobilPoliteness: 0.5
+    mobilThresholdMps2: 0.2
+    mobilSafeDecelMps2: 3
+    criticalGapFactor: 1.2
+    yellowStopDecelMps2: 4.0
+    distractionIntervalS: 120
+    violations:
+      redLight: 0
+      earlyStart: 0
+      noSignal: 0.1
+      distracted: 0.05
+      speeding: 0
+      wrongWay: 0
+      sidewalk: 0
+      illegalUturn: 0
+      cutIn: 0
+      paramBasis:
+        { redLight: design, earlyStart: design, noSignal: design, distracted: design, speeding: design,
+          wrongWay: design, sidewalk: design, illegalUturn: design, cutIn: design }
+    paramBasis:
+      share: design
+      v0Factor: design
+      speedingV0Factor: design
+      timeGapFactor: design
+      minGapFactor: design
+      accelFactor: design
+      comfortDecelFactor: design
+      reactionFactor: design
+      distractedReactionFactor: design
+      distanceErr: design
+      approachErr: design
+      mobilPoliteness: design
+      mobilThresholdMps2: design
+      mobilSafeDecelMps2: design
+      criticalGapFactor: design
+      yellowStopDecelMps2: design
+      distractionIntervalS: design
+  normal:
+    share: 0.6
+    v0Factor: [0.85, 1.0]
+    speedingV0Factor: [1.15, 1.3]
+    timeGapFactor: 1.0
+    minGapFactor: 1.0
+    accelFactor: 1.0
+    comfortDecelFactor: 1.0
+    reactionFactor: 1.0
+    distractedReactionFactor: 3.0
+    distanceErr: 0.05
+    approachErr: 0.01
+    mobilPoliteness: 0.2
+    mobilThresholdMps2: 0.1
+    mobilSafeDecelMps2: 4
+    criticalGapFactor: 1.0
+    yellowStopDecelMps2: 3.1
+    distractionIntervalS: 60
+    violations:
+      redLight: 0.04
+      earlyStart: 0.05
+      noSignal: 0.4
+      distracted: 0.2
+      speeding: 0.1
+      wrongWay: 0.01
+      sidewalk: 0.02
+      illegalUturn: 0.02
+      cutIn: 0.01
+      paramBasis:
+        { redLight: design, earlyStart: design, noSignal: design, distracted: design, speeding: design,
+          wrongWay: design, sidewalk: design, illegalUturn: design, cutIn: design }
+    paramBasis:
+      share: design
+      v0Factor: design
+      speedingV0Factor: design
+      timeGapFactor: design
+      minGapFactor: design
+      accelFactor: design
+      comfortDecelFactor: design
+      reactionFactor: design
+      distractedReactionFactor: design
+      distanceErr: { sourced: hdm-2006 }
+      approachErr: { sourced: hdm-2006 }
+      mobilPoliteness: design
+      mobilThresholdMps2: design
+      mobilSafeDecelMps2: design
+      criticalGapFactor: design
+      yellowStopDecelMps2: { sourced: nchrp-14396 }
+      distractionIntervalS: design
+  reckless:
+    share: 0.15
+    v0Factor: [1.0, 1.0]
+    speedingV0Factor: [1.15, 1.3]
+    timeGapFactor: 0.7
+    minGapFactor: 0.6
+    accelFactor: 1.3
+    comfortDecelFactor: 1.4
+    reactionFactor: 0.9
+    distractedReactionFactor: 3.0
+    distanceErr: 0.08
+    approachErr: 0.02
+    mobilPoliteness: 0.0
+    mobilThresholdMps2: 0.05
+    mobilSafeDecelMps2: 6
+    criticalGapFactor: 0.6
+    yellowStopDecelMps2: 2.0
+    distractionIntervalS: 20
+    violations:
+      redLight: 0.35
+      earlyStart: 0.4
+      noSignal: 0.8
+      distracted: 0.35
+      speeding: 0.8
+      wrongWay: 0.08
+      sidewalk: 0.15
+      illegalUturn: 0.1
+      cutIn: 0.15
+      paramBasis:
+        { redLight: design, earlyStart: design, noSignal: design, distracted: design, speeding: design,
+          wrongWay: design, sidewalk: design, illegalUturn: design, cutIn: design }
+    paramBasis:
+      share: design
+      v0Factor: design
+      speedingV0Factor: design
+      timeGapFactor: design
+      minGapFactor: design
+      accelFactor: design
+      comfortDecelFactor: design
+      reactionFactor: design
+      distractedReactionFactor: design
+      distanceErr: design
+      approachErr: design
+      mobilPoliteness: design
+      mobilThresholdMps2: design
+      mobilSafeDecelMps2: design
+      criticalGapFactor: design
+      yellowStopDecelMps2: design
+      distractionIntervalS: design
+
+humanFactors:
+  perceptionTauS: 20
+  distractionDurationS: [1, 3]
+  v0VarCoeff: 0.15
+  timeGapVarCoeff: 0.15
+  paramBasis:
+    perceptionTauS: { sourced: hdm-2006 }
+    distractionDurationS: design
+    v0VarCoeff: { sourced: movsim-varcoeff }
+    timeGapVarCoeff: { sourced: movsim-varcoeff }
+
+violations:
+  carScale: 0.1
+  earlyStartRedRemainingS: 3
+  yellowLogisticK: 2.0
+  stopLineOvershootShare: 0.4
+  # 1 is off: raise it only if playtests show too few incidents in the player's view.
+  nearEgoViolationBoost: 1.0
+  nearEgoBoostRadiusM: 60
+  paramBasis:
+    carScale: design
+    earlyStartRedRemainingS: design
+    yellowLogisticK: design
+    stopLineOvershootShare: design
+    nearEgoViolationBoost: design
+    nearEgoBoostRadiusM: design
+
+motorbike:
+  laneWidthPerMps: 0.07
+  laneWidthBaseM: 0.8
+  passClearanceM: 1.5
+  sideBySideM: 1.8
+  keepRightOffsetM: 0.8
+  queueMinGapM: 0.5
+  slotHz: 3
+  paramBasis:
+    laneWidthPerMps: { sourced: minh-2007 }
+    laneWidthBaseM: { sourced: minh-2007 }
+    passClearanceM: { sourced: minh-2005 }
+    sideBySideM: { sourced: easts-p357 }
+    keepRightOffsetM: design
+    queueMinGapM: design
+    slotHz: design
+
+behaviour:
+  turnWeights: { straight: 0.7, left: 0.15, right: 0.15 }
+  deadlockS: 4
+  mobilHz: 1.5
+  indicatorLeadS: 3
+  rainDecelFactor: 0.7
+  wreckSlideDecelMps2: 6
+  # Junction geometry and lamps. 7 m puts 6 m trucks below the long-vehicle line and the 10.5 m
+  # bus above it. 5 m: a 10.5 x 2.5 m bus on a 9 m radius sweeps about 2.7 m out of its path, plus
+  # the other body's half width and a margin. Turns are driven at walking pace or more.
+  turnLateralMps2: 2
+  minTurnSpeedMps: 3
+  longVehicleM: 7
+  swingConflictM: 5
+  maxHoldBackM: 30
+  gapLookM: 60
+  egoOnLaneM: 2.5
+  yellowGoMarginS: 0.5
+  brakeLampMps2: 0.5
+  corridorMarginM: 0.3
+  paramBasis:
+    turnWeights: design
+    deadlockS: design
+    mobilHz: design
+    indicatorLeadS: design
+    rainDecelFactor: design
+    wreckSlideDecelMps2: design
+    turnLateralMps2: design
+    minTurnSpeedMps: design
+    longVehicleM: design
+    swingConflictM: design
+    maxHoldBackM: design
+    gapLookM: design
+    egoOnLaneM: design
+    yellowGoMarginS: design
+    brakeLampMps2: design
+    corridorMarginM: design
+
+# About one NPC–NPC incident every 1 to 5 simulated minutes at full density.
+incidentBand:
+  minPerMin: 0.2
+  maxPerMin: 1.0
+  paramBasis: { minPerMin: design, maxPerMin: design }
+
+mirrorRadiusM: 30
+maxMirrored: 24
+strikerShare: 0.65
+wreckClearS: 20
+wreckClearDistM: 120
+sourceMinEgoDistM: 60
+despawnBehindM: 120
+preRollS: 20
+egoPerceptionM: 40
+# The ego's view cone, where the ring spawner and dead-end despawns avoid acting.
+viewHalfAngleDeg: 60
+viewRangeM: 300
+spawnClearM: 2
+spawnEgoMarginM: 2
+paramBasis:
+  mirrorRadiusM: design
+  maxMirrored: design
+  strikerShare: design
+  wreckClearS: design
+  wreckClearDistM: design
+  sourceMinEgoDistM: design
+  despawnBehindM: design
+  preRollS: design
+  egoPerceptionM: design
+  viewHalfAngleDeg: design
+  viewRangeM: design
+  spawnClearM: design
+  spawnEgoMarginM: design

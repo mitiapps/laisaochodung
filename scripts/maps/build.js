@@ -14,11 +14,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import { assertMap } from '../../src/contracts/assert-map.js';
-import { MAP_COLLECTIONS } from '../../src/contracts/map.js';
+import { MAP_COLLECTIONS, OPTIONAL_MAP_COLLECTIONS } from '../../src/contracts/map.js';
 import { angleDiff, headingOf } from '../../src/geometry/index.js';
+import { buildLaneGraph } from './lib/connectors.js';
 import { compileMap, routeLength } from './lib/elements.js';
 import { wayPoints } from './lib/graph.js';
 import { osmSpec, tutorialSpec } from './lib/source.js';
+import { parseTrafficSource, trafficConfig, trafficTimeLimit } from './lib/traffic.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -66,7 +68,8 @@ export function canonical(v, scale = 1000) {
 export function serializeMap(map) {
   /** @type {Record<string, unknown>} */
   const copy = { ...map };
-  for (const key of MAP_COLLECTIONS) {
+  for (const key of [...MAP_COLLECTIONS, ...OPTIONAL_MAP_COLLECTIONS]) {
+    if (copy[key] === undefined) continue;
     copy[key] = [.../** @type {Array<{id: string}>} */ (copy[key])].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   }
   return `${JSON.stringify(canonical(copy), null, 2)}\n`;
@@ -167,11 +170,41 @@ export function corridorProblems(spec, map) {
 }
 
 /**
+ * Adds the lane graph to a compiled map and, when its source has a `traffic` key, the traffic
+ * block and the traffic time limit.
+ * @param {GameMap} map Compiled map (changed in place).
+ * @param {SourceYaml | undefined} trafficSrc Value of the source's `traffic` key.
+ * @param {string} where Source file name for messages.
+ * @returns {string[]} Build notes worth logging.
+ */
+export function addLaneGraphAndTraffic(map, trafficSrc, where) {
+  const graph = buildLaneGraph(map);
+  map.connectors = graph.connectors;
+  map.conflicts = graph.conflicts;
+  // A plain join hands a lane to the next road with no junction.
+  map.laneJoins = graph.joins.map((j) => ({ fromLaneId: j.fromLaneId, toLaneId: j.toLaneId }));
+  const notes = [];
+  if (trafficSrc !== undefined && graph.joins.length > 0) {
+    notes.push(`plain joins: ${graph.joins.map((j) => `${j.fromLaneId}→${j.toLaneId}`).join(', ')}`);
+  }
+  if (trafficSrc === undefined) return notes;
+  map.traffic = trafficConfig(map, parseTrafficSource(trafficSrc, where), graph);
+  const limit = trafficTimeLimit(map, graph);
+  map.route.timeLimitS = limit.timeLimitS;
+  notes.push(
+    `traffic: maxAgents ${map.traffic.maxAgents}, ${map.traffic.sources.length} sources, ${map.traffic.sinks.length} sinks; ` +
+      `timeLimitS ${limit.timeLimitS} (formula ${limit.formulaS} s over ${limit.routeM.toFixed(0)} m)`,
+  );
+  return notes;
+}
+
+/**
  * Builds one map.
  * @param {string} mapsDir `data/maps` directory.
  * @param {string} id Map id.
  * @param {string[]} signCodes Allowed sign codes.
- * @returns {Promise<{map: GameMap, json: string, entry: MapIndexEntry, spec: MapSpec}>} Result.
+ * @returns {Promise<{map: GameMap, json: string, entry: MapIndexEntry, spec: MapSpec, notes: string[]}>} Result
+ *   and the notes worth logging (stubs kept short, traffic values).
  */
 export async function buildOne(mapsDir, id, signCodes) {
   const spec = await loadSpec(mapsDir, id);
@@ -179,6 +212,9 @@ export async function buildOne(mapsDir, id, signCodes) {
     if (!signCodes.includes(s.code)) throw new Error(`${id}: sign ${s.id} uses code ${s.code}, which is not in data/signs/signs.yaml`);
   }
   const compiled = compileMap(spec);
+  const src = await readYaml(path.join(mapsDir, id, 'source.yaml'));
+  const notes = (spec.stubNotes ?? []).map((n) => `stub of way ${n.osmWayId} at ${n.nodeId} (${n.side}) kept at ${n.lengthM.toFixed(0)} m: ${n.reason}`);
+  notes.push(...addLaneGraphAndTraffic(compiled, src.traffic, `${id}/source.yaml`));
   const json = serializeMap(compiled);
   const map = /** @type {GameMap} */ (JSON.parse(json));
   assertMap(map, { signCodes });
@@ -189,14 +225,15 @@ export async function buildOne(mapsDir, id, signCodes) {
   /** @type {MapIndexEntry} */
   const entry = { id: map.id, name: map.name, kind: map.kind, lengthM: Math.round(routeLength(map)) };
   if (map.attribution) entry.attribution = map.attribution;
-  return { map, json, entry, spec };
+  return { map, json, entry, spec, notes };
 }
 
 /**
  * Builds every map in a directory.
  * @param {string} mapsDir `data/maps` directory.
  * @param {string[]} signCodes Allowed sign codes.
- * @returns {Promise<{files: Map<string, string>, entries: MapIndexEntry[]}>} JSON text per map id and the index.
+ * @returns {Promise<{files: Map<string, string>, entries: MapIndexEntry[], notes: Map<string, string[]>}>} JSON text per
+ *   map id, the index, and the build notes per map id.
  */
 export async function buildAll(mapsDir, signCodes) {
   const ids = (await readdir(mapsDir, { withFileTypes: true }))
@@ -207,12 +244,15 @@ export async function buildAll(mapsDir, signCodes) {
   /** @type {Map<string, string>} */
   const files = new Map();
   const entries = [];
+  /** @type {Map<string, string[]>} */
+  const notes = new Map();
   for (const id of ids) {
-    const { json, entry } = await buildOne(mapsDir, id, signCodes);
-    files.set(id, json);
-    entries.push(entry);
+    const built = await buildOne(mapsDir, id, signCodes);
+    files.set(id, built.json);
+    entries.push(built.entry);
+    notes.set(id, built.notes);
   }
-  return { files, entries };
+  return { files, entries, notes };
 }
 
 /**
@@ -230,12 +270,15 @@ export function serializeIndex(entries) {
  */
 async function main() {
   const signCodes = await loadSignCodes(ROOT);
-  const { files, entries } = await buildAll(path.join(ROOT, 'data/maps'), signCodes);
+  const { files, entries, notes } = await buildAll(path.join(ROOT, 'data/maps'), signCodes);
   const out = path.join(ROOT, 'public/maps');
   await mkdir(out, { recursive: true });
   for (const [id, json] of files) await writeFile(path.join(out, `${id}.json`), json);
   await writeFile(path.join(out, 'index.json'), serializeIndex(entries));
-  for (const e of entries) console.log(`built ${e.id} (${e.kind}, ${e.lengthM} m)`);
+  for (const e of entries) {
+    console.log(`built ${e.id} (${e.kind}, ${e.lengthM} m)`);
+    for (const n of notes.get(e.id) ?? []) console.log(`  ${e.id}: ${n}`);
+  }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

@@ -75,19 +75,20 @@ function exempt(frame, ctx, params) {
     const ahead = junctionsNear(map, [ctx.front], params.lineAheadM);
     if (ahead.some((j) => givesWayAt(map, j.id, ctx.loc.roadId))) return true;
   }
-  const walking = frame.actors.filter((a) => a.kind === 'pedestrian' && a.active);
+  const walking = actorsAround(ctx, 'pedestrian');
   if (walking.length > 0) {
     for (const cw of crosswalksNear(map, ctx.front, params.lineAheadM)) {
       if (egoFrame(ctx.front, ctx.heading, polygonCentroid(cw.polygon)).along <= 0) continue;
-      if (walking.some((a) => pointInPolygon([a.pos.x, a.pos.z], cw.polygon))) return true;
+      if (walking.some((a) => pointInPolygon([a.pose.pos.x, a.pose.pos.z], cw.polygon))) return true;
     }
   }
-  for (const a of actorsAround(frame, ctx, null)) {
-    const gap = a.along - (vehicle.lengthM + a.info.lengthM) / 2;
-    if (a.along > 0 && gap <= params.actorAheadM && Math.abs(a.lateral) <= params.corridorHalfWidthM + a.info.widthM / 2) {
+  // A wreck ahead is a stopped vehicle: it exempts the stop, and never counts as moving traffic.
+  for (const a of actorsAround(ctx, null)) {
+    const gap = a.along - (vehicle.lengthM + a.lengthM) / 2;
+    if (a.along > 0 && gap <= params.actorAheadM && Math.abs(a.lateral) <= params.corridorHalfWidthM + a.widthM / 2) {
       return true;
     }
-    if (ctx.loc.junctionId && a.pose.speed > 0 && distance(ctx.pos, [a.pose.pos.x, a.pose.pos.z]) <= params.yieldRadiusM) {
+    if (ctx.loc.junctionId && a.speed > 0 && distance(ctx.pos, [a.pose.pos.x, a.pose.pos.z]) <= params.yieldRadiusM) {
       return true;
     }
   }

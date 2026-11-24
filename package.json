@@ -16,13 +16,14 @@
     "test:e2e": "playwright test",
     "build:rules": "node scripts/rules/build.js",
     "build:maps": "node scripts/maps/build.js",
-    "build:data": "npm run build:rules && npm run build:maps",
+    "build:data": "npm run build:rules && npm run build:traffic && npm run build:maps",
     "fetch:osm": "node scripts/maps/fetch.js",
     "release:check": "node scripts/release-check.js",
     "predeploy": "npm run build && npm run release:check",
     "deploy": "wrangler deploy",
     "predev": "npm run build:data",
-    "pretest": "npm run build:data"
+    "pretest": "npm run build:data",
+    "build:traffic": "node scripts/traffic/build.js"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",

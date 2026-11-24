@@ -9,8 +9,8 @@
  */
 
 import { bboxCentre, createProjection } from './project.js';
-import { nodeDistance, osmCorridor, wayPoints } from './graph.js';
-import { parseLineSpec } from './lanes.js';
+import { STUB_M, nodeDistance, osmCorridor, wayPoints } from './graph.js';
+import { LANE_WIDTH_M, parseLineSpec } from './lanes.js';
 import { polylineLength } from '../../../src/geometry/index.js';
 
 /** @typedef {[number, number]} Vec2 */
@@ -83,6 +83,8 @@ import { polylineLength } from '../../../src/geometry/index.js';
  * @property {'tutorial' | 'override'} placedSource Source tag for placed signs and the zones they make.
  * @property {number[]} [routeOsmWays] OSM route way ids in order (OSM maps).
  * @property {Map<string, Dir>} [routeDirs] Travel direction per route way id (OSM maps).
+ * @property {import('./graph.js').StubNote[]} [stubNotes] Side-road stubs kept shorter than the
+ *   map's `stubM` (OSM maps).
  */
 
 /** OSM map attribution required by the ODbL. */
@@ -558,7 +560,8 @@ export function osmSpec(id, src, raw, overrides) {
     wayOverrides.set(wid, o);
   });
 
-  const { network, routeDirs, osmNodes } = osmCorridor(raw, routeWays, proj, (w, oneway) => {
+  const stubM = num(src.stubM ?? STUB_M, `${file} stubM`, { min: 1 });
+  const { network, routeDirs, osmNodes, stubNotes } = osmCorridor(raw, routeWays, proj, (w, oneway) => {
     const tags = /** @type {Record<string, string>} */ (w.tags);
     const o = wayOverrides.get(w.id) ?? {};
     const where = `${ofile} ways(${w.id})`;
@@ -592,7 +595,7 @@ export function osmSpec(id, src, raw, overrides) {
       laneLine: parseLineSpec(o.laneLine ?? 'dashed', `${where}.laneLine`),
       pavement: pavement(o.pavement, `${where}.pavement`, noSidewalk ? 0 : PAVEMENT_M),
     };
-  });
+  }, { stubM, laneWidth: LANE_WIDTH_M });
   for (const wid of wayOverrides.keys()) {
     if (!network.ways.some((w) => w.osmWayId === wid)) throw new Error(`${ofile} ways: way ${wid} is not in the corridor`);
   }
@@ -666,6 +669,7 @@ export function osmSpec(id, src, raw, overrides) {
     placedSource: 'override',
     routeOsmWays: routeWays,
     routeDirs,
+    stubNotes,
   };
 }
 

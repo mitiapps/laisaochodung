@@ -47,6 +47,21 @@ export function minimalMap() {
 }
 
 /**
+ * The hand-written junction fixture map (fresh copy), with a lane graph and a traffic block.
+ * @param {(map: GameMap) => void} [edit] Mutates the copy; the result is checked with `assertMap`.
+ * @returns {GameMap} Map.
+ */
+export function junctionMap(edit) {
+  /** @type {GameMap} */
+  const map = JSON.parse(readFileSync(path.join(ROOT, 'tests', 'fixtures', 'map-junction.json'), 'utf8'));
+  if (edit) {
+    edit(map);
+    assertMap(map);
+  }
+  return map;
+}
+
+/**
  * A vehicle from the catalog.
  * @param {'car-sedan' | 'scooter'} id Vehicle id.
  * @returns {VehicleInfo} Vehicle.

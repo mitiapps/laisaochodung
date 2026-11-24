@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DT } from '../contracts/index.js';
 import { buildFrames } from '../testing/index.js';
-import { mapVariant, minimalMap, realBundle, scoreScript, summary, vehicle } from '../../scripts/rules/lib/test-support.js';
+import { junctionMap, mapVariant, minimalMap, realBundle, scoreScript, summary, vehicle } from '../../scripts/rules/lib/test-support.js';
 import { createScorer, scoreRun } from './index.js';
 import { resolveBreach } from './resolve.js';
 
@@ -38,6 +38,7 @@ describe('scorer core', () => {
     expect(report).toEqual({
       score: 10,
       breaches: [],
+      notices: [],
       licence: { start: 12, deducted: 0, remaining: 12 },
       fineTotalVnd: { min: 0, max: 0 },
       finished: true,
@@ -338,5 +339,86 @@ describe('amendment sources and speed-limit context', () => {
     const row = bundle.speedDefaults.find((d) => d.legalClass === 'car' && d.builtUp && d.maxKmh === ctx.speedLimitKmh);
     expect(ctx.speedLimitSource).toBe('default');
     expect(ctx.speedLimitVerified).toBe(row?.verified);
+  });
+});
+
+describe('notices and the windowed replay', () => {
+  /**
+   * A traffic-style run on the junction map: a notice at t 2, a charged contact at t 8.
+   * @returns {Parameters<typeof scoreScript>[0]} Script.
+   */
+  const script = () => ({
+    map: junctionMap(),
+    path: /** @type {[number, number][]} */ ([[-150, 1.75], [150, 1.75]]),
+    speed: 10,
+    durationS: 10,
+    events: [
+      { t: 2, event: hit({ otherKind: 'motorbike', otherId: 'npc-3', otherModel: 'motorbike', striker: 'other', otherFromBehind: true, otherViolations: [] }) },
+      { t: 8, event: hit({ otherId: 'npc-9', otherModel: 'car', striker: 'ego' }) },
+    ],
+  });
+
+  it('returns each notice from its step and keeps every notice in the state', async () => {
+    const { frames, report } = await scoreScript(script());
+    const bundle = await realBundle();
+    const map = junctionMap();
+    const scorer = createScorer(bundle, map, vehicle('car-sedan'));
+    let state = scorer.initial;
+    /** @type {number[]} */
+    const noticeTicks = [];
+    for (const f of frames) {
+      const r = scorer.step(state, f);
+      state = r.state;
+      noticeTicks.push(...r.notices.map((n) => n.tick));
+    }
+    expect(noticeTicks).toEqual([Math.round(2 / DT)]);
+    expect(scorer.report(state, { quit: true }).notices).toEqual(report.notices);
+    expect(summary(report)).toEqual(['crash:1:D6.10.a']);
+  });
+
+  it('folds the frames after a checkpoint from the state saved there to the full report', async () => {
+    const { frames } = await scoreScript(script());
+    const bundle = await realBundle();
+    const map = junctionMap();
+    const car = vehicle('car-sedan');
+    const full = scoreRun(bundle, map, car, frames, { quit: true });
+    expect(full.notices).toHaveLength(1);
+    const scorer = createScorer(bundle, map, car);
+    const checkpoint = Math.round(5 / DT);
+    let state = scorer.initial;
+    for (const f of frames.slice(0, checkpoint)) state = scorer.step(state, f).state;
+    // The saved state is plain JSON: a round trip changes nothing.
+    const saved = JSON.parse(JSON.stringify(state));
+    expect(saved).toEqual(state);
+    const windowed = scoreRun(bundle, map, car, frames.slice(checkpoint), { quit: true, initialState: saved });
+    expect(windowed).toEqual(full);
+  });
+
+  it('folds from a checkpoint inside the aftermath window to the full report', async () => {
+    const base = script();
+    // Notice at t 2; a kerb hit at t 3 (row 0, a notice) and the same NPC again at t 3.2
+    // (debounced); a fault contact at t 8. The checkpoint at t 2.5 holds an open window and a
+    // live debounce entry.
+    const { frames } = await scoreScript({
+      ...base,
+      events: [
+        ...(base.events ?? []),
+        { t: 3, event: hit({ otherKind: 'kerb', otherId: null, striker: 'ego' }) },
+        { t: 3.2, event: hit({ otherKind: 'motorbike', otherId: 'npc-3', otherModel: 'motorbike', striker: 'other', otherFromBehind: true }) },
+      ],
+    });
+    const bundle = await realBundle();
+    const map = junctionMap();
+    const car = vehicle('car-sedan');
+    const full = scoreRun(bundle, map, car, frames, { quit: true });
+    expect(full.notices.map((n) => n.otherKind)).toEqual(['motorbike', 'kerb']);
+    const scorer = createScorer(bundle, map, car);
+    const checkpoint = Math.round(2.5 / DT);
+    let state = scorer.initial;
+    for (const f of frames.slice(0, checkpoint)) state = scorer.step(state, f).state;
+    const saved = JSON.parse(JSON.stringify(state));
+    expect(saved.fault.aftermathFromT).toBe(2);
+    expect(Object.keys(saved.fault.noticeT)).toEqual(['motorbike:npc-3']);
+    expect(scoreRun(bundle, map, car, frames.slice(checkpoint), { quit: true, initialState: saved })).toEqual(full);
   });
 });

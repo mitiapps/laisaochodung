@@ -7,7 +7,7 @@
  * are distances `s` from its first node, measured on the untrimmed polyline.
  */
 
-import { cumulativeLengths, slicePolyline } from '../../../src/geometry/index.js';
+import { cumulativeLengths, offsetPolyline, polygonsIntersect, slicePolyline } from '../../../src/geometry/index.js';
 
 /** @typedef {[number, number]} Vec2 */
 
@@ -349,8 +349,12 @@ export function nodeDistance(network, way, nodeId) {
  * @typedef {(osmWay: OsmElement, oneway: boolean) => Omit<NetWay, 'id' | 'osmWayId' | 'nodeIds' | 'oneway' | 'cls'>} WayAttributes
  */
 
-/** Length of the side-road stubs kept at each corridor junction (m). */
+/** Default length of the side-road stubs kept at each corridor junction (m); a map may ask for more. */
 export const STUB_M = 30;
+/** Step by which a stub that overlaps another road is shortened (m). */
+export const STUB_SHORTEN_STEP_M = 10;
+/** Lane width used for the stub overlap check when the caller gives none (m), as `LANE_WIDTH_M`. */
+const DEFAULT_LANE_WIDTH_M = 3.5;
 
 /** Highway classes that become side-road stubs; driveways and parking aisles are left out. */
 export const STUB_CLASSES = Object.freeze([
@@ -372,16 +376,43 @@ export function osmOneway(tags) {
 }
 
 /**
- * Builds the corridor network from an Overpass extract: the route's ways in order, plus
- * `STUB_M` stubs of every side road that meets a route node. No whole-network conversion.
+ * A side-road stub shorter than the length the map asked for, and why.
+ * @typedef {object} StubNote
+ * @property {number} osmWayId Side road OSM way id.
+ * @property {string} nodeId Route node the stub hangs from.
+ * @property {'in' | 'out'} side `in` runs towards the route node, `out` away from it.
+ * @property {number} lengthM Kept length.
+ * @property {string} reason Why it is shorter.
+ */
+
+/**
+ * @typedef {object} StubPlan
+ * @property {OsmElement} w Side road.
+ * @property {NetWay} way Network way, node ids filled in last.
+ * @property {string} nodeId Route node.
+ * @property {'in' | 'out'} side Side.
+ * @property {Vec2[]} points Available polyline, outward from the route node.
+ * @property {number} lengthM Length to keep.
+ * @property {string | null} reason Why it is shorter than asked, or null.
+ */
+
+/**
+ * Builds the corridor network from an Overpass extract: the route's ways in order, plus a stub of
+ * every side road that meets a route node. A stub is `options.stubM` long (default `STUB_M`) where
+ * the street continues: along its own way, then along a way of the same name and one-way state
+ * that shares its end node. It stops at the middle of the street towards another route node, and
+ * the part beyond `STUB_M` is shortened where it would overlap another road. No whole-network
+ * conversion.
  * @param {{elements: OsmElement[]}} raw Overpass JSON (`out body geom`).
  * @param {number[]} routeWayIds Route ways in driving order.
  * @param {import('./project.js').Projection} proj Projection.
  * @param {WayAttributes} attributes Lane and line attributes per way.
- * @returns {{network: Network, routeDirs: Map<string, 'forward' | 'backward'>, osmNodes: Map<string, OsmElement>}}
- *   Network, travel direction per route way id, and tagged OSM nodes by network node id.
+ * @param {{stubM?: number, laneWidth?: number}} [options] Stub length and the lane width for its overlap check.
+ * @returns {{network: Network, routeDirs: Map<string, 'forward' | 'backward'>, osmNodes: Map<string, OsmElement>, stubNotes: StubNote[]}}
+ *   Network, travel direction per route way id, tagged OSM nodes by network node id, and the
+ *   stubs kept shorter than asked.
  */
-export function osmCorridor(raw, routeWayIds, proj, attributes) {
+export function osmCorridor(raw, routeWayIds, proj, attributes, options = {}) {
   if (!Array.isArray(raw?.elements)) throw new Error('raw extract has no elements array');
   /** @type {Map<number, OsmElement>} */
   const ways = new Map();
@@ -472,32 +503,173 @@ export function osmCorridor(raw, routeWayIds, proj, attributes) {
     routeDirs.set(way.id, dir);
   }
 
-  // Stubs of side roads at route nodes.
+  // Stubs of side roads at route nodes, longest first where the street continues in the extract.
   const routeIds = new Set(routeWayIds);
+  /** @type {Map<string, OsmElement[]>} side ways by end node, for same-street continuations */
+  const sideWaysAt = new Map();
+  /** @type {OsmElement[]} */
+  const sideWays = [];
   for (const w of [...ways.values()].sort((a, b) => a.id - b.id)) {
     if (routeIds.has(w.id) || !STUB_CLASSES.includes(/** @type {Record<string, string>} */ (w.tags).highway)) continue;
-    const reverse = osmOneway(/** @type {Record<string, string>} */ (w.tags)) === 'reverse';
-    const rawIds = /** @type {number[]} */ (w.nodes).map((n) => `n${n}`);
-    const rawGeom = /** @type {Array<{lat: number, lon: number}>} */ (w.geometry);
-    const ids = reverse ? [...rawIds].reverse() : rawIds;
-    const geom = reverse ? [...rawGeom].reverse() : rawGeom;
-    const pts = geom.map((g) => proj.toXZ(g.lat, g.lon));
-    const cum = cumulativeLengths(pts);
+    sideWays.push(w);
+    const ns = /** @type {number[]} */ (w.nodes);
+    for (const n of [ns[0], ns[ns.length - 1]]) {
+      const key = `n${n}`;
+      if (!sideWaysAt.has(key)) sideWaysAt.set(key, []);
+      /** @type {OsmElement[]} */ (sideWaysAt.get(key)).push(w);
+    }
+  }
+  const stubM = options.stubM ?? STUB_M;
+  const laneWidth = options.laneWidth ?? DEFAULT_LANE_WIDTH_M;
+
+  /** @type {StubPlan[]} */
+  const plans = [];
+  for (const w of sideWays) {
+    const { ids, geom } = travelOrder(w);
     ids.forEach((id, i) => {
       if (!routeNodes.has(id)) return;
       addNode(id, geom[i]);
       for (const side of /** @type {const} */ (['in', 'out'])) {
-        const s0 = side === 'in' ? Math.max(0, cum[i] - STUB_M) : cum[i];
-        const s1 = side === 'in' ? cum[i] : Math.min(cum[cum.length - 1], cum[i] + STUB_M);
-        if (s1 - s0 < 1) continue;
-        const cutId = `n${w.id}@${id.slice(1)}-${side}`;
-        const cut = slicePolyline(pts, side === 'in' ? s0 : s1, side === 'in' ? s0 : s1)[0];
-        nodes.set(cutId, { id: cutId, pos: cut });
-        const nodeIds = side === 'in' ? [cutId, id] : [id, cutId];
-        netWays.push(toNetWay(w, `w${w.id}-${id.slice(1)}-${side}`, nodeIds));
+        const chain = outwardChain(w, i, side, { proj, routeNodes, sideWaysAt, limitM: stubM });
+        // Stop at the middle of the street towards another route node, but never below today's stub.
+        const lengthM = Math.min(stubM, chain.lengthM, Math.max(Math.min(STUB_M, chain.lengthM), chain.routeNodeAtM / 2));
+        if (lengthM < 1) continue;
+        const way = toNetWay(w, `w${w.id}-${id.slice(1)}-${side}`, []);
+        const reason = lengthM < stubM - 1e-6 ? chain.reason : null;
+        plans.push({ w, way, nodeId: id, side, points: chain.points, lengthM, reason });
       }
     });
   }
 
-  return { network: { nodes, ways: netWays }, routeDirs, osmNodes };
+  // The stretch of a stub beyond today's `STUB_M` must not overlap another road: shorten it in
+  // `STUB_SHORTEN_STEP_M` steps until it does not. Stubs are settled in order; one not yet settled
+  // counts at its `STUB_M` length.
+  const routeNet = { nodes, ways: netWays };
+  const routeBands = netWays.map((way) => ({ id: way.id, ring: wayBand(way, wayPoints(routeNet, way), laneWidth) }));
+  plans.forEach((plan, k) => {
+    const others = [
+      ...routeBands,
+        ...plans.flatMap((o, q) => {
+        if (q === k) return [];
+        const len = q < k ? o.lengthM : Math.min(o.lengthM, STUB_M);
+        return [{ id: o.way.id, ring: wayBand(o.way, slicePolyline(o.points, 0, len), laneWidth) }];
+      }),
+    ];
+    while (plan.lengthM > STUB_M + 1e-6) {
+      const ext = wayBand(plan.way, slicePolyline(plan.points, STUB_M, plan.lengthM), laneWidth);
+      const hit = others.find((o) => polygonsIntersect(ext, o.ring));
+      if (!hit) break;
+      plan.lengthM = Math.max(STUB_M, plan.lengthM - STUB_SHORTEN_STEP_M);
+      plan.reason = `shortened to ${plan.lengthM.toFixed(0)} m: a longer stub overlaps ${hit.id}`;
+    }
+  });
+
+  /** @type {StubNote[]} */
+  const stubNotes = [];
+  for (const plan of plans) {
+    const piece = slicePolyline(plan.points, 0, plan.lengthM);
+    const base = `n${plan.w.id}@${plan.nodeId.slice(1)}-${plan.side}`;
+    // Outward from the route node: the cut point last; intermediate vertices get their own ids so
+    // that no OSM node outside the corridor (a signal or crossing elsewhere) enters the network.
+    /** @type {string[]} */
+    const outIds = [plan.nodeId];
+    for (let k = 1; k < piece.length; k += 1) {
+      const nid = k === piece.length - 1 ? base : `${base}-p${k}`;
+      nodes.set(nid, { id: nid, pos: piece[k] });
+      outIds.push(nid);
+    }
+    plan.way.nodeIds = plan.side === 'in' ? outIds.reverse() : outIds;
+    netWays.push(plan.way);
+    if (plan.reason) {
+      stubNotes.push({ osmWayId: plan.w.id, nodeId: plan.nodeId, side: plan.side, lengthM: plan.lengthM, reason: plan.reason });
+    }
+  }
+
+  return { network: { nodes, ways: netWays }, routeDirs, osmNodes, stubNotes };
+}
+
+/**
+ * Node ids and coordinates of an OSM way in its travel order (`oneway=-1` reversed).
+ * @param {OsmElement} w OSM way.
+ * @returns {{ids: string[], geom: Array<{lat: number, lon: number}>}} Ordered ids and coordinates.
+ */
+function travelOrder(w) {
+  const ids = /** @type {number[]} */ (w.nodes).map((n) => `n${n}`);
+  const geom = /** @type {Array<{lat: number, lon: number}>} */ (w.geometry);
+  const reverse = osmOneway(/** @type {Record<string, string>} */ (w.tags)) === 'reverse';
+  return reverse ? { ids: [...ids].reverse(), geom: [...geom].reverse() } : { ids, geom };
+}
+
+/**
+ * The street away from a route node, up to `limitM`: along the side road's own way, then through
+ * each end node onto the one way of the same name and one-way state that continues it in the same
+ * travel direction (lowest OSM id first). Walking stops at another route node.
+ * @param {OsmElement} w Side road.
+ * @param {number} i Index of the route node in the travel order of `w`.
+ * @param {'in' | 'out'} side `out` walks along the travel order, `in` against it.
+ * @param {{proj: import('./project.js').Projection, routeNodes: Set<string>, sideWaysAt: Map<string, OsmElement[]>, limitM: number}} ctx Context.
+ * @returns {{points: Vec2[], lengthM: number, routeNodeAtM: number, reason: string}} Points outward
+ *   from the route node, their length, the distance to the next route node (Infinity when none)
+ *   and why the street ends where it does.
+ */
+function outwardChain(w, i, side, ctx) {
+  const { ids, geom } = travelOrder(w);
+  /** @type {Vec2[]} */
+  const points = [ctx.proj.toXZ(geom[i].lat, geom[i].lon)];
+  let lengthM = 0;
+  let routeNodeAtM = Infinity;
+  const visited = new Set([w.id]);
+  let cur = { w, ids, geom, k: i, step: side === 'out' ? 1 : -1 };
+  const name = /** @type {Record<string, string>} */ (w.tags).name;
+  const oneway = osmOneway(/** @type {Record<string, string>} */ (w.tags)) !== 'no';
+  for (;;) {
+    const next = cur.k + cur.step;
+    if (next < 0 || next >= cur.ids.length) {
+      // The way ends at the route node itself: the street beyond is the stub of its own way.
+      if (lengthM === 0) return { points, lengthM, routeNodeAtM, reason: '' };
+      const end = cur.ids[cur.k];
+      const candidates = (ctx.sideWaysAt.get(end) ?? []).filter((o) => {
+        const tags = /** @type {Record<string, string>} */ (o.tags);
+        if (visited.has(o.id) || !name || tags.name !== name || (osmOneway(tags) !== 'no') !== oneway) return false;
+        const order = travelOrder(o).ids;
+        // Same travel direction: walking forward we enter at its first node, backward at its last.
+        if (oneway) return side === 'out' ? order[0] === end : order[order.length - 1] === end;
+        return order[0] === end || order[order.length - 1] === end;
+      });
+      if (candidates.length === 0) {
+        return { points, lengthM, routeNodeAtM, reason: `the street ends after ${lengthM.toFixed(0)} m in the extract (no continuation of ${name ?? 'the unnamed way'} ${w.id})` };
+      }
+      const o = candidates[0];
+      visited.add(o.id);
+      const order = travelOrder(o);
+      const atStart = order.ids[0] === end;
+      cur = { w: o, ids: order.ids, geom: order.geom, k: atStart ? 0 : order.ids.length - 1, step: atStart ? 1 : -1 };
+      continue;
+    }
+    const g = cur.geom[next];
+    const p = ctx.proj.toXZ(g.lat, g.lon);
+    const last = points[points.length - 1];
+    lengthM += Math.hypot(p[0] - last[0], p[1] - last[1]);
+    points.push(p);
+    cur.k = next;
+    if (ctx.routeNodes.has(cur.ids[next])) {
+      routeNodeAtM = lengthM;
+      return { points, lengthM, routeNodeAtM, reason: `the street meets the route again after ${lengthM.toFixed(0)} m` };
+    }
+    if (lengthM >= ctx.limitM) return { points, lengthM, routeNodeAtM, reason: '' };
+  }
+}
+
+/**
+ * Ground band of a way, carriageway plus pavements.
+ * @param {NetWay} way Way (lanes and pavements).
+ * @param {Vec2[]} points Polyline.
+ * @param {number} laneWidth Lane width.
+ * @returns {Vec2[]} Ring.
+ */
+function wayBand(way, points, laneWidth) {
+  const cw = carriageway(way, laneWidth);
+  const right = offsetPolyline(points, cw.lo - way.pavement.right);
+  const left = offsetPolyline(points, cw.hi + way.pavement.left);
+  return [...right, ...left.reverse()];
 }

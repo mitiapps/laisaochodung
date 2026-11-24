@@ -23,8 +23,9 @@ ESLint (`eslint.config.js`) rejects in them:
 - `Math.random`, `Date.now`, `performance`, `window`, `document`, `requestAnimationFrame`.
 
 Dependency direction: `src/geometry/` imports nothing; `src/world/` only `src/contracts/` and
-`src/geometry/`; `src/testing/` only those plus `src/world/`. Colocated `*.test.js` files are
-exempt. `src/testing/purity-guard.test.js` proves the guard fires.
+`src/geometry/` (a nested directory such as `src/world/traffic/` may also import its parent
+`src/world/` files); `src/testing/` only those plus `src/world/`. Colocated `*.test.js` and
+`*.bench.js` files are exempt. `src/testing/purity-guard.test.js` proves the guard fires.
 
 ## Data first
 

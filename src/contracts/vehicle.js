@@ -4,7 +4,11 @@
 
 /** @typedef {'car' | 'motorbike' | 'moped'} LegalClass Legal vehicle class; `moped` is reserved, unused in the MVP. */
 /** @typedef {'D6' | 'D7'} DecreeGroup ND 168 article that penalises the class: Điều 6 cars, Điều 7 motorbikes and mopeds. */
-/** @typedef {'manual' | 'auto'} Gearbox `manual`: clutchless N, R, 1–5; `auto`: N and D. */
+/**
+ * @typedef {'manual' | 'auto'} Gearbox Catalog gearbox. `manual`: clutchless N, R, 1–5; `auto`: N
+ *   and D. With the automatic-gearbox assist a `manual` car drives on the selector R, N and D, and
+ *   its ratios shift by themselves.
+ */
 
 /**
  * Localised text. `en` is optional and empty in the MVP (Vietnamese UI only).

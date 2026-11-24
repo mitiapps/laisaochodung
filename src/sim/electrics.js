@@ -1,6 +1,7 @@
 /**
  * Indicator, headlight and horn state machines. Commands are edges (one step), except `flash`,
- * which the input repeats every step it is held. Indicators do not cancel themselves in the MVP.
+ * which the input repeats every step it is held. Indicators cancel only through the auto-cancel
+ * assist (`signal-cancel.js`), which the sim applies with `cancelIndicators` before a step.
  *
  * - `left` / `right`: toggles that side on, or off when it is already on; switches sides directly.
  * - `hazard`: toggles the hazard lights; turning them off restores `off`.
@@ -45,4 +46,13 @@ export function stepElectrics(state, input) {
   }
   const lights = input.lightsCmd === 'flash' ? 'high' : selected;
   return { state: { indicators, selected }, indicators, lights, horn: input.horn };
+}
+
+/**
+ * Switches the indicator off, as the auto-cancel assist does; the headlights are kept.
+ * @param {ElectricsState} state Current state.
+ * @returns {ElectricsState} State with `indicators: 'off'`.
+ */
+export function cancelIndicators(state) {
+  return { ...state, indicators: 'off' };
 }

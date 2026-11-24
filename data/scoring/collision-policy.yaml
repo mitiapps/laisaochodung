@@ -28,3 +28,54 @@ inferredAccidentCauses: [pavement]
 sameLaneAhead: { D6: D6.4.l, D7: D7.3.i }
 # Static objects, kerbs and scooter falls never carry a legal penalty.
 staticAndFall: scoreOnly
+
+# Fault by law for ego contacts with vehicles (cars and motorbikes, scripted or traffic). The
+# rows run per contact, first match wins (conditions: FaultCondition, src/contracts/rule.js). A
+# deduction row resolves the clause through the choice above; a notice row shows the player a
+# message and deducts nothing. Pedestrian contacts never enter the table: they keep the accident
+# clause and end the run. Static objects, kerbs and falls enter only the aftermath row.
+#
+# A deduction needs a player breach (rows 1 and 2) or the player striking a party that had right
+# of way (rows 3 and 4, the Luật 36 Điều 12 khoản 3 duty to observe and slow down, charged as
+# 10.a). Every other contact is a notice. Contacts below contactMinEgoSpeed never deduct but
+# still raise notices, so a stopped player who is rear-ended gets a notice.
+faultRows:
+  - { id: aftermath, when: aftermath, result: notice }
+  - { id: from-behind, when: from-behind, result: notice, unlessRearEndContributing: true }
+  - { id: contributing, when: contributing-episode, result: deduction }
+  - { id: same-lane-ahead, when: same-lane-ahead, result: deduction }
+  - { id: ego-strikes, when: ego-strikes, result: deduction }
+  - { id: otherwise, when: otherwise, result: notice }
+# Every rule's episode contributes to a contact except these. Game design ("ngưỡng của trò
+# chơi"): a horn at night cannot cause a contact, although 10.b lists its clause.
+nonContributingRules: [night-horn]
+# Being hit from behind is the player's fault only after a cut-in or an unsignalled turn put
+# them wrongly in front.
+rearEndContributingRules: [lane-change, turn-signal]
+# Only right-of-way violations of the other party excuse a player who strikes it; a merely
+# speeding or tailgating vehicle does not.
+excusingViolations: [red-light, wrong-way, no-yield, unsafe-lane-change]
+# Game design: seconds after a notice contact (rows 1 to 5) during which every further contact
+# with a vehicle, a static object or a kerb, and a fall, is a notice too (the shove). Row 0
+# notices do not restart the window.
+aftermathWindowS: 1.5
+# Basis of the fault-table choices above (all game design; the comments give each reason).
+paramBasis:
+  nonContributingRules: design
+  rearEndContributingRules: design
+  excusingViolations: design
+  aftermathWindowS: design
+# Notice texts, keyed by the other party's first violation, then `from-behind`, then `none`;
+# `aftermath` for contacts inside the aftermath window. `{vehicle}` is replaced by the other
+# vehicle's word (xe máy, ô tô, xe buýt…), capitalised at the start of the text. The game never
+# states a legal conclusion: only the police decide fault.
+noticeTexts:
+  red-light: { vi: "{vehicle} vượt đèn đỏ va vào bạn. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm." }
+  wrong-way: { vi: "{vehicle} đi ngược chiều va vào bạn. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm." }
+  no-yield: { vi: "{vehicle} không nhường đường va vào bạn. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm." }
+  unsafe-lane-change: { vi: "{vehicle} chuyển làn ẩu va vào bạn. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm." }
+  speeding: { vi: "{vehicle} chạy quá tốc độ va vào bạn. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm." }
+  tailgating: { vi: "{vehicle} không giữ khoảng cách an toàn va vào bạn. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm." }
+  from-behind: { vi: "Xe khác va vào bạn từ phía sau. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm." }
+  none: { vi: "{vehicle} va vào bạn. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm." }
+  aftermath: { vi: "Va chạm tiếp theo sau khi bạn bị xe khác va vào. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm." }

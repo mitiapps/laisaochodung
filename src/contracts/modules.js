@@ -16,6 +16,8 @@
  * @typedef {object} ScorerStep
  * @property {unknown} state Next scorer state (opaque, plain JSON).
  * @property {Breach[]} breaches Breaches opened or escalated this step.
+ * @property {import('./score.js').Notice[]} notices Notices raised this step; the state keeps every
+ *   notice of the run so far, so a fold from a saved state still reports them.
  * @property {ScoreContext} context Context for the HUD.
  * @property {null | 'crash'} runEnded `crash` after a pedestrian hit at or above the contact speed.
  */
@@ -43,8 +45,15 @@
  * @param {GameMap} map Map.
  * @param {VehicleInfo} vehicleInfo Vehicle.
  * @param {Frame[]} frames Frames in tick order.
- * @param {{quit: boolean}} options Whether the player quit after the last frame.
+ * @param {ScoreRunOptions} options Quit flag and an optional start state.
  * @returns {ScoreReport} Report.
+ */
+
+/**
+ * @typedef {object} ScoreRunOptions
+ * @property {boolean} quit The player quit after the last frame.
+ * @property {unknown} [initialState] Scorer state to fold from instead of `scorer.initial`: the
+ *   state saved at a checkpoint, so a windowed replay folds only the frames after it.
  */
 
 /**
@@ -58,10 +67,21 @@
  */
 
 /**
+ * @typedef {object} SimOptions
+ * @property {'map' | 'off'} [traffic] `map` runs the map's traffic block, `off` (the default) runs
+ *   scripted actors only, exactly as a map without traffic.
+ * @property {number} [runSeed] 32-bit unsigned run seed for the traffic.
+ * @property {import('./traffic.js').TrafficParams} [params] Compiled traffic parameters; needed
+ *   when `traffic` is `map`.
+ * @property {import('./controls.js').ControlAssists} [assists] Driving assists; default all off.
+ */
+
+/**
  * @callback CreateSim
  * @param {unknown} rapier Initialised `@dimforge/rapier3d-compat` module.
  * @param {GameMap} map Map.
  * @param {VehicleInfo} vehicleInfo Vehicle.
+ * @param {SimOptions} [options] Traffic and assist options.
  * @returns {Sim} Simulation.
  */
 

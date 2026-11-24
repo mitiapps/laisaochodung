@@ -9,7 +9,7 @@
 
 import { angleDiff, pointInPolygon } from '../../geometry/index.js';
 import { crosswalksOverlapping } from '../../map-query/index.js';
-import { DEG } from './common.js';
+import { actorsAround, DEG } from './common.js';
 
 /** @typedef {{onIds: string[]}} State Crosswalks the footprint is on and entered at speed. */
 /** @typedef {{minSpeedMps: number, turnMinDeg: number, turnWindowS: number}} Params */
@@ -37,7 +37,7 @@ export function detect(state, frame, ctx, params) {
   const occupied =
     moving &&
     entered.some((c) =>
-      frame.actors.some((a) => a.kind === 'pedestrian' && a.active && pointInPolygon([a.pos.x, a.pos.z], c.polygon)),
+      actorsAround(ctx, 'pedestrian').some((a) => pointInPolygon([a.pose.pos.x, a.pose.pos.z], c.polygon)),
     );
   const turnMin = params.turnMinDeg * DEG;
   const inTurn = ctx.junction !== null && Math.abs(angleDiff(ctx.junction.entryHeading, ctx.heading)) >= turnMin;

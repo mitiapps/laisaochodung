@@ -305,6 +305,8 @@ export function createSession(deps) {
 
   const api = {
     /**
+     * Starts a run. The `GameApi` start options (`controlPreset`) are accepted and not applied yet:
+     * every run uses the controls without assists.
      * @param {string} mapId Map id.
      * @param {string} vehicleId Vehicle id.
      * @returns {Promise<void>} Resolves once running, or when a newer start or a quit supersedes it.
@@ -440,6 +442,16 @@ export function createSession(deps) {
       } catch (err) {
         failRun(r, err);
       }
+    },
+
+    /**
+     * On-screen controls. Not wired to the input yet; every call is ignored.
+     * @type {import('../contracts/hud.js').GameControls}
+     */
+    controls: {
+      hold() {},
+      press() {},
+      steer() {},
     },
 
     /**

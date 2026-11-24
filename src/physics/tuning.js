@@ -35,6 +35,16 @@
  * @property {number} idleRpm Idle speed.
  * @property {number} redlineRpm Rev limiter; no drive force above it.
  * @property {number} maxReverseShiftKmh Shifting into R is refused at or above this speed.
+ * @property {AutoShiftSpec} autoShift Shift points of the auto-shift assist (selector R, N, D).
+ */
+
+/**
+ * Auto-shift assist of a manual gearbox. `downRpm` stays well below the rpm right after an
+ * up-shift, and `minIntervalS` spaces the shifts, so the box cannot hunt.
+ * @typedef {object} AutoShiftSpec
+ * @property {number} upRpm Shift up one gear at or above this engine speed with the throttle open.
+ * @property {number} downRpm Shift down at or below this engine speed.
+ * @property {number} minIntervalS Shortest time between two shifts.
  */
 
 /**
@@ -62,8 +72,10 @@
  * @property {number} frictionSlip Dry-asphalt `frictionSlip`, multiplied by the map surface grip.
  * @property {number} sideFrictionStiffness Lateral grip multiplier.
  * @property {{frontCap: number, rearCap: number, handbrakeCap: number, handbrakeSideStiffness: number,
- *   coastCap: number}} brakes Per-wheel brake impulse caps per step at full input. `coastCap` is
- *   the rolling and engine-drag brake applied while a wheel is neither braked nor driven.
+ *   coastCap: number, combinedRearPerGrip?: number}} brakes Per-wheel brake impulse caps per step at
+ *   full input. `coastCap` is the rolling and engine-drag brake applied while a wheel is neither
+ *   braked nor driven. `combinedRearPerGrip` (motorbikes only): the rear brake the simple preset's
+ *   one brake key adds, per unit of surface grip, next to the capped front.
  * @property {{maxLockRad: number, refSpeedMps: number, rateRadPerS: number}} steering Lock at
  *   standstill, the speed at which the lock halves, and the steering rate limit.
  * @property {number} dragCdA Drag coefficient times frontal area in m².

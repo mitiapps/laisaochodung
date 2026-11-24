@@ -2,10 +2,12 @@
 // fire, no-fire, boundaries, and the clean cases that lawful driving must pass.
 
 import { describe, expect, it } from 'vitest';
-import { clone, mapVariant, minimalMap, realBundle, scoreScript, summary } from '../../../scripts/rules/lib/test-support.js';
+import { ACTOR_LIGHTS, NO_VIOLATIONS } from '../../contracts/index.js';
+import { clone, junctionMap, mapVariant, minimalMap, realBundle, scoreScript, summary } from '../../../scripts/rules/lib/test-support.js';
 
 /** @typedef {import('../../contracts/index.js').GameMap} GameMap */
 /** @typedef {import('../../contracts/index.js').FrameEvent} FrameEvent */
+/** @typedef {import('../../contracts/index.js').ActorPose} ActorPose */
 /** @typedef {import('../../testing/frame-builder.js').Keyframe} Keyframe */
 /** @typedef {[number, number]} Vec2 */
 
@@ -707,5 +709,118 @@ describe('collision', () => {
     expect(live.flat().map((b) => [b.kind, b.tierIndex, b.clause?.id ?? null])).toEqual([['new', 0, null], ['escalated', 1, 'D6.10.a']]);
     expect(report.endedBy).toBe('crash');
     expect(report.breaches).toHaveLength(1);
+  });
+});
+
+describe('detectors in motorbike traffic', () => {
+  const JUNCTION = junctionMap();
+  /**
+   * Ego centre x when driving east along rw-e1 at 10 m/s from x −150.
+   * @param {number} t Time.
+   * @returns {number} X.
+   */
+  const egoX = (t) => -150 + 10 * t;
+
+  /**
+   * A traffic pose.
+   * @param {string} id Id.
+   * @param {'car' | 'motorbike'} kind Kind.
+   * @param {number} x X.
+   * @param {number} z Z.
+   * @param {Partial<ActorPose>} [more] Further fields.
+   * @returns {ActorPose} Pose.
+   */
+  const pose = (id, kind, x, z, more = {}) => ({
+    id,
+    kind,
+    pos: { x, z },
+    heading: 0,
+    speed: 10,
+    active: true,
+    model: kind,
+    variant: 0,
+    lengthM: kind === 'car' ? 4.5 : 1.9,
+    widthM: kind === 'car' ? 1.8 : 0.8,
+    lights: ACTOR_LIGHTS.off,
+    state: 'moving',
+    violations: NO_VIOLATIONS,
+    ...more,
+  });
+
+  describe('gap-ahead', () => {
+    /**
+     * Scores 10 s east with motorbikes 5 m ahead of the ego centre (bumper gap about 1.8 m).
+     * @param {(t: number) => ActorPose[]} extraActors Poses.
+     * @returns {Promise<string[]>} Summary.
+     */
+    const follow = (extraActors) => run({ map: JUNCTION, path: [[-150, 1.75], [150, 1.75]], speed: 10, durationS: 10, extraActors });
+
+    it('does not fire when motorbikes filter in ahead one after another', async () => {
+      // A new rider every 1.5 s, each ahead for 1.5 s, shorter than sustainS 2.
+      const riders = (/** @type {number} */ t) => {
+        const i = Math.floor((t - 1) / 1.5);
+        return t >= 1 && i < 5 ? [pose(`npc-${i}`, 'motorbike', egoX(t) + 5, 1.75 + (i % 2 ? 0.6 : -0.6))] : [];
+      };
+      expect(await follow(riders)).toEqual([]);
+    });
+
+    it('fires behind one motorbike held that close for the sustain time', async () => {
+      const one = (/** @type {number} */ t) => (t >= 1 && t < 6 ? [pose('npc-1', 'motorbike', egoX(t) + 5, 1.75)] : []);
+      expect(await follow(one)).toEqual(['following-distance:0:-']);
+    });
+
+    it('ignores a leader whose unsafe lane change is still latched', async () => {
+      const cutIn = (/** @type {number} */ t) =>
+        t >= 1 && t < 6 ? [pose('npc-1', 'motorbike', egoX(t) + 5, 1.75, { violations: Object.freeze(['unsafe-lane-change']) })] : [];
+      expect(await follow(cutIn)).toEqual([]);
+    });
+  });
+
+  describe('lane-change tier 2', () => {
+    /**
+     * Signalled merge from rw-e1 into the kerb lane rw-e0 over the dashed line rw-k (z 3.5).
+     * @param {(t: number) => ActorPose[]} extraActors Poses.
+     * @returns {Promise<string[]>} Summary.
+     */
+    const merge = (extraActors) =>
+      run({
+        map: JUNCTION,
+        path: [[-150, 1.75], [-130, 1.75], [-120, 5.25], [-60, 5.25]],
+        speed: 10,
+        durationS: 8,
+        controls: [{ t: 0, indicators: 'right' }],
+        extraActors,
+      });
+
+    // The rider keeps pace just behind the ego (the merge path is a little longer than its own).
+    it('stays quiet with a motorbike passing on the far side of the kerb lane, outside the ego strip', async () => {
+      expect(await merge((t) => [pose('npc-1', 'motorbike', egoX(t) - 3, 6.6)])).toEqual([]);
+    });
+
+    it('fires with a motorbike alongside inside the strip the ego moves into', async () => {
+      expect(await merge((t) => [pose('npc-1', 'motorbike', egoX(t) - 3, 4.4)])).toEqual(['lane-change:1:D6.2.a']);
+    });
+
+    it('fires with a stopped car within gapAheadM in the target lane', async () => {
+      expect(await merge(() => [pose('npc-1', 'car', -118, 5.25, { speed: 0, state: 'stopped' })])).toEqual(['lane-change:1:D6.2.a']);
+    });
+  });
+
+  describe('wrecks', () => {
+    /**
+     * Stands in the junction box for 5 s with a vehicle beside the ego, within yieldRadiusM.
+     * @param {Partial<ActorPose>} more Pose fields of the vehicle.
+     * @returns {Promise<string[]>} Summary.
+     */
+    const waitInBox = (more) =>
+      run({ map: JUNCTION, path: [[0, 1.75], [10, 1.75]], speed: 0, durationS: 5, extraActors: () => [pose('npc-1', 'car', -5, -1.75, { heading: Math.PI, speed: 3, ...more })] });
+
+    it('lets moving traffic in the junction exempt a stop', async () => {
+      expect(await waitInBox({})).toEqual([]);
+    });
+
+    it('treats a wreck as a stopped vehicle that exempts nothing', async () => {
+      expect(await waitInBox({ state: 'crashed' })).toEqual(['stopping:0:D6.3.đ']);
+    });
   });
 });

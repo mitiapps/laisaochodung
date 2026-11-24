@@ -127,23 +127,20 @@ export function actorInfo(map, id) {
 }
 
 /**
- * Active actors with their ego-frame coordinates and sizes.
- * @param {Frame} frame Frame.
+ * Active actors near the ego (the step's distance-filtered list, `ctx.actors`) with their
+ * ego-frame coordinates, sizes and effective speed (0 for a wreck).
  * @param {StepContext} ctx Context.
- * @param {'car' | 'pedestrian' | null} kind Kind filter, null for both.
- * @returns {{pose: ActorPose, info: MapActor, along: number, lateral: number}[]} Actors in frame order.
+ * @param {ActorPose['kind'] | ReadonlyArray<ActorPose['kind']> | null} kind Kind or kinds to keep, null for all.
+ * @returns {import('../context.js').NearActor[]} Actors in frame order.
  */
-export function actorsAround(frame, ctx, kind) {
-  /** @type {{pose: ActorPose, info: MapActor, along: number, lateral: number}[]} */
-  const out = [];
-  for (const pose of frame.actors) {
-    if (!pose.active || (kind && pose.kind !== kind)) continue;
-    const info = actorInfo(ctx.env.map, pose.id);
-    if (!info) continue;
-    out.push({ pose, info, ...egoFrame(ctx.pos, ctx.heading, [pose.pos.x, pose.pos.z]) });
-  }
-  return out;
+export function actorsAround(ctx, kind) {
+  if (kind === null) return ctx.actors;
+  const kinds = typeof kind === 'string' ? [kind] : kind;
+  return ctx.actors.filter((a) => kinds.includes(a.pose.kind));
 }
+
+/** Kinds that are vehicles. */
+export const VEHICLE_KINDS = Object.freeze(/** @type {const} */ (['car', 'motorbike']));
 
 /**
  * Whether the time of day (minute) lies in a window that may wrap midnight.

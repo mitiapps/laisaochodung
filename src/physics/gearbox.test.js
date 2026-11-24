@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { driveForce, initialGear, shiftGear } from './gearbox.js';
+import { AUTO_SHIFT_STANDSTILL_MPS, autoShiftRatio, driveForce, initialGear, shiftGear } from './gearbox.js';
 import { carSedan } from './vehicles/car-sedan.js';
 import { scooter } from './vehicles/scooter.js';
 
@@ -73,5 +73,76 @@ describe('driveForce', () => {
     expect(driveForce(auto, 'D', 1, auto.topSpeedMps, 0, r).forceN).toBe(0);
     expect(driveForce(auto, 'N', 1, 0, 0, r).forceN).toBe(0);
     expect(driveForce(auto, 'D', 1, 10, 0, r).rpm).toBeLessThanOrEqual(auto.redlineRpm);
+  });
+});
+
+describe('auto-shift selector', () => {
+  const sel = { autoShift: true };
+  const r = carSedan.wheelRadius;
+  const { upRpm, downRpm, minIntervalS } = manual.autoShift;
+  const RPM_PER_RAD_S = 60 / (2 * Math.PI);
+  /**
+   * Wheel spin at which a gear turns at an engine speed.
+   * @param {number} gear Gear 1–5.
+   * @param {number} rpm Engine speed.
+   * @returns {number} Spin in rad/s.
+   */
+  const spinAt = (gear, rpm) => rpm / RPM_PER_RAD_S / (manual.ratios[gear - 1] * manual.finalDrive);
+
+  it('starts in D and walks R ← N ← D, refusing R when moving', () => {
+    expect(initialGear(manual, sel)).toBe('D');
+    expect(shiftGear(manual, 'D', 'down', 0, sel)).toBe('N');
+    expect(shiftGear(manual, 'N', 'down', 0, sel)).toBe('R');
+    expect(shiftGear(manual, 'R', 'down', 0, sel)).toBe('R');
+    expect(shiftGear(manual, 'R', 'up', 0, sel)).toBe('N');
+    expect(shiftGear(manual, 'N', 'up', 0, sel)).toBe('D');
+    expect(shiftGear(manual, 'D', 'up', 20, sel)).toBe('D');
+    expect(shiftGear(manual, 'N', 'down', 2 / 3.6, sel)).toBe('N');
+    expect(shiftGear(manual, 'N', 'down', -5, sel)).toBe('N');
+    expect(() => shiftGear(manual, 3, 'up', 0, sel)).toThrow(RangeError);
+  });
+
+  it('leaves the automatic scooter and the plain manual alone', () => {
+    expect(initialGear(auto, sel)).toBe('D');
+    expect(shiftGear(auto, 'D', 'down', 0, sel)).toBe('N');
+    expect(shiftGear(auto, 'N', 'down', 0, sel)).toBe('N');
+    expect(initialGear(manual, {})).toBe('N');
+    expect(shiftGear(manual, 'N', 'up', 0, {})).toBe(1);
+  });
+
+  it('shifts up one gear at upRpm with the throttle open, never within minIntervalS', () => {
+    const at = (/** @type {number} */ gear, /** @type {number} */ rpm, throttle = 1, sinceShiftS = 5) => {
+      const wheelSpin = spinAt(gear, rpm);
+      return autoShiftRatio(manual, gear, { throttle, speedMps: wheelSpin * r, wheelSpin, sinceShiftS });
+    };
+    expect(at(1, upRpm)).toBe(2);
+    expect(at(1, upRpm - 1)).toBe(1);
+    expect(at(1, upRpm, 0)).toBe(1);
+    expect(at(1, upRpm, 1, minIntervalS - 0.01)).toBe(1);
+    expect(at(5, 6000)).toBe(5);
+    expect(at(3, (upRpm + downRpm) / 2)).toBe(3);
+  });
+
+  it('shifts down to the highest gear above downRpm, landing below upRpm', () => {
+    for (let g = 2; g <= 5; g += 1) {
+      for (let rpm = 50; rpm < downRpm; rpm += 50) {
+        const wheelSpin = spinAt(g, rpm);
+        const next = autoShiftRatio(manual, g, { throttle: 0, speedMps: Math.max(1, wheelSpin * r), wheelSpin, sinceShiftS: 5 });
+        expect(next).toBeLessThan(g);
+        const after = wheelSpin * manual.ratios[next - 1] * manual.finalDrive * RPM_PER_RAD_S;
+        expect(after).toBeLessThan(upRpm);
+        if (next > 1) expect(after).toBeGreaterThan(downRpm);
+      }
+    }
+    // Every up-shift lands above downRpm, so an up-shift cannot trigger a down-shift.
+    for (let g = 1; g < 5; g += 1) expect((upRpm * manual.ratios[g]) / manual.ratios[g - 1]).toBeGreaterThan(downRpm);
+  });
+
+  it('engages 1 at once near standstill and rejects a ratio that does not exist', () => {
+    const still = { throttle: 1, speedMps: AUTO_SHIFT_STANDSTILL_MPS / 2, wheelSpin: 0, sinceShiftS: 0 };
+    expect(autoShiftRatio(manual, 4, still)).toBe(1);
+    expect(() => autoShiftRatio(manual, 0, still)).toThrow(RangeError);
+    expect(() => autoShiftRatio(manual, 6, still)).toThrow(RangeError);
+    expect(() => autoShiftRatio(manual, 1.5, still)).toThrow(RangeError);
   });
 });

@@ -340,7 +340,7 @@ export function planDrive(map, vehicleInfo, options = {}) {
     speed.push({ t, value: v });
     sPerTick.push(s);
 
-    const step = stepActors(actorState, map, fp, v, DT);
+    const step = stepActors(actorState, map, [fp], v, DT);
     actorState = step.state;
     poses = step.poses;
     s = Math.min(total, s + v * DT);

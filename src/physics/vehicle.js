@@ -7,7 +7,7 @@
 import { DT } from '../contracts/units.js';
 import { headingOf } from '../geometry/index.js';
 import { GROUP, WHEEL_RAY_GROUPS, interactionGroups } from './collision-groups.js';
-import { driveForce, initialGear, shiftGear } from './gearbox.js';
+import { autoShiftRatio, driveForce, initialGear, shiftGear } from './gearbox.js';
 import { stepFall } from './fall.js';
 import { isotropicFrictionSlip, wheelSkids } from './skid.js';
 import { fourWheelCommands } from './rigs/four-wheel.js';
@@ -93,6 +93,12 @@ export function steeringLock(tuning, speedMps) {
 }
 
 /**
+ * @typedef {object} VehicleOptions
+ * @property {boolean} [autoGearbox] Manual gearbox: drive it through the R, N, D selector with
+ *   automatic ratio changes. An automatic gearbox ignores it.
+ */
+
+/**
  * Builds the player vehicle in a world.
  * @param {Rapier} R Initialised Rapier module.
  * @param {World} world World.
@@ -100,10 +106,15 @@ export function steeringLock(tuning, speedMps) {
  * @param {number} surfaceGrip Map grip multiplier (1 dry).
  * @param {{x: number, z: number}} pos Start position.
  * @param {number} heading Start heading.
+ * @param {VehicleOptions} [options] Options; default the plain gearbox.
  * @returns {PhysicsVehicle} Vehicle.
  */
-export function createVehicle(R, world, tuning, surfaceGrip, pos, heading) {
+export function createVehicle(R, world, tuning, surfaceGrip, pos, heading, options = {}) {
   if (!(surfaceGrip > 0)) throw new RangeError(`surfaceGrip must be positive, got ${surfaceGrip}`);
+  const gearbox = tuning.gearbox;
+  const autoShift = gearbox.kind === 'manual' && options.autoGearbox === true;
+  if (autoShift && !gearbox.autoShift) throw new Error(`Vehicle ${tuning.id} has no autoShift tuning`);
+  const shiftMode = { autoShift };
   const body = world.createRigidBody(
     R.RigidBodyDesc.dynamic()
       .setTranslation(pos.x, tuning.spawnHeight, pos.z)
@@ -140,7 +151,11 @@ export function createVehicle(R, world, tuning, surfaceGrip, pos, heading) {
   const commands = tuning.rig === 'two-wheel' ? twoWheelCommands : fourWheelCommands;
   const drivenIdx = tuning.wheels.flatMap((w, i) => (w.driven ? [i] : []));
 
-  let gear = initialGear(tuning.gearbox);
+  let gear = initialGear(gearbox, shiftMode);
+  // Auto-shift only: the ratio engaged behind the selector's D, and the time since it changed. It
+  // is kept through N and R, so D re-engages at a ratio that suits the speed.
+  let engaged = 1;
+  let sinceShiftS = 0;
   let steerAngle = 0;
   let rpm = tuning.gearbox.idleRpm;
   let fallHeldS = -1;
@@ -179,6 +194,7 @@ export function createVehicle(R, world, tuning, surfaceGrip, pos, heading) {
       body.setLinvel({ x: 0, y: 0, z: 0 }, true);
       body.setAngvel({ x: 0, y: 0, z: 0 }, true);
       steerAngle = 0;
+      engaged = 1;
       fallHeldS = -1;
       spin = spin.map(() => 0);
       skids = skids.map(() => false);
@@ -190,7 +206,7 @@ export function createVehicle(R, world, tuning, surfaceGrip, pos, heading) {
 
     prepare(input) {
       const speed = speedNow();
-      gear = shiftGear(tuning.gearbox, gear, input.gearCmd, speed);
+      gear = shiftGear(gearbox, gear, input.gearCmd, speed, shiftMode);
 
       // Steering: −input.steer because ControlInput +1 is right and the wheel angle + is left.
       const target = -input.steer * steeringLock(tuning, speed);
@@ -198,7 +214,20 @@ export function createVehicle(R, world, tuning, surfaceGrip, pos, heading) {
       steerAngle += Math.max(-maxDelta, Math.min(maxDelta, target - steerAngle));
 
       const drivenSpin = drivenIdx.reduce((sum, i) => sum + spin[i], 0) / Math.max(1, drivenIdx.length);
-      const drive = driveForce(tuning.gearbox, gear, input.throttle, speed, drivenSpin, tuning.wheelRadius);
+      /** @type {Gear} */
+      let driveGear = gear;
+      if (autoShift && gearbox.kind === 'manual') {
+        sinceShiftS += DT;
+        if (gear === 'D') {
+          const next = autoShiftRatio(gearbox, engaged, { throttle: input.throttle, speedMps: speed, wheelSpin: drivenSpin, sinceShiftS });
+          if (next !== engaged) {
+            engaged = next;
+            sinceShiftS = 0;
+          }
+          driveGear = /** @type {Gear} */ (engaged);
+        }
+      }
+      const drive = driveForce(gearbox, driveGear, input.throttle, speed, drivenSpin, tuning.wheelRadius);
       rpm = drive.rpm;
       commands(tuning, input, drive.forceN, steerAngle).forEach((c, i) => {
         controller.setWheelEngineForce(i, c.engine);

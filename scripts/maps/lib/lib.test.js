@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pointInPolygon, polylineLength } from '../../../src/geometry/index.js';
 import { compileMap } from './elements.js';
-import { carriageway, continuation, laneSpan, locateOnWay, splitNetwork } from './graph.js';
+import { STUB_M, carriageway, continuation, laneSpan, locateOnWay, osmCorridor, splitNetwork } from './graph.js';
 import { buildRoad, convexHull, growPolygon, parseLineSpec } from './lanes.js';
 import { bboxCentre, createProjection } from './project.js';
 import { isMarkedCrossing, tutorialSpec } from './source.js';
@@ -333,5 +333,79 @@ describe('zones and elements', () => {
     const building = map.obstacles.find((o) => o.kind === 'building');
     expect(Math.min(...(building?.footprint ?? []).map((p) => p[1]))).toBeCloseTo(7);
     expect(() => compileTutorial({ buildings: [{ way: 'w1', side: 'right', fromS: 150, toS: 250 }] })).toThrow(/runs off way|overlaps/);
+  });
+});
+
+describe('side-road stubs', () => {
+  const proj = createProjection({ lat: 10, lon: 106 });
+  /**
+   * OSM way element from x/z points.
+   * @param {number} id Way id.
+   * @param {Array<[number, [number, number]]>} nodes Node id and position pairs.
+   * @param {Record<string, string>} tags Tags.
+   * @returns {import('./graph.js').OsmElement} Way.
+   */
+  const osmWay = (id, nodes, tags) => ({
+    type: 'way',
+    id,
+    nodes: nodes.map(([n]) => n),
+    geometry: nodes.map(([, p]) => proj.toLatLon(p[0], p[1])),
+    tags,
+  });
+  // Route way 1 runs east through nodes 2 and 3. "Phố A" leaves node 2 northwards as way 10 and
+  // continues as way 11; an unnamed lane (way 20) leaves it southwards for 40 m; "Phố B" (way 30)
+  // leaves node 3 north-westwards and would cross "Phố A" about 110 m out.
+  const raw = {
+    elements: [
+      osmWay(1, [[1, [-200, 0]], [2, [0, 0]], [3, [80, 0]], [4, [200, 0]]], { highway: 'secondary' }),
+      osmWay(10, [[2, [0, 0]], [11, [0, -50]]], { highway: 'residential', name: 'Phố A' }),
+      osmWay(11, [[11, [0, -50]], [12, [0, -200]]], { highway: 'residential', name: 'Phố A' }),
+      osmWay(20, [[2, [0, 0]], [21, [0, 40]]], { highway: 'residential' }),
+      osmWay(30, [[3, [80, 0]], [31, [-40, -110]]], { highway: 'residential', name: 'Phố B' }),
+    ],
+  };
+  /** @type {import('./graph.js').WayAttributes} */
+  const attributes = (_w, oneway) => ({
+    divided: false,
+    priority: false,
+    forward: 1,
+    backward: oneway ? 0 : 1,
+    centerLine: parseLineSpec('dashed', 'c'),
+    laneLine: parseLineSpec('dashed', 'l'),
+    pavement: { left: 3, right: 3 },
+  });
+  /**
+   * @param {import('./graph.js').Network} network Network.
+   * @param {string} id Way id.
+   * @returns {number} Way length.
+   */
+  const length = (network, id) => {
+    const w = network.ways.find((x) => x.id === id);
+    if (!w) throw new Error(`no way ${id}`);
+    return polylineLength(w.nodeIds.map((n) => /** @type {{pos: [number, number]}} */ (network.nodes.get(n)).pos));
+  };
+
+  it('keeps today\'s 30 m stubs by default', () => {
+    const { network, stubNotes } = osmCorridor(raw, [1], proj, attributes);
+    expect(length(network, 'w10-2-out')).toBeCloseTo(STUB_M, 6);
+    expect(length(network, 'w20-2-out')).toBeCloseTo(STUB_M, 6);
+    expect(stubNotes).toEqual([]);
+  });
+
+  it('follows the same street to the asked length, keeps its bends, and logs short or clipped stubs', () => {
+    const { network, stubNotes } = osmCorridor(raw, [1], proj, attributes, { stubM: 120, laneWidth: 3.5 });
+    // Way 10 ends at 50 m; way 11 of the same name carries it on to 120 m.
+    expect(length(network, 'w10-2-out')).toBeCloseTo(120, 6);
+    const w10 = network.ways.find((w) => w.id === 'w10-2-out');
+    expect(w10?.nodeIds).toEqual(['n2', 'n10@2-out-p1', 'n10@2-out']);
+    expect(network.nodes.get('n11')).toBeUndefined();
+    // The unnamed lane ends at 40 m; Phố B is cut back where it would overlap Phố A.
+    expect(length(network, 'w20-2-out')).toBeCloseTo(40, 6);
+    const w30 = length(network, 'w30-3-out');
+    expect(w30).toBeGreaterThanOrEqual(STUB_M);
+    expect(w30).toBeLessThan(110);
+    expect(stubNotes.map((n) => [n.osmWayId, n.side])).toEqual([[20, 'out'], [30, 'out']]);
+    expect(stubNotes[0].reason).toMatch(/ends after 40 m/);
+    expect(stubNotes[1].reason).toMatch(/overlaps w10-2-out/);
   });
 });

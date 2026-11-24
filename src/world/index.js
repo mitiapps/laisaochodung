@@ -20,3 +20,17 @@ export {
   insideCheckpoint,
   stepRoute,
 } from './route.js';
+export {
+  MULBERRY_INCREMENT,
+  createStream,
+  hash32,
+  hashString,
+  mulberry32,
+  nextUint32,
+  normalish,
+  pick,
+  range,
+  splitmix32,
+  streamFor,
+  uniform,
+} from './random.js';

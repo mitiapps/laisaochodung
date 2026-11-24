@@ -35,6 +35,12 @@ export const carSedan = {
     idleRpm: 800,
     redlineRpm: 6500,
     maxReverseShiftKmh: 2,
+    // Auto-shift assist, paramBasis: design. `upRpm` sits on the scenario driver's manual shift
+    // points (about 2,060–2,350 rpm). Measured: 0–60 km/h in 8.9 s (manual schedule 8.4 s), up-shifts
+    // at 17.5, 28.8, 42.9 and 60.0 km/h; steady 30 km/h holds 3rd at about 1,450 rpm and
+    // 50 km/h holds 4th at about 1,730 rpm, with no shift in 10 s. The lowest rpm right after an
+    // up-shift is 2,100 × 2.1 / 3.5 = 1,260, above `downRpm`, so the box cannot hunt.
+    autoShift: { upRpm: 2100, downRpm: 1100, minIntervalS: 0.8 },
   },
   fall: null,
 };

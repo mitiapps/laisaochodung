@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { assertFrame } from '../contracts/assert-frame.js';
 import { DT, kmhToMps } from '../contracts/units.js';
 import { createSim, sanitizeInput } from './index.js';
+import { parseAssists } from './sim.js';
 
 /** @typedef {import('../contracts/index.js').GameMap} GameMap */
 /** @typedef {import('../contracts/index.js').Frame} Frame */
@@ -312,5 +313,74 @@ describe('createSim', () => {
     const sim = createSim(RAPIER, MAP, CAR);
     sim.dispose();
     expect(() => sim.step(sanitizeInput({}))).toThrow(/disposed/);
+  });
+});
+
+describe('createSim assists option', () => {
+  /** @type {GameMap[]} */
+  const SHIPPED = JSON.parse(readFileSync(new URL('../../public/maps/index.json', import.meta.url), 'utf8')).map(
+    (/** @type {{id: string}} */ m) => JSON.parse(readFileSync(new URL(`../../public/maps/${m.id}.json`, import.meta.url), 'utf8')),
+  );
+
+  /**
+   * Policy that uses every control: gears, throttle, steering, brakes, indicators, lights, horn.
+   * @param {Frame | null} _prev Last frame.
+   * @param {number} k Step.
+   * @returns {Partial<ControlInput>} Input.
+   */
+  const busy = (_prev, k) => ({
+    throttle: k < 300 ? 0.7 : 0,
+    brakeFront: k >= 400 ? 0.5 : 0,
+    steer: Math.sin(k / 50) * 0.3,
+    gearCmd: k === 0 || k === 120 ? 'up' : null,
+    signalCmd: k === 10 ? 'left' : k === 200 ? 'right' : null,
+    lightsCmd: k === 5 ? 'cycle' : null,
+    horn: k % 97 === 0,
+  });
+
+  it('gives frames equal to no options with the assists absent or off, on every shipped map', () => {
+    expect(SHIPPED.length).toBeGreaterThan(0);
+    for (const map of SHIPPED) {
+      for (const veh of [CAR, SCOOTER]) {
+        const base = createSim(RAPIER, map, veh);
+        const fBase = run(base, 600, busy);
+        base.dispose();
+        for (const options of [{}, { assists: { autoGearbox: false, signalAutoCancel: null } }]) {
+          const sim = createSim(RAPIER, map, veh, options);
+          const f = run(sim, 600, busy);
+          sim.dispose();
+          expect(f, `${map.id} ${veh.id}`).toEqual(fBase);
+        }
+      }
+    }
+  });
+
+  it('starts the car in D with autoGearbox and keeps the scooter unchanged', () => {
+    const car = createSim(RAPIER, MAP, CAR, { assists: { autoGearbox: true, signalAutoCancel: null } });
+    const frames = run(car, 300, (prev) => ({ throttle: 1, steer: prev ? 2 * prev.ego.heading : 0 }));
+    car.dispose();
+    expect(frames[0].ego.gear).toBe('D');
+    expect(frames.every((f) => f.ego.gear === 'D')).toBe(true);
+    expect(frames[299].ego.speed).toBeGreaterThan(kmhToMps(20));
+    // The rpm falls at each up-shift.
+    const drops = frames.filter((f, i) => i > 0 && f.ego.rpm < frames[i - 1].ego.rpm - 300);
+    expect(drops.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('validates the assists', () => {
+    expect(parseAssists(undefined)).toEqual({ autoGearbox: false, signalAutoCancel: null });
+    expect(parseAssists({})).toEqual({ autoGearbox: false, signalAutoCancel: null });
+    expect(parseAssists({ autoGearbox: true, signalAutoCancel: { turnMinDeg: 45, clearM: 30 } })).toEqual({
+      autoGearbox: true,
+      signalAutoCancel: { turnMinDeg: 45, clearM: 30 },
+    });
+    expect(() => parseAssists(null)).toThrow(TypeError);
+    expect(() => parseAssists({ autoGearbox: 'yes' })).toThrow(TypeError);
+    expect(() => parseAssists({ signalAutoCancel: 30 })).toThrow(TypeError);
+    expect(() => parseAssists({ signalAutoCancel: { turnMinDeg: 0, clearM: 30 } })).toThrow(RangeError);
+    expect(() => parseAssists({ signalAutoCancel: { turnMinDeg: 45, clearM: -1 } })).toThrow(RangeError);
+    expect(() => parseAssists({ signalAutoCancel: { turnMinDeg: 45 } })).toThrow(RangeError);
+    expect(() => createSim(RAPIER, MAP, CAR, /** @type {never} */ (null))).toThrow(TypeError);
+    expect(() => createSim(RAPIER, MAP, CAR, { assists: /** @type {never} */ ({ autoGearbox: 1 }) })).toThrow(TypeError);
   });
 });

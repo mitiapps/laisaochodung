@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { footprint } from '../geometry/index.js';
 import { DT } from '../contracts/units.js';
+import { ACTOR_LIGHTS, NO_VIOLATIONS } from '../contracts/telemetry.js';
 import {
   CHECKPOINT_DEPTH_M,
   clockAt,
@@ -75,12 +76,12 @@ describe('clockAt', () => {
 describe('stepActors', () => {
   it('starts a time-triggered car and moves it speed · DT per step', () => {
     let state = createActorState(MAP);
-    const first = stepActors(state, MAP, AWAY, 0, DT);
+    const first = stepActors(state, MAP, [AWAY], 0, DT);
     const npc = first.poses.find((p) => p.id === 'npc-1');
     expect(npc).toMatchObject({ pos: { x: 195, z: -1.75 }, active: true, speed: 10 });
     expect(npc?.heading).toBeCloseTo(Math.PI);
     state = first.state;
-    const second = stepActors(state, MAP, AWAY, 0, DT);
+    const second = stepActors(state, MAP, [AWAY], 0, DT);
     expect(second.poses.find((p) => p.id === 'npc-1')?.pos.x).toBeCloseTo(195 - 10 * DT);
   });
 
@@ -89,35 +90,35 @@ describe('stepActors', () => {
     const blocker = footprint({ x: 195 - 2.25 - 6 - 2.25, z: -1.75 }, Math.PI, 4.5, 1.8);
     let state = createActorState(MAP);
     for (let i = 0; i < 120; i += 1) {
-      const r = stepActors(state, MAP, blocker, 0, DT);
+      const r = stepActors(state, MAP, [blocker], 0, DT);
       const npc = r.poses.find((p) => p.id === 'npc-1');
       expect(npc?.speed).toBe(0);
       expect(npc?.active).toBe(true);
       expect(npc?.pos.x).toBeCloseTo(195);
       state = r.state;
     }
-    const released = stepActors(state, MAP, AWAY, 0, DT);
+    const released = stepActors(state, MAP, [AWAY], 0, DT);
     expect(released.poses.find((p) => p.id === 'npc-1')?.speed).toBe(10);
-    expect(stepActors(released.state, MAP, AWAY, 0, DT).poses.find((p) => p.id === 'npc-1')?.pos.x).toBeLessThan(195);
+    expect(stepActors(released.state, MAP, [AWAY], 0, DT).poses.find((p) => p.id === 'npc-1')?.pos.x).toBeLessThan(195);
   });
 
   it('does not hold for a footprint in the opposite lane', () => {
     const beside = footprint({ x: 185, z: 1.75 }, 0, 4.5, 1.8);
-    const r = stepActors(createActorState(MAP), MAP, beside, 0, DT);
+    const r = stepActors(createActorState(MAP), MAP, [beside], 0, DT);
     expect(r.poses.find((p) => p.id === 'npc-1')?.speed).toBe(10);
   });
 
   it('starts a pedestrian only when the ego reaches its trigger, then holds it for a car on the crossing', () => {
     let state = createActorState(MAP);
-    let r = stepActors(state, MAP, AWAY, 0, DT);
+    let r = stepActors(state, MAP, [AWAY], 0, DT);
     expect(r.poses.find((p) => p.id === 'ped-1')?.active).toBe(false);
     const inTrigger = footprint({ x: 50, z: 1.75 }, 0, 4.5, 1.8);
-    r = stepActors(r.state, MAP, inTrigger, 10, DT);
+    r = stepActors(r.state, MAP, [inTrigger], 10, DT);
     expect(r.poses.find((p) => p.id === 'ped-1')).toMatchObject({ active: true, speed: 1.4 });
     state = r.state;
     // A car standing on the zebra right in front of the pedestrian.
     const onCrossing = footprint({ x: 92, z: -1.75 }, Math.PI, 4.5, 1.8);
-    r = stepActors(state, MAP, onCrossing, 0, DT);
+    r = stepActors(state, MAP, [onCrossing], 0, DT);
     expect(r.poses.find((p) => p.id === 'ped-1')?.speed).toBe(0);
   });
 
@@ -126,7 +127,7 @@ describe('stepActors', () => {
     /** @type {import('../contracts/index.js').ActorPose | undefined} */
     let last;
     for (let i = 0; i < 60 * 20 + 5; i += 1) {
-      const r = stepActors(state, MAP, AWAY, 0, DT);
+      const r = stepActors(state, MAP, [AWAY], 0, DT);
       last = r.poses.find((p) => p.id === 'npc-1');
       state = r.state;
     }
@@ -153,15 +154,40 @@ describe('stepActors', () => {
       ],
     };
     let state = createActorState(loopMap);
-    for (let i = 0; i < 60 * 4; i += 1) state = stepActors(state, loopMap, AWAY, 0, DT).state;
-    const pose = stepActors(state, loopMap, AWAY, 0, DT).poses[0];
+    for (let i = 0; i < 60 * 4; i += 1) state = stepActors(state, loopMap, [AWAY], 0, DT).state;
+    const pose = stepActors(state, loopMap, [AWAY], 0, DT).poses[0];
     expect(pose.active).toBe(true);
     expect(pose.pos.x).toBeCloseTo(0, 6);
     expect(pose.pos.z).toBeCloseTo(0, 6);
   });
 
   it('rejects a state built for another map', () => {
-    expect(() => stepActors({ t: 0, actors: [] }, MAP, AWAY, 0, DT)).toThrow();
+    expect(() => stepActors({ t: 0, actors: [] }, MAP, [AWAY], 0, DT)).toThrow();
+  });
+
+  it('holds for any blocker but fires polygon triggers only for the ego, the first blocker', () => {
+    const blocker = footprint({ x: 195 - 2.25 - 6 - 2.25, z: -1.75 }, Math.PI, 4.5, 1.8);
+    const inTrigger = footprint({ x: 50, z: 1.75 }, 0, 4.5, 1.8);
+    const r = stepActors(createActorState(MAP), MAP, [AWAY, blocker, inTrigger], 0, DT);
+    expect(r.poses.find((p) => p.id === 'npc-1')?.speed).toBe(0);
+    expect(r.poses.find((p) => p.id === 'ped-1')?.active).toBe(false);
+    const noEgo = stepActors(createActorState(MAP), MAP, [], 0, DT);
+    expect(noEgo.poses.find((p) => p.id === 'npc-1')).toMatchObject({ active: true, speed: 10 });
+    expect(noEgo.poses.find((p) => p.id === 'ped-1')?.active).toBe(false);
+    expect(() => stepActors(createActorState(MAP), MAP, /** @type {never} */ (AWAY), 0, DT)).toThrow(TypeError);
+  });
+
+  it('fills the traffic pose fields from the map actor with the shared constants', () => {
+    const { poses } = stepActors(createActorState(MAP), MAP, [AWAY], 0, DT);
+    poses.forEach((pose, i) => {
+      const actor = MAP.actors[i];
+      expect(pose).toMatchObject({ id: actor.id, model: actor.model, variant: 0, lengthM: actor.lengthM, widthM: actor.widthM });
+      expect(pose.lights).toBe(ACTOR_LIGHTS.off);
+      expect(pose.violations).toBe(NO_VIOLATIONS);
+      expect(pose.state).toBe(pose.speed > 0 ? 'moving' : 'stopped');
+    });
+    expect(poses.find((p) => p.id === 'npc-1')?.state).toBe('moving');
+    expect(poses.find((p) => p.id === 'ped-1')?.state).toBe('stopped');
   });
 });
 

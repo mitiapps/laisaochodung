@@ -19,6 +19,7 @@ import { clockAt, createActorState, createRouteState, stepActors, stepRoute, tra
 /** @typedef {import('../contracts/index.js').VehicleInfo} VehicleInfo */
 /** @typedef {import('../contracts/index.js').Frame} Frame */
 /** @typedef {import('../contracts/index.js').FrameEvent} FrameEvent */
+/** @typedef {import('../contracts/index.js').ActorPose} ActorPose */
 /** @typedef {import('../contracts/index.js').ControlInput} ControlInput */
 /** @typedef {import('../contracts/index.js').Gear} Gear */
 /** @typedef {import('../contracts/index.js').Indicators} Indicators */
@@ -65,6 +66,11 @@ import { clockAt, createActorState, createRouteState, stepActors, stepRoute, tra
  * @property {ControlChange[]} [controls] Control changes.
  * @property {ForcedEvent[]} [events] Injected events (collisions, falls, resets).
  * @property {boolean} [stopAtRunEnd] Stop after the frame with `finish` or `timeout`, default true.
+ * @property {(t: number) => ActorPose[]} [extraActors] Hand-placed traffic poses at time `t`,
+ *   appended after the scripted poses. Their footprints also hold scripted actors, as traffic
+ *   agents do. Poses should use the shared `ACTOR_LIGHTS` entries and frozen `violations` lists.
+ * @property {(t: number) => FrameEvent[]} [extraEvents] Events at time `t`, appended after the
+ *   `events` entries of that tick (for injected collisions with those poses).
  */
 
 /**
@@ -226,7 +232,9 @@ export function buildFrames(options) {
       compression: 0,
     }));
 
-    const actors = stepActors(actorState, map, fp, speed, DT);
+    const extra = options.extraActors ? options.extraActors(t) : [];
+    const blockers = [fp, ...extra.map((a) => footprint(a.pos, a.heading, a.lengthM, a.widthM))];
+    const actors = stepActors(actorState, map, blockers, speed, DT);
     actorState = actors.state;
     const route = stepRoute(routeState, map, { x: here.x, z: here.z }, t);
     routeState = route.state;
@@ -234,7 +242,7 @@ export function buildFrames(options) {
     /** @type {FrameEvent[]} */
     const events = [];
     if (tick === 0) events.push({ type: 'run-start' });
-    events.push(...(forced.get(tick) ?? []), ...route.events);
+    events.push(...(forced.get(tick) ?? []), ...(options.extraEvents ? options.extraEvents(t) : []), ...route.events);
 
     frames.push({
       tick,
@@ -256,7 +264,7 @@ export function buildFrames(options) {
         wheels,
         footprint: fp,
       },
-      actors: actors.poses,
+      actors: extra.length > 0 ? [...actors.poses, ...extra] : actors.poses,
       trafficLights: trafficLightStates(map, t),
       route: route.nav,
       env: { clockMin: clockAt(map.environment, t), weather: map.environment.weather },

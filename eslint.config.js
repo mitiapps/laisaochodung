@@ -49,7 +49,8 @@ const PURE_RUNTIME_RULES = {
   ],
 };
 
-const TESTS = ['**/*.test.js'];
+// Colocated tests and benches run only under Vitest in Node, so the purity guard skips them.
+const TESTS = ['**/*.test.js', '**/*.bench.js'];
 
 /**
  * One config block per pure directory.
@@ -89,7 +90,7 @@ export default defineConfig([
   },
   { languageOptions: { globals: { ...globals.browser } } },
   {
-    files: ['scripts/**/*.js', '*.config.js', 'tests/**/*.js', '**/*.test.js'],
+    files: ['scripts/**/*.js', '*.config.js', 'tests/**/*.js', ...TESTS],
     languageOptions: { globals: { ...globals.node } },
   },
   { files: ['**/*.svelte', '**/*.svelte.js'], languageOptions: { parserOptions: { svelteConfig } } },
@@ -102,6 +103,15 @@ export default defineConfig([
   pureBlock(
     'src/world',
     importRule('\\./|\\.\\./(contracts|geometry)/', 'src/world imports only src/contracts and src/geometry.'),
+  ),
+  // Nested src/world directories: siblings one level up stay inside src/world; anything two levels
+  // up must be src/contracts or src/geometry.
+  pureBlock(
+    'src/world/traffic',
+    importRule(
+      '\\./|\\.\\./(?!\\.\\.?/)[^/]+\\.js$|\\.\\./\\.\\./(contracts|geometry)/',
+      'src/world imports only src/contracts and src/geometry.',
+    ),
   ),
   pureBlock(
     'src/testing',

@@ -1,0 +1,1673 @@
+{
+  "schemaVersion": 1,
+  "id": "map-junction",
+  "name": {
+    "vi": "Ngã tư thử nghiệm"
+  },
+  "kind": "tutorial",
+  "environment": {
+    "startClockMin": 600,
+    "weather": "clear",
+    "surfaceGrip": 1
+  },
+  "route": {
+    "start": {
+      "pos": {
+        "x": -150,
+        "z": 1.75
+      },
+      "heading": 0
+    },
+    "checkpoints": [
+      {
+        "pos": {
+          "x": -40,
+          "z": 1.75
+        },
+        "heading": 0
+      },
+      {
+        "pos": {
+          "x": 60,
+          "z": 1.75
+        },
+        "heading": 0
+      }
+    ],
+    "finish": {
+      "polygon": [
+        [
+          140,
+          0
+        ],
+        [
+          150,
+          0
+        ],
+        [
+          150,
+          3.5
+        ],
+        [
+          140,
+          3.5
+        ]
+      ]
+    },
+    "timeLimitS": 120
+  },
+  "roads": [
+    {
+      "id": "rw",
+      "class": "secondary",
+      "divided": false,
+      "oneway": false,
+      "lanes": [
+        {
+          "id": "rw-e0",
+          "dir": "forward",
+          "index": 0,
+          "polygon": [
+            [
+              -157.0,
+              3.5
+            ],
+            [
+              -7.0,
+              3.5
+            ],
+            [
+              -7.0,
+              7
+            ],
+            [
+              -157.0,
+              7
+            ]
+          ],
+          "centerline": [
+            [
+              -157.0,
+              5.25
+            ],
+            [
+              -7.0,
+              5.25
+            ]
+          ]
+        },
+        {
+          "id": "rw-e1",
+          "dir": "forward",
+          "index": 1,
+          "polygon": [
+            [
+              -157.0,
+              0
+            ],
+            [
+              -7.0,
+              0
+            ],
+            [
+              -7.0,
+              3.5
+            ],
+            [
+              -157.0,
+              3.5
+            ]
+          ],
+          "centerline": [
+            [
+              -157.0,
+              1.75
+            ],
+            [
+              -7.0,
+              1.75
+            ]
+          ]
+        },
+        {
+          "id": "rw-w0",
+          "dir": "backward",
+          "index": 0,
+          "polygon": [
+            [
+              -157.0,
+              -3.5
+            ],
+            [
+              -7.0,
+              -3.5
+            ],
+            [
+              -7.0,
+              0
+            ],
+            [
+              -157.0,
+              0
+            ]
+          ],
+          "centerline": [
+            [
+              -7.0,
+              -1.75
+            ],
+            [
+              -157.0,
+              -1.75
+            ]
+          ]
+        }
+      ],
+      "laneLines": [
+        {
+          "id": "rw-k",
+          "left": "rw-e1",
+          "right": "rw-e0",
+          "type": "dashed",
+          "polyline": [
+            [
+              -157.0,
+              3.5
+            ],
+            [
+              -7.0,
+              3.5
+            ]
+          ],
+          "crossable": "both"
+        },
+        {
+          "id": "rw-c",
+          "left": "rw-w0",
+          "right": "rw-e1",
+          "type": "dashed",
+          "polyline": [
+            [
+              -157.0,
+              0
+            ],
+            [
+              -7.0,
+              0
+            ]
+          ],
+          "crossable": "both"
+        }
+      ]
+    },
+    {
+      "id": "re",
+      "class": "secondary",
+      "divided": false,
+      "oneway": false,
+      "lanes": [
+        {
+          "id": "re-e0",
+          "dir": "forward",
+          "index": 0,
+          "polygon": [
+            [
+              7.0,
+              0
+            ],
+            [
+              157.0,
+              0
+            ],
+            [
+              157.0,
+              3.5
+            ],
+            [
+              7.0,
+              3.5
+            ]
+          ],
+          "centerline": [
+            [
+              7.0,
+              1.75
+            ],
+            [
+              157.0,
+              1.75
+            ]
+          ]
+        },
+        {
+          "id": "re-w0",
+          "dir": "backward",
+          "index": 0,
+          "polygon": [
+            [
+              7.0,
+              -3.5
+            ],
+            [
+              157.0,
+              -3.5
+            ],
+            [
+              157.0,
+              0
+            ],
+            [
+              7.0,
+              0
+            ]
+          ],
+          "centerline": [
+            [
+              157.0,
+              -1.75
+            ],
+            [
+              7.0,
+              -1.75
+            ]
+          ]
+        }
+      ],
+      "laneLines": [
+        {
+          "id": "re-c",
+          "left": "re-w0",
+          "right": "re-e0",
+          "type": "dashed",
+          "polyline": [
+            [
+              7.0,
+              0
+            ],
+            [
+              157.0,
+              0
+            ]
+          ],
+          "crossable": "both"
+        }
+      ]
+    },
+    {
+      "id": "rn",
+      "class": "tertiary",
+      "divided": false,
+      "oneway": false,
+      "lanes": [
+        {
+          "id": "rn-s",
+          "dir": "forward",
+          "index": 0,
+          "polygon": [
+            [
+              -3.5,
+              -157.0
+            ],
+            [
+              0,
+              -157.0
+            ],
+            [
+              0,
+              -7.0
+            ],
+            [
+              -3.5,
+              -7.0
+            ]
+          ],
+          "centerline": [
+            [
+              -1.75,
+              -157.0
+            ],
+            [
+              -1.75,
+              -7.0
+            ]
+          ]
+        },
+        {
+          "id": "rn-n",
+          "dir": "backward",
+          "index": 0,
+          "polygon": [
+            [
+              0,
+              -157.0
+            ],
+            [
+              3.5,
+              -157.0
+            ],
+            [
+              3.5,
+              -7.0
+            ],
+            [
+              0,
+              -7.0
+            ]
+          ],
+          "centerline": [
+            [
+              1.75,
+              -7.0
+            ],
+            [
+              1.75,
+              -157.0
+            ]
+          ]
+        }
+      ],
+      "laneLines": [
+        {
+          "id": "rn-c",
+          "left": "rn-n",
+          "right": "rn-s",
+          "type": "dashed",
+          "polyline": [
+            [
+              0,
+              -157.0
+            ],
+            [
+              0,
+              -7.0
+            ]
+          ],
+          "crossable": "both"
+        }
+      ]
+    },
+    {
+      "id": "rs",
+      "class": "tertiary",
+      "divided": false,
+      "oneway": false,
+      "lanes": [
+        {
+          "id": "rs-s",
+          "dir": "forward",
+          "index": 0,
+          "polygon": [
+            [
+              -3.5,
+              7.0
+            ],
+            [
+              0,
+              7.0
+            ],
+            [
+              0,
+              157.0
+            ],
+            [
+              -3.5,
+              157.0
+            ]
+          ],
+          "centerline": [
+            [
+              -1.75,
+              7.0
+            ],
+            [
+              -1.75,
+              157.0
+            ]
+          ]
+        },
+        {
+          "id": "rs-n",
+          "dir": "backward",
+          "index": 0,
+          "polygon": [
+            [
+              0,
+              7.0
+            ],
+            [
+              3.5,
+              7.0
+            ],
+            [
+              3.5,
+              157.0
+            ],
+            [
+              0,
+              157.0
+            ]
+          ],
+          "centerline": [
+            [
+              1.75,
+              157.0
+            ],
+            [
+              1.75,
+              7.0
+            ]
+          ]
+        }
+      ],
+      "laneLines": [
+        {
+          "id": "rs-c",
+          "left": "rs-n",
+          "right": "rs-s",
+          "type": "dashed",
+          "polyline": [
+            [
+              0,
+              7.0
+            ],
+            [
+              0,
+              157.0
+            ]
+          ],
+          "crossable": "both"
+        }
+      ]
+    }
+  ],
+  "junctions": [
+    {
+      "id": "j1",
+      "polygon": [
+        [
+          -7.0,
+          -7.0
+        ],
+        [
+          7.0,
+          -7.0
+        ],
+        [
+          7.0,
+          7.0
+        ],
+        [
+          -7.0,
+          7.0
+        ]
+      ],
+      "roadIds": [
+        "rw",
+        "re",
+        "rn",
+        "rs"
+      ],
+      "signalized": true,
+      "roundabout": false,
+      "priorityRoadIds": []
+    }
+  ],
+  "zones": [
+    {
+      "id": "z-built-up",
+      "type": "built-up",
+      "polygon": [
+        [
+          -162.0,
+          -162.0
+        ],
+        [
+          162.0,
+          -162.0
+        ],
+        [
+          162.0,
+          162.0
+        ],
+        [
+          -162.0,
+          162.0
+        ]
+      ],
+      "laneIds": [
+        "rw-e0",
+        "rw-e1",
+        "rw-w0",
+        "re-e0",
+        "re-w0",
+        "rn-s",
+        "rn-n",
+        "rs-s",
+        "rs-n"
+      ],
+      "signIds": [
+        "s-r420"
+      ],
+      "source": "tutorial"
+    }
+  ],
+  "stopLines": [
+    {
+      "id": "sl-w",
+      "segment": [
+        [
+          -9,
+          0
+        ],
+        [
+          -9,
+          7
+        ]
+      ],
+      "laneIds": [
+        "rw-e0",
+        "rw-e1"
+      ],
+      "control": "signal",
+      "signalId": "sig-w"
+    },
+    {
+      "id": "sl-e",
+      "segment": [
+        [
+          9,
+          -3.5
+        ],
+        [
+          9,
+          0
+        ]
+      ],
+      "laneIds": [
+        "re-w0"
+      ],
+      "control": "signal",
+      "signalId": "sig-e"
+    },
+    {
+      "id": "sl-n",
+      "segment": [
+        [
+          -3.5,
+          -9
+        ],
+        [
+          0,
+          -9
+        ]
+      ],
+      "laneIds": [
+        "rn-s"
+      ],
+      "control": "signal",
+      "signalId": "sig-n"
+    },
+    {
+      "id": "sl-s",
+      "segment": [
+        [
+          0,
+          9
+        ],
+        [
+          3.5,
+          9
+        ]
+      ],
+      "laneIds": [
+        "rs-n"
+      ],
+      "control": "signal",
+      "signalId": "sig-s"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig-w",
+      "pos": {
+        "x": -10,
+        "z": 8.5
+      },
+      "heading": 0,
+      "stopLineIds": [
+        "sl-w"
+      ],
+      "cycle": {
+        "green": 27,
+        "yellow": 3,
+        "red": 30,
+        "offset": 0
+      }
+    },
+    {
+      "id": "sig-e",
+      "pos": {
+        "x": 10,
+        "z": -5
+      },
+      "heading": 3.141592653589793,
+      "stopLineIds": [
+        "sl-e"
+      ],
+      "cycle": {
+        "green": 27,
+        "yellow": 3,
+        "red": 30,
+        "offset": 0
+      }
+    },
+    {
+      "id": "sig-n",
+      "pos": {
+        "x": -5,
+        "z": -10
+      },
+      "heading": -1.5707963267948966,
+      "stopLineIds": [
+        "sl-n"
+      ],
+      "cycle": {
+        "green": 27,
+        "yellow": 3,
+        "red": 30,
+        "offset": 30
+      }
+    },
+    {
+      "id": "sig-s",
+      "pos": {
+        "x": 5,
+        "z": 10
+      },
+      "heading": 1.5707963267948966,
+      "stopLineIds": [
+        "sl-s"
+      ],
+      "cycle": {
+        "green": 27,
+        "yellow": 3,
+        "red": 30,
+        "offset": 30
+      }
+    }
+  ],
+  "crosswalks": [],
+  "restrictions": [],
+  "entries": [],
+  "pavements": [],
+  "signs": [
+    {
+      "id": "s-r420",
+      "code": "R.420",
+      "pos": {
+        "x": -152,
+        "z": 8.5
+      },
+      "heading": 0,
+      "source": "tutorial"
+    }
+  ],
+  "obstacles": [
+    {
+      "id": "ob-shophouse-1",
+      "kind": "building",
+      "footprint": [
+        [
+          -60,
+          9
+        ],
+        [
+          -55,
+          9
+        ],
+        [
+          -55,
+          25
+        ],
+        [
+          -60,
+          25
+        ]
+      ],
+      "height": 12,
+      "use": "shophouse",
+      "floors": 4,
+      "frontEdge": 0
+    }
+  ],
+  "actors": [],
+  "connectors": [
+    {
+      "id": "c-rw-e0-re-e0",
+      "fromLaneId": "rw-e0",
+      "toLaneId": "re-e0",
+      "junctionId": "j1",
+      "centerline": [
+        [
+          -7.0,
+          5.25
+        ],
+        [
+          7.0,
+          1.75
+        ]
+      ],
+      "turn": "straight",
+      "stopLineId": "sl-w"
+    },
+    {
+      "id": "c-rw-e0-rs-s",
+      "fromLaneId": "rw-e0",
+      "toLaneId": "rs-s",
+      "junctionId": "j1",
+      "centerline": [
+        [
+          -7.0,
+          5.25
+        ],
+        [
+          -5.7695,
+          5.2773
+        ],
+        [
+          -4.7031,
+          5.3594
+        ],
+        [
+          -3.8008,
+          5.4961
+        ],
+        [
+          -3.0625,
+          5.6875
+        ],
+        [
+          -2.4883,
+          5.9336
+        ],
+        [
+          -2.0781,
+          6.2344
+        ],
+        [
+          -1.832,
+          6.5898
+        ],
+        [
+          -1.75,
+          7.0
+        ]
+      ],
+      "turn": "right",
+      "stopLineId": "sl-w"
+    },
+    {
+      "id": "c-rw-e1-re-e0",
+      "fromLaneId": "rw-e1",
+      "toLaneId": "re-e0",
+      "junctionId": "j1",
+      "centerline": [
+        [
+          -7.0,
+          1.75
+        ],
+        [
+          7.0,
+          1.75
+        ]
+      ],
+      "turn": "straight",
+      "stopLineId": "sl-w"
+    },
+    {
+      "id": "c-rw-e1-rn-n",
+      "fromLaneId": "rw-e1",
+      "toLaneId": "rn-n",
+      "junctionId": "j1",
+      "centerline": [
+        [
+          -7.0,
+          1.75
+        ],
+        [
+          -4.9492,
+          1.6133
+        ],
+        [
+          -3.1719,
+          1.2031
+        ],
+        [
+          -1.668,
+          0.5195
+        ],
+        [
+          -0.4375,
+          -0.4375
+        ],
+        [
+          0.5195,
+          -1.668
+        ],
+        [
+          1.2031,
+          -3.1719
+        ],
+        [
+          1.6133,
+          -4.9492
+        ],
+        [
+          1.75,
+          -7.0
+        ]
+      ],
+      "turn": "left",
+      "stopLineId": "sl-w"
+    },
+    {
+      "id": "c-re-w0-rw-w0",
+      "fromLaneId": "re-w0",
+      "toLaneId": "rw-w0",
+      "junctionId": "j1",
+      "centerline": [
+        [
+          7.0,
+          -1.75
+        ],
+        [
+          -7.0,
+          -1.75
+        ]
+      ],
+      "turn": "straight",
+      "stopLineId": "sl-e"
+    },
+    {
+      "id": "c-re-w0-rn-n",
+      "fromLaneId": "re-w0",
+      "toLaneId": "rn-n",
+      "junctionId": "j1",
+      "centerline": [
+        [
+          7.0,
+          -1.75
+        ],
+        [
+          5.7695,
+          -1.832
+        ],
+        [
+          4.7031,
+          -2.0781
+        ],
+        [
+          3.8008,
+          -2.4883
+        ],
+        [
+          3.0625,
+          -3.0625
+        ],
+        [
+          2.4883,
+          -3.8008
+        ],
+        [
+          2.0781,
+          -4.7031
+        ],
+        [
+          1.832,
+          -5.7695
+        ],
+        [
+          1.75,
+          -7.0
+        ]
+      ],
+      "turn": "right",
+      "stopLineId": "sl-e"
+    },
+    {
+      "id": "c-re-w0-rs-s",
+      "fromLaneId": "re-w0",
+      "toLaneId": "rs-s",
+      "junctionId": "j1",
+      "centerline": [
+        [
+          7.0,
+          -1.75
+        ],
+        [
+          4.9492,
+          -1.6133
+        ],
+        [
+          3.1719,
+          -1.2031
+        ],
+        [
+          1.668,
+          -0.5195
+        ],
+        [
+          0.4375,
+          0.4375
+        ],
+        [
+          -0.5195,
+          1.668
+        ],
+        [
+          -1.2031,
+          3.1719
+        ],
+        [
+          -1.6133,
+          4.9492
+        ],
+        [
+          -1.75,
+          7.0
+        ]
+      ],
+      "turn": "left",
+      "stopLineId": "sl-e"
+    },
+    {
+      "id": "c-rn-s-rs-s",
+      "fromLaneId": "rn-s",
+      "toLaneId": "rs-s",
+      "junctionId": "j1",
+      "centerline": [
+        [
+          -1.75,
+          -7.0
+        ],
+        [
+          -1.75,
+          7.0
+        ]
+      ],
+      "turn": "straight",
+      "stopLineId": "sl-n"
+    },
+    {
+      "id": "c-rn-s-rw-w0",
+      "fromLaneId": "rn-s",
+      "toLaneId": "rw-w0",
+      "junctionId": "j1",
+      "centerline": [
+        [
+          -1.75,
+          -7.0
+        ],
+        [
+          -1.832,
+          -5.7695
+        ],
+        [
+          -2.0781,
+          -4.7031
+        ],
+        [
+          -2.4883,
+          -3.8008
+        ],
+        [
+          -3.0625,
+          -3.0625
+        ],
+        [
+          -3.8008,
+          -2.4883
+        ],
+        [
+          -4.7031,
+          -2.0781
+        ],
+        [
+          -5.7695,
+          -1.832
+        ],
+        [
+          -7.0,
+          -1.75
+        ]
+      ],
+      "turn": "right",
+      "stopLineId": "sl-n"
+    },
+    {
+      "id": "c-rn-s-re-e0",
+      "fromLaneId": "rn-s",
+      "toLaneId": "re-e0",
+      "junctionId": "j1",
+      "centerline": [
+        [
+          -1.75,
+          -7.0
+        ],
+        [
+          -1.6133,
+          -4.9492
+        ],
+        [
+          -1.2031,
+          -3.1719
+        ],
+        [
+          -0.5195,
+          -1.668
+        ],
+        [
+          0.4375,
+          -0.4375
+        ],
+        [
+          1.668,
+          0.5195
+        ],
+        [
+          3.1719,
+          1.2031
+        ],
+        [
+          4.9492,
+          1.6133
+        ],
+        [
+          7.0,
+          1.75
+        ]
+      ],
+      "turn": "left",
+      "stopLineId": "sl-n"
+    },
+    {
+      "id": "c-rs-n-rn-n",
+      "fromLaneId": "rs-n",
+      "toLaneId": "rn-n",
+      "junctionId": "j1",
+      "centerline": [
+        [
+          1.75,
+          7.0
+        ],
+        [
+          1.75,
+          -7.0
+        ]
+      ],
+      "turn": "straight",
+      "stopLineId": "sl-s"
+    },
+    {
+      "id": "c-rs-n-re-e0",
+      "fromLaneId": "rs-n",
+      "toLaneId": "re-e0",
+      "junctionId": "j1",
+      "centerline": [
+        [
+          1.75,
+          7.0
+        ],
+        [
+          1.832,
+          5.7695
+        ],
+        [
+          2.0781,
+          4.7031
+        ],
+        [
+          2.4883,
+          3.8008
+        ],
+        [
+          3.0625,
+          3.0625
+        ],
+        [
+          3.8008,
+          2.4883
+        ],
+        [
+          4.7031,
+          2.0781
+        ],
+        [
+          5.7695,
+          1.832
+        ],
+        [
+          7.0,
+          1.75
+        ]
+      ],
+      "turn": "right",
+      "stopLineId": "sl-s"
+    },
+    {
+      "id": "c-rs-n-rw-w0",
+      "fromLaneId": "rs-n",
+      "toLaneId": "rw-w0",
+      "junctionId": "j1",
+      "centerline": [
+        [
+          1.75,
+          7.0
+        ],
+        [
+          1.6133,
+          4.9492
+        ],
+        [
+          1.2031,
+          3.1719
+        ],
+        [
+          0.5195,
+          1.668
+        ],
+        [
+          -0.4375,
+          0.4375
+        ],
+        [
+          -1.668,
+          -0.5195
+        ],
+        [
+          -3.1719,
+          -1.2031
+        ],
+        [
+          -4.9492,
+          -1.6133
+        ],
+        [
+          -7.0,
+          -1.75
+        ]
+      ],
+      "turn": "left",
+      "stopLineId": "sl-s"
+    }
+  ],
+  "conflicts": [
+    {
+      "id": "cf-01",
+      "a": "c-rw-e0-re-e0",
+      "b": "c-rw-e1-re-e0",
+      "aFromS": 4.3039,
+      "aToS": 14.4309,
+      "bFromS": 3.75,
+      "bToS": 14.0,
+      "kind": "merge"
+    },
+    {
+      "id": "cf-02",
+      "a": "c-rw-e0-re-e0",
+      "b": "c-re-w0-rs-s",
+      "aFromS": 3.0381,
+      "aToS": 8.6079,
+      "bFromS": 7.8696,
+      "bToS": 13.6665,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-03",
+      "a": "c-rw-e0-re-e0",
+      "b": "c-rn-s-rs-s",
+      "aFromS": 3.0381,
+      "aToS": 7.8484,
+      "bFromS": 8.5,
+      "bToS": 13.5,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-04",
+      "a": "c-rw-e0-re-e0",
+      "b": "c-rn-s-re-e0",
+      "aFromS": 8.8611,
+      "aToS": 14.4309,
+      "bFromS": 8.649,
+      "bToS": 14.1804,
+      "kind": "merge"
+    },
+    {
+      "id": "cf-05",
+      "a": "c-rw-e0-re-e0",
+      "b": "c-rs-n-rn-n",
+      "aFromS": 6.5825,
+      "aToS": 11.3928,
+      "bFromS": 1.5,
+      "bToS": 6.5,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-06",
+      "a": "c-rw-e0-re-e0",
+      "b": "c-rs-n-re-e0",
+      "aFromS": 7.0888,
+      "aToS": 14.4309,
+      "bFromS": 1.5068,
+      "bToS": 8.5083,
+      "kind": "merge"
+    },
+    {
+      "id": "cf-07",
+      "a": "c-rw-e0-re-e0",
+      "b": "c-rs-n-rw-w0",
+      "aFromS": 6.0762,
+      "aToS": 10.8864,
+      "bFromS": 1.5415,
+      "bToS": 6.3108,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-08",
+      "a": "c-rw-e0-rs-s",
+      "b": "c-re-w0-rs-s",
+      "aFromS": 2.9088,
+      "aToS": 5.9597,
+      "bFromS": 11.0827,
+      "bToS": 14.1804,
+      "kind": "merge"
+    },
+    {
+      "id": "cf-09",
+      "a": "c-rw-e0-rs-s",
+      "b": "c-rn-s-rs-s",
+      "aFromS": 2.9088,
+      "aToS": 5.9597,
+      "bFromS": 10.75,
+      "bToS": 14.0,
+      "kind": "merge"
+    },
+    {
+      "id": "cf-10",
+      "a": "c-rw-e1-re-e0",
+      "b": "c-re-w0-rs-s",
+      "aFromS": 3.75,
+      "aToS": 9.75,
+      "bFromS": 4.9807,
+      "bToS": 11.3433,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-11",
+      "a": "c-rw-e1-re-e0",
+      "b": "c-rn-s-rs-s",
+      "aFromS": 3.0,
+      "aToS": 7.5,
+      "bFromS": 6.5,
+      "bToS": 11.0,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-12",
+      "a": "c-rw-e1-re-e0",
+      "b": "c-rn-s-re-e0",
+      "aFromS": 6.25,
+      "aToS": 14.0,
+      "bFromS": 6.8304,
+      "bToS": 14.1804,
+      "kind": "merge"
+    },
+    {
+      "id": "cf-13",
+      "a": "c-rw-e1-re-e0",
+      "b": "c-rs-n-rn-n",
+      "aFromS": 6.5,
+      "aToS": 11.0,
+      "bFromS": 3.0,
+      "bToS": 7.5,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-14",
+      "a": "c-rw-e1-re-e0",
+      "b": "c-rs-n-re-e0",
+      "aFromS": 8.0,
+      "aToS": 14.0,
+      "bFromS": 2.9884,
+      "bToS": 8.5083,
+      "kind": "merge"
+    },
+    {
+      "id": "cf-15",
+      "a": "c-rw-e1-re-e0",
+      "b": "c-rs-n-rw-w0",
+      "aFromS": 4.25,
+      "aToS": 10.25,
+      "bFromS": 2.8371,
+      "bToS": 9.1997,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-16",
+      "a": "c-rw-e1-rn-n",
+      "b": "c-re-w0-rw-w0",
+      "aFromS": 4.9807,
+      "aToS": 11.3433,
+      "bFromS": 3.75,
+      "bToS": 9.75,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-17",
+      "a": "c-rw-e1-rn-n",
+      "b": "c-re-w0-rn-n",
+      "aFromS": 9.1997,
+      "aToS": 14.1804,
+      "bFromS": 3.6306,
+      "bToS": 8.5083,
+      "kind": "merge"
+    },
+    {
+      "id": "cf-18",
+      "a": "c-rw-e1-rn-n",
+      "b": "c-re-w0-rs-s",
+      "aFromS": 4.1547,
+      "aToS": 10.0257,
+      "bFromS": 4.1547,
+      "bToS": 10.0257,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-19",
+      "a": "c-rw-e1-rn-n",
+      "b": "c-rn-s-rs-s",
+      "aFromS": 2.8371,
+      "aToS": 9.1997,
+      "bFromS": 4.25,
+      "bToS": 10.25,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-20",
+      "a": "c-rw-e1-rn-n",
+      "b": "c-rn-s-re-e0",
+      "aFromS": 5.5313,
+      "aToS": 10.5616,
+      "bFromS": 3.6188,
+      "bToS": 8.649,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-21",
+      "a": "c-rw-e1-rn-n",
+      "b": "c-rs-n-rn-n",
+      "aFromS": 6.8304,
+      "aToS": 14.1804,
+      "bFromS": 6.25,
+      "bToS": 14.0,
+      "kind": "merge"
+    },
+    {
+      "id": "cf-22",
+      "a": "c-rw-e1-rn-n",
+      "b": "c-rs-n-rw-w0",
+      "aFromS": 3.6188,
+      "aToS": 8.649,
+      "bFromS": 5.5313,
+      "bToS": 10.5616,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-23",
+      "a": "c-re-w0-rw-w0",
+      "b": "c-rn-s-rs-s",
+      "aFromS": 6.5,
+      "aToS": 11.0,
+      "bFromS": 3.0,
+      "bToS": 7.5,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-24",
+      "a": "c-re-w0-rw-w0",
+      "b": "c-rn-s-rw-w0",
+      "aFromS": 8.0,
+      "aToS": 14.0,
+      "bFromS": 2.9884,
+      "bToS": 8.5083,
+      "kind": "merge"
+    },
+    {
+      "id": "cf-25",
+      "a": "c-re-w0-rw-w0",
+      "b": "c-rn-s-re-e0",
+      "aFromS": 4.25,
+      "aToS": 10.25,
+      "bFromS": 2.8371,
+      "bToS": 9.1997,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-26",
+      "a": "c-re-w0-rw-w0",
+      "b": "c-rs-n-rn-n",
+      "aFromS": 3.0,
+      "aToS": 7.5,
+      "bFromS": 6.5,
+      "bToS": 11.0,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-27",
+      "a": "c-re-w0-rw-w0",
+      "b": "c-rs-n-rw-w0",
+      "aFromS": 6.25,
+      "aToS": 14.0,
+      "bFromS": 6.8304,
+      "bToS": 14.1804,
+      "kind": "merge"
+    },
+    {
+      "id": "cf-28",
+      "a": "c-re-w0-rn-n",
+      "b": "c-rs-n-rn-n",
+      "aFromS": 2.9884,
+      "aToS": 8.5083,
+      "bFromS": 8.0,
+      "bToS": 14.0,
+      "kind": "merge"
+    },
+    {
+      "id": "cf-29",
+      "a": "c-re-w0-rs-s",
+      "b": "c-rn-s-rs-s",
+      "aFromS": 6.8304,
+      "aToS": 14.1804,
+      "bFromS": 6.25,
+      "bToS": 14.0,
+      "kind": "merge"
+    },
+    {
+      "id": "cf-30",
+      "a": "c-re-w0-rs-s",
+      "b": "c-rn-s-re-e0",
+      "aFromS": 3.6188,
+      "aToS": 8.649,
+      "bFromS": 5.5313,
+      "bToS": 10.5616,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-31",
+      "a": "c-re-w0-rs-s",
+      "b": "c-rs-n-rn-n",
+      "aFromS": 2.8371,
+      "aToS": 9.1997,
+      "bFromS": 4.25,
+      "bToS": 10.25,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-32",
+      "a": "c-re-w0-rs-s",
+      "b": "c-rs-n-rw-w0",
+      "aFromS": 5.5313,
+      "aToS": 10.5616,
+      "bFromS": 3.6188,
+      "bToS": 8.649,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-33",
+      "a": "c-rn-s-rs-s",
+      "b": "c-rs-n-rw-w0",
+      "aFromS": 3.75,
+      "aToS": 9.75,
+      "bFromS": 4.9807,
+      "bToS": 11.3433,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-34",
+      "a": "c-rn-s-rw-w0",
+      "b": "c-rs-n-rw-w0",
+      "aFromS": 3.6306,
+      "aToS": 8.5083,
+      "bFromS": 9.1997,
+      "bToS": 14.1804,
+      "kind": "merge"
+    },
+    {
+      "id": "cf-35",
+      "a": "c-rn-s-re-e0",
+      "b": "c-rs-n-rn-n",
+      "aFromS": 4.9807,
+      "aToS": 11.3433,
+      "bFromS": 3.75,
+      "bToS": 9.75,
+      "kind": "cross"
+    },
+    {
+      "id": "cf-36",
+      "a": "c-rn-s-re-e0",
+      "b": "c-rs-n-re-e0",
+      "aFromS": 9.1997,
+      "aToS": 14.1804,
+      "bFromS": 3.6306,
+      "bToS": 8.5083,
+      "kind": "merge"
+    },
+    {
+      "id": "cf-37",
+      "a": "c-rn-s-re-e0",
+      "b": "c-rs-n-rw-w0",
+      "aFromS": 4.1547,
+      "aToS": 10.0257,
+      "bFromS": 4.1547,
+      "bToS": 10.0257,
+      "kind": "cross"
+    }
+  ],
+  "laneJoins": [],
+  "traffic": {
+    "seed": 20261124,
+    "maxAgents": 40,
+    "spawnRingM": [
+      60,
+      150
+    ],
+    "densityPerKm": {
+      "rw": 40,
+      "re": 30,
+      "rn": 20,
+      "rs": 20
+    },
+    "sources": [
+      {
+        "laneId": "rw-e0",
+        "ratePerH": 600
+      },
+      {
+        "laneId": "rw-e1",
+        "ratePerH": 400
+      },
+      {
+        "laneId": "re-w0",
+        "ratePerH": 500
+      },
+      {
+        "laneId": "rn-s",
+        "ratePerH": 300
+      },
+      {
+        "laneId": "rs-n",
+        "ratePerH": 300
+      }
+    ],
+    "sinks": [
+      "re-e0",
+      "rw-w0",
+      "rn-n",
+      "rs-s"
+    ],
+    "mix": [
+      {
+        "model": "motorbike",
+        "share": 0.75
+      },
+      {
+        "model": "car",
+        "share": 0.12
+      },
+      {
+        "model": "taxi",
+        "share": 0.06
+      },
+      {
+        "model": "bus",
+        "share": 0.02
+      },
+      {
+        "model": "truck",
+        "share": 0.05
+      }
+    ]
+  },
+  "props": [
+    {
+      "id": "p-tree-1",
+      "kind": "tree",
+      "pos": {
+        "x": -30,
+        "z": 9
+      },
+      "heading": 0,
+      "solid": true
+    },
+    {
+      "id": "p-lamp-1",
+      "kind": "lamp",
+      "pos": {
+        "x": -20,
+        "z": -5
+      },
+      "heading": 0,
+      "solid": true
+    },
+    {
+      "id": "p-moto-1",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": -45,
+        "z": 8.5
+      },
+      "heading": 0,
+      "solid": false
+    }
+  ]
+}

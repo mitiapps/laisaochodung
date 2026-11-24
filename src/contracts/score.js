@@ -48,9 +48,24 @@
  */
 
 /**
+ * A contact the player did not cause (fault by law): shown to the player, no deduction.
+ * @typedef {object} Notice
+ * @property {'npc-fault'} kind Notice kind.
+ * @property {number} tick Tick of the contact.
+ * @property {number} t Time of the contact.
+ * @property {import('./telemetry.js').Pos2} pos Ego position at the contact.
+ * @property {import('./telemetry.js').CollisionEvent['otherKind'] | null} otherKind What the ego
+ *   touched; null for a scooter fall inside the aftermath of a notice contact.
+ * @property {string | null} otherModel Model key of the other actor, when known.
+ * @property {import('./telemetry.js').NpcViolation[]} violations The other party's latched flags.
+ * @property {LocalText} text Message, resolved from the policy's `noticeTexts`.
+ */
+
+/**
  * @typedef {object} ScoreReport
  * @property {number} score `max(0, 10 − Σ deductions)`, 0 after a pedestrian hit.
  * @property {Breach[]} breaches One entry per episode at its worst tier.
+ * @property {Notice[]} notices Contacts the player did not cause, oldest first.
  * @property {{start: 12, deducted: number, remaining: number}} licence Only the largest point value
  *   is deducted, once, floor 0 (ND 168 Điều 50 khoản 1 điểm b, c).
  * @property {{min: number, max: number}} fineTotalVnd Sum of the fine bands of every episode not

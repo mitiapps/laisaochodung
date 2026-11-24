@@ -4,6 +4,628 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
 "{
   "actors": [],
   "attribution": "© OpenStreetMap contributors, ODbL",
+  "conflicts": [
+    {
+      "a": "c-w1-1-f0-w1-2-f0",
+      "aFromS": 4.75,
+      "aToS": 9,
+      "b": "c-w3-2-in-f0-w1-2-f0",
+      "bFromS": 0.479,
+      "bToS": 4.313,
+      "id": "cf-j-n2-001",
+      "kind": "merge"
+    },
+    {
+      "a": "c-w1-1-f0-w1-2-f0",
+      "aFromS": 3.75,
+      "aToS": 8.5,
+      "b": "c-w3-2-in-f0-w3-2-out-f0",
+      "bFromS": 0.5,
+      "bToS": 5,
+      "id": "cf-j-n2-002",
+      "kind": "cross"
+    },
+    {
+      "a": "c-w1-1-f0-w1-2-f0",
+      "aFromS": 0.25,
+      "aToS": 5,
+      "b": "c-w3-2-out-b0-w3-2-in-b0",
+      "bFromS": 4,
+      "bToS": 8.5,
+      "id": "cf-j-n2-003",
+      "kind": "cross"
+    },
+    {
+      "a": "c-w1-1-f0-w3-2-in-b0",
+      "aFromS": 0.479,
+      "aToS": 4.313,
+      "b": "c-w3-2-out-b0-w3-2-in-b0",
+      "bFromS": 4.75,
+      "bToS": 9,
+      "id": "cf-j-n2-004",
+      "kind": "merge"
+    },
+    {
+      "a": "c-w1-1-f1-w1-2-f1",
+      "aFromS": 3.75,
+      "aToS": 8.5,
+      "b": "c-w3-2-in-f0-w3-2-out-f0",
+      "bFromS": 4,
+      "bToS": 8.5,
+      "id": "cf-j-n2-005",
+      "kind": "cross"
+    },
+    {
+      "a": "c-w1-1-f1-w1-2-f1",
+      "aFromS": 1.25,
+      "aToS": 9,
+      "b": "c-w3-2-out-b0-w1-2-f1",
+      "bFromS": 0.49,
+      "bToS": 7.6,
+      "id": "cf-j-n2-006",
+      "kind": "merge"
+    },
+    {
+      "a": "c-w1-1-f1-w1-2-f1",
+      "aFromS": 0.25,
+      "aToS": 5,
+      "b": "c-w3-2-out-b0-w3-2-in-b0",
+      "bFromS": 0.5,
+      "bToS": 5,
+      "id": "cf-j-n2-007",
+      "kind": "cross"
+    },
+    {
+      "a": "c-w1-1-f1-w3-2-out-f0",
+      "aFromS": 3.922,
+      "aToS": 7.6,
+      "b": "c-w3-2-in-f0-w3-2-out-f0",
+      "bFromS": 5,
+      "bToS": 9,
+      "id": "cf-j-n2-008",
+      "kind": "merge"
+    },
+    {
+      "a": "c-w1-1-f1-w3-2-out-f0",
+      "aFromS": 1.226,
+      "aToS": 7.355,
+      "b": "c-w3-2-out-b0-w1-2-f1",
+      "bFromS": 0.245,
+      "bToS": 6.374,
+      "id": "cf-j-n2-009",
+      "kind": "cross"
+    },
+    {
+      "a": "c-w1-1-f1-w3-2-out-f0",
+      "aFromS": 0.49,
+      "aToS": 5.393,
+      "b": "c-w3-2-out-b0-w3-2-in-b0",
+      "bFromS": 0.25,
+      "bToS": 5,
+      "id": "cf-j-n2-010",
+      "kind": "cross"
+    },
+    {
+      "a": "c-w3-2-in-f0-w3-2-out-f0",
+      "aFromS": 4,
+      "aToS": 8.75,
+      "b": "c-w3-2-out-b0-w1-2-f1",
+      "bFromS": 2.206,
+      "bToS": 7.109,
+      "id": "cf-j-n2-011",
+      "kind": "cross"
+    },
+    {
+      "a": "c-w1-2-f0-w4-3-out-f0",
+      "aFromS": 2.75,
+      "aToS": 9,
+      "b": "c-w1-2-f1-w4-3-out-f0",
+      "bFromS": 3.421,
+      "bToS": 9.774,
+      "id": "cf-j-n3-001",
+      "kind": "merge"
+    },
+    {
+      "a": "c-w1-2-f0-w4-3-out-f0",
+      "aFromS": 3,
+      "aToS": 9,
+      "b": "c-w2-b0-w4-3-out-f0",
+      "bFromS": 4.166,
+      "bToS": 9.803,
+      "id": "cf-j-n3-002",
+      "kind": "merge"
+    },
+    {
+      "a": "c-w1-2-f1-w2-f0",
+      "aFromS": 0.735,
+      "aToS": 5.639,
+      "b": "c-w2-b0-w4-3-out-f0",
+      "bFromS": 0.245,
+      "bToS": 5.392,
+      "id": "cf-j-n3-003",
+      "kind": "cross"
+    },
+    {
+      "a": "c-w1-2-f1-w2-f0",
+      "aFromS": 4.413,
+      "aToS": 7.6,
+      "b": "c-w4-3-out-b0-w2-f0",
+      "bFromS": 1.198,
+      "bToS": 4.313,
+      "id": "cf-j-n3-004",
+      "kind": "merge"
+    },
+    {
+      "a": "c-w1-2-f1-w4-3-out-f0",
+      "aFromS": 0.977,
+      "aToS": 9.774,
+      "b": "c-w2-b0-w4-3-out-f0",
+      "bFromS": 0.98,
+      "bToS": 9.803,
+      "id": "cf-j-n3-005",
+      "kind": "merge"
+    }
+  ],
+  "connectors": [
+    {
+      "centerline": [
+        [
+          -42.827,
+          40.668
+        ],
+        [
+          -33.827,
+          40.668
+        ]
+      ],
+      "fromLaneId": "w1-1-f0",
+      "id": "c-w1-1-f0-w1-2-f0",
+      "junctionId": "j-n2",
+      "stopLineId": null,
+      "toLaneId": "w1-2-f0",
+      "turn": "straight"
+    },
+    {
+      "centerline": [
+        [
+          -42.827,
+          40.668
+        ],
+        [
+          -42.273,
+          40.724
+        ],
+        [
+          -41.757,
+          40.884
+        ],
+        [
+          -41.289,
+          41.138
+        ],
+        [
+          -40.882,
+          41.474
+        ],
+        [
+          -40.547,
+          41.881
+        ],
+        [
+          -40.293,
+          42.348
+        ],
+        [
+          -40.133,
+          42.864
+        ],
+        [
+          -40.077,
+          43.418
+        ]
+      ],
+      "fromLaneId": "w1-1-f0",
+      "id": "c-w1-1-f0-w3-2-in-b0",
+      "junctionId": "j-n2",
+      "stopLineId": null,
+      "toLaneId": "w3-2-in-b0",
+      "turn": "right"
+    },
+    {
+      "centerline": [
+        [
+          -42.827,
+          37.168
+        ],
+        [
+          -33.827,
+          37.168
+        ]
+      ],
+      "fromLaneId": "w1-1-f1",
+      "id": "c-w1-1-f1-w1-2-f1",
+      "junctionId": "j-n2",
+      "stopLineId": null,
+      "toLaneId": "w1-2-f1",
+      "turn": "straight"
+    },
+    {
+      "centerline": [
+        [
+          -42.827,
+          37.168
+        ],
+        [
+          -41.793,
+          37.159
+        ],
+        [
+          -40.725,
+          37.114
+        ],
+        [
+          -39.678,
+          37.001
+        ],
+        [
+          -38.702,
+          36.793
+        ],
+        [
+          -37.851,
+          36.46
+        ],
+        [
+          -37.179,
+          35.973
+        ],
+        [
+          -36.736,
+          35.302
+        ],
+        [
+          -36.577,
+          34.418
+        ]
+      ],
+      "fromLaneId": "w1-1-f1",
+      "id": "c-w1-1-f1-w3-2-out-f0",
+      "junctionId": "j-n2",
+      "stopLineId": null,
+      "toLaneId": "w3-2-out-f0",
+      "turn": "left"
+    },
+    {
+      "centerline": [
+        [
+          121.432,
+          40.668
+        ],
+        [
+          130.432,
+          40.668
+        ]
+      ],
+      "fromLaneId": "w1-2-f0",
+      "id": "c-w1-2-f0-w4-3-out-f0",
+      "junctionId": "j-n3",
+      "stopLineId": "sl-w1-2-f",
+      "toLaneId": "w4-3-out-f0",
+      "turn": "straight"
+    },
+    {
+      "centerline": [
+        [
+          121.432,
+          37.168
+        ],
+        [
+          122.466,
+          37.159
+        ],
+        [
+          123.533,
+          37.114
+        ],
+        [
+          124.581,
+          37.001
+        ],
+        [
+          125.556,
+          36.793
+        ],
+        [
+          126.407,
+          36.46
+        ],
+        [
+          127.08,
+          35.973
+        ],
+        [
+          127.522,
+          35.302
+        ],
+        [
+          127.682,
+          34.418
+        ]
+      ],
+      "fromLaneId": "w1-2-f1",
+      "id": "c-w1-2-f1-w2-f0",
+      "junctionId": "j-n3",
+      "stopLineId": "sl-w1-2-f",
+      "toLaneId": "w2-f0",
+      "turn": "left"
+    },
+    {
+      "centerline": [
+        [
+          121.432,
+          37.168
+        ],
+        [
+          122.61,
+          37.319
+        ],
+        [
+          123.743,
+          37.715
+        ],
+        [
+          124.845,
+          38.276
+        ],
+        [
+          125.932,
+          38.918
+        ],
+        [
+          127.018,
+          39.561
+        ],
+        [
+          128.12,
+          40.121
+        ],
+        [
+          129.253,
+          40.518
+        ],
+        [
+          130.432,
+          40.668
+        ]
+      ],
+      "fromLaneId": "w1-2-f1",
+      "id": "c-w1-2-f1-w4-3-out-f0",
+      "junctionId": "j-n3",
+      "stopLineId": "sl-w1-2-f",
+      "toLaneId": "w4-3-out-f0",
+      "turn": "straight"
+    },
+    {
+      "centerline": [
+        [
+          124.182,
+          34.418
+        ],
+        [
+          124.308,
+          35.678
+        ],
+        [
+          124.673,
+          36.851
+        ],
+        [
+          125.249,
+          37.913
+        ],
+        [
+          126.012,
+          38.838
+        ],
+        [
+          126.937,
+          39.601
+        ],
+        [
+          127.999,
+          40.177
+        ],
+        [
+          129.172,
+          40.541
+        ],
+        [
+          130.432,
+          40.668
+        ]
+      ],
+      "fromLaneId": "w2-b0",
+      "id": "c-w2-b0-w4-3-out-f0",
+      "junctionId": "j-n3",
+      "stopLineId": "sl-w2-b",
+      "toLaneId": "w4-3-out-f0",
+      "turn": "left"
+    },
+    {
+      "centerline": [
+        [
+          -36.577,
+          43.418
+        ],
+        [
+          -36.521,
+          42.864
+        ],
+        [
+          -36.361,
+          42.348
+        ],
+        [
+          -36.107,
+          41.881
+        ],
+        [
+          -35.772,
+          41.474
+        ],
+        [
+          -35.365,
+          41.138
+        ],
+        [
+          -34.897,
+          40.884
+        ],
+        [
+          -34.381,
+          40.724
+        ],
+        [
+          -33.827,
+          40.668
+        ]
+      ],
+      "fromLaneId": "w3-2-in-f0",
+      "id": "c-w3-2-in-f0-w1-2-f0",
+      "junctionId": "j-n2",
+      "stopLineId": null,
+      "toLaneId": "w1-2-f0",
+      "turn": "right"
+    },
+    {
+      "centerline": [
+        [
+          -36.577,
+          43.418
+        ],
+        [
+          -36.577,
+          34.418
+        ]
+      ],
+      "fromLaneId": "w3-2-in-f0",
+      "id": "c-w3-2-in-f0-w3-2-out-f0",
+      "junctionId": "j-n2",
+      "stopLineId": null,
+      "toLaneId": "w3-2-out-f0",
+      "turn": "straight"
+    },
+    {
+      "centerline": [
+        [
+          -40.077,
+          34.418
+        ],
+        [
+          -39.918,
+          35.302
+        ],
+        [
+          -39.475,
+          35.973
+        ],
+        [
+          -38.803,
+          36.46
+        ],
+        [
+          -37.952,
+          36.793
+        ],
+        [
+          -36.976,
+          37.001
+        ],
+        [
+          -35.929,
+          37.114
+        ],
+        [
+          -34.861,
+          37.159
+        ],
+        [
+          -33.827,
+          37.168
+        ]
+      ],
+      "fromLaneId": "w3-2-out-b0",
+      "id": "c-w3-2-out-b0-w1-2-f1",
+      "junctionId": "j-n2",
+      "stopLineId": null,
+      "toLaneId": "w1-2-f1",
+      "turn": "left"
+    },
+    {
+      "centerline": [
+        [
+          -40.077,
+          34.418
+        ],
+        [
+          -40.077,
+          43.418
+        ]
+      ],
+      "fromLaneId": "w3-2-out-b0",
+      "id": "c-w3-2-out-b0-w3-2-in-b0",
+      "junctionId": "j-n2",
+      "stopLineId": null,
+      "toLaneId": "w3-2-in-b0",
+      "turn": "straight"
+    },
+    {
+      "centerline": [
+        [
+          130.432,
+          37.168
+        ],
+        [
+          129.877,
+          37.112
+        ],
+        [
+          129.361,
+          36.952
+        ],
+        [
+          128.894,
+          36.699
+        ],
+        [
+          128.487,
+          36.363
+        ],
+        [
+          128.151,
+          35.956
+        ],
+        [
+          127.898,
+          35.489
+        ],
+        [
+          127.737,
+          34.972
+        ],
+        [
+          127.682,
+          34.418
+        ]
+      ],
+      "fromLaneId": "w4-3-out-b0",
+      "id": "c-w4-3-out-b0-w2-f0",
+      "junctionId": "j-n3",
+      "stopLineId": "sl-w4-3-out-b",
+      "toLaneId": "w2-f0",
+      "turn": "right"
+    }
+  ],
   "crosswalks": [
     {
       "id": "cw-n7",
@@ -129,6 +751,7 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
     }
   ],
   "kind": "osm",
+  "laneJoins": [],
   "name": {
     "vi": "Đoạn phố kiểm thử (dữ liệu tổng hợp)"
   },
@@ -1521,6 +2144,346 @@ exports[`fixture builds > matches the snapshot for tutorial 01 1`] = `
       "widthM": 0.5
     }
   ],
+  "conflicts": [
+    {
+      "a": "c-cuoi-b1-nhanh-f0",
+      "aFromS": 6.906,
+      "aToS": 12.333,
+      "b": "c-nhanh-b0-rong-b1",
+      "bFromS": 2.96,
+      "bToS": 8.386,
+      "id": "cf-j-c-001",
+      "kind": "cross"
+    },
+    {
+      "a": "c-cuoi-b1-nhanh-f0",
+      "aFromS": 9.866,
+      "aToS": 14.799,
+      "b": "c-rong-f0-cuoi-f0",
+      "bFromS": 4.25,
+      "bToS": 9.25,
+      "id": "cf-j-c-002",
+      "kind": "cross"
+    },
+    {
+      "a": "c-cuoi-b1-nhanh-f0",
+      "aFromS": 11.593,
+      "aToS": 15.293,
+      "b": "c-rong-f0-nhanh-f0",
+      "bFromS": 4.168,
+      "bToS": 7.6,
+      "id": "cf-j-c-003",
+      "kind": "merge"
+    },
+    {
+      "a": "c-cuoi-b1-nhanh-f0",
+      "aFromS": 4.44,
+      "aToS": 11.346,
+      "b": "c-rong-f1-cuoi-f1",
+      "bFromS": 5.75,
+      "bToS": 12.25,
+      "id": "cf-j-c-004",
+      "kind": "cross"
+    },
+    {
+      "a": "c-cuoi-b1-rong-b1",
+      "aFromS": 8.75,
+      "aToS": 16,
+      "b": "c-nhanh-b0-rong-b1",
+      "bFromS": 8.386,
+      "bToS": 15.293,
+      "id": "cf-j-c-005",
+      "kind": "merge"
+    },
+    {
+      "a": "c-nhanh-b0-cuoi-f0",
+      "aFromS": 0.49,
+      "aToS": 7.6,
+      "b": "c-rong-f0-cuoi-f0",
+      "bFromS": 8.25,
+      "bToS": 16,
+      "id": "cf-j-c-006",
+      "kind": "merge"
+    },
+    {
+      "a": "c-nhanh-b0-rong-b1",
+      "aFromS": 0.493,
+      "aToS": 5.426,
+      "b": "c-rong-f0-cuoi-f0",
+      "bFromS": 6.75,
+      "bToS": 11.75,
+      "id": "cf-j-c-007",
+      "kind": "cross"
+    },
+    {
+      "a": "c-nhanh-b0-rong-b1",
+      "aFromS": 3.947,
+      "aToS": 10.853,
+      "b": "c-rong-f1-cuoi-f1",
+      "bFromS": 3.75,
+      "bToS": 10.25,
+      "id": "cf-j-c-008",
+      "kind": "cross"
+    }
+  ],
+  "connectors": [
+    {
+      "centerline": [
+        [
+          528,
+          -5.25
+        ],
+        [
+          512,
+          -5.25
+        ]
+      ],
+      "fromLaneId": "cuoi-b0",
+      "id": "c-cuoi-b0-rong-b0",
+      "junctionId": "j-c",
+      "stopLineId": null,
+      "toLaneId": "rong-b0",
+      "turn": "straight"
+    },
+    {
+      "centerline": [
+        [
+          528,
+          -1.75
+        ],
+        [
+          526.035,
+          -1.552
+        ],
+        [
+          524.205,
+          -0.984
+        ],
+        [
+          522.549,
+          -0.085
+        ],
+        [
+          521.106,
+          1.106
+        ],
+        [
+          519.915,
+          2.549
+        ],
+        [
+          519.016,
+          4.205
+        ],
+        [
+          518.448,
+          6.035
+        ],
+        [
+          518.25,
+          8
+        ]
+      ],
+      "fromLaneId": "cuoi-b1",
+      "id": "c-cuoi-b1-nhanh-f0",
+      "junctionId": "j-c",
+      "stopLineId": null,
+      "toLaneId": "nhanh-f0",
+      "turn": "left"
+    },
+    {
+      "centerline": [
+        [
+          528,
+          -1.75
+        ],
+        [
+          512,
+          -1.75
+        ]
+      ],
+      "fromLaneId": "cuoi-b1",
+      "id": "c-cuoi-b1-rong-b1",
+      "junctionId": "j-c",
+      "stopLineId": null,
+      "toLaneId": "rong-b1",
+      "turn": "straight"
+    },
+    {
+      "centerline": [
+        [
+          521.75,
+          8
+        ],
+        [
+          521.909,
+          7.116
+        ],
+        [
+          522.352,
+          6.445
+        ],
+        [
+          523.024,
+          5.958
+        ],
+        [
+          523.875,
+          5.625
+        ],
+        [
+          524.851,
+          5.417
+        ],
+        [
+          525.898,
+          5.305
+        ],
+        [
+          526.966,
+          5.259
+        ],
+        [
+          528,
+          5.25
+        ]
+      ],
+      "fromLaneId": "nhanh-b0",
+      "id": "c-nhanh-b0-cuoi-f0",
+      "junctionId": "j-c",
+      "stopLineId": null,
+      "toLaneId": "cuoi-f0",
+      "turn": "right"
+    },
+    {
+      "centerline": [
+        [
+          521.75,
+          8
+        ],
+        [
+          521.552,
+          6.035
+        ],
+        [
+          520.984,
+          4.205
+        ],
+        [
+          520.085,
+          2.549
+        ],
+        [
+          518.894,
+          1.106
+        ],
+        [
+          517.451,
+          -0.085
+        ],
+        [
+          515.795,
+          -0.984
+        ],
+        [
+          513.965,
+          -1.552
+        ],
+        [
+          512,
+          -1.75
+        ]
+      ],
+      "fromLaneId": "nhanh-b0",
+      "id": "c-nhanh-b0-rong-b1",
+      "junctionId": "j-c",
+      "stopLineId": null,
+      "toLaneId": "rong-b1",
+      "turn": "left"
+    },
+    {
+      "centerline": [
+        [
+          512,
+          5.25
+        ],
+        [
+          528,
+          5.25
+        ]
+      ],
+      "fromLaneId": "rong-f0",
+      "id": "c-rong-f0-cuoi-f0",
+      "junctionId": "j-c",
+      "stopLineId": null,
+      "toLaneId": "cuoi-f0",
+      "turn": "straight"
+    },
+    {
+      "centerline": [
+        [
+          512,
+          5.25
+        ],
+        [
+          513.034,
+          5.259
+        ],
+        [
+          514.102,
+          5.305
+        ],
+        [
+          515.149,
+          5.417
+        ],
+        [
+          516.125,
+          5.625
+        ],
+        [
+          516.976,
+          5.958
+        ],
+        [
+          517.648,
+          6.445
+        ],
+        [
+          518.091,
+          7.116
+        ],
+        [
+          518.25,
+          8
+        ]
+      ],
+      "fromLaneId": "rong-f0",
+      "id": "c-rong-f0-nhanh-f0",
+      "junctionId": "j-c",
+      "stopLineId": null,
+      "toLaneId": "nhanh-f0",
+      "turn": "right"
+    },
+    {
+      "centerline": [
+        [
+          512,
+          1.75
+        ],
+        [
+          528,
+          1.75
+        ]
+      ],
+      "fromLaneId": "rong-f1",
+      "id": "c-rong-f1-cuoi-f1",
+      "junctionId": "j-c",
+      "stopLineId": null,
+      "toLaneId": "cuoi-f1",
+      "turn": "straight"
+    }
+  ],
   "crosswalks": [
     {
       "id": "cw-hep",
@@ -1591,6 +2554,16 @@ exports[`fixture builds > matches the snapshot for tutorial 01 1`] = `
     }
   ],
   "kind": "tutorial",
+  "laneJoins": [
+    {
+      "fromLaneId": "hep-f0",
+      "toLaneId": "rong-f1"
+    },
+    {
+      "fromLaneId": "rong-b1",
+      "toLaneId": "hep-b0"
+    }
+  ],
   "name": {
     "vi": "Bài 1: Làm quen"
   },

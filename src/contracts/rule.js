@@ -128,6 +128,44 @@
  *   of which only some are named in 10.a (D7.7.a: pavement riding is inferred, wrong-way riding is not).
  * @property {{D6: string, D7: string}} sameLaneAhead Va chạm with the vehicle ahead: 6.4.l / 7.3.i.
  * @property {'scoreOnly'} staticAndFall Static objects, kerbs and falls never carry a penalty.
+ * @property {FaultRow[]} [faultRows] Fault table for ego contacts with vehicles, first match wins;
+ *   absent, every contact is charged as before.
+ * @property {string[]} [nonContributingRules] Rule ids whose episodes never contribute to a contact.
+ * @property {string[]} [rearEndContributingRules] Rule ids whose open episode makes being hit from
+ *   behind the player's fault (a cut-in or an unsignalled turn).
+ * @property {import('./telemetry.js').NpcViolation[]} [excusingViolations] Other-party violations
+ *   that excuse a striking ego (right-of-way violations).
+ * @property {number} [aftermathWindowS] Seconds after a notice contact during which every further
+ *   contact and a fall are notices too.
+ * @property {Record<string, import('./vehicle.js').LocalText>} [noticeTexts] Notice templates keyed
+ *   by the other party's first violation, or by `from-behind` and `none` when it has none, and by
+ *   `aftermath` for a contact inside the aftermath window. `{vehicle}` in a template is replaced
+ *   with the Vietnamese word for the other vehicle (capitalised at the start of the text).
+ * @property {Partial<Record<'nonContributingRules' | 'rearEndContributingRules' | 'excusingViolations' |
+ *   'aftermathWindowS', 'legal' | 'design'>>} [paramBasis] Basis of each fault-table choice;
+ *   required for all four with `faultRows`.
+ */
+
+/**
+ * Condition of a fault row, evaluated per contact from the frame and the scorer state:
+ * - `aftermath`: within `aftermathWindowS` of a notice contact, other party not a pedestrian;
+ * - `from-behind`: `otherFromBehind` and the striker is not the ego;
+ * - `contributing-episode`: an episode of a contributing rule is open within `crashCauseWindowS`;
+ * - `same-lane-ahead`: `sameLaneAhead`, the striker is the ego or both, and the other party has no
+ *   excusing violation;
+ * - `ego-strikes`: the striker is the ego and the other party has no excusing violation;
+ * - `otherwise`: always matches.
+ * @typedef {'aftermath' | 'from-behind' | 'contributing-episode' | 'same-lane-ahead' | 'ego-strikes'
+ *   | 'otherwise'} FaultCondition
+ */
+
+/**
+ * @typedef {object} FaultRow
+ * @property {string} id Row id, for tests and notes.
+ * @property {FaultCondition} when Condition.
+ * @property {'notice' | 'deduction'} result Outcome when the condition holds.
+ * @property {boolean} [unlessRearEndContributing] A notice row becomes a deduction when a
+ *   `rearEndContributingRules` episode is open in the window (that episode is the cause).
  */
 
 /**
