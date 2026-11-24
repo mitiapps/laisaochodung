@@ -21,6 +21,13 @@ export const TICK_HZ = 60;
 /** Earth radius in metres used by the OSM projection. */
 export const EARTH_RADIUS_M = 6_371_008.8;
 
+/**
+ * Kerb top above the road surface, in metres: the sim's kerb collider and the drawn pavement share
+ * it, so wheels ride what is drawn. TCVN 13592 §9.7.4 asks for at least 12.5 cm; the game keeps
+ * 12 cm.
+ */
+export const KERB_HEIGHT_M = 0.12;
+
 /** Minutes in a day, for clock wrap-around. */
 export const MINUTES_PER_DAY = 1440;
 

@@ -19,8 +19,9 @@
  * Creates the replaying stub.
  * @param {StubStates} states Recorded states (e.g. `tests/fixtures/hud-states.json`).
  * @param {{stepMs?: number}} [options] Delay between replayed states.
- * @returns {GameApi & {calls: string[]}} Stub API; `calls` logs every call for tests. `start`
- *   accepts the start options and ignores them; `controls` calls are logged as `hold:<action>:<on>`,
+ * @returns {GameApi & {calls: string[]}} Stub API; `calls` logs every call for tests. `start` is
+ *   logged as `start:<map>:<vehicle>`, followed by `:<options JSON>` when options are given; the
+ *   options change nothing in the replay. `controls` calls are logged as `hold:<action>:<on>`,
  *   `press:<action>` and `steer:<value>` and change nothing.
  */
 export function createStubGame(states, { stepMs = 1500 } = {}) {
@@ -56,8 +57,8 @@ export function createStubGame(states, { stepMs = 1500 } = {}) {
 
   return {
     calls,
-    async start(mapId, vehicleId) {
-      calls.push(`start:${mapId}:${vehicleId}`);
+    async start(mapId, vehicleId, options) {
+      calls.push(options === undefined ? `start:${mapId}:${vehicleId}` : `start:${mapId}:${vehicleId}:${JSON.stringify(options)}`);
       emit(states.ready);
       play([states.running, states.withToasts, states.finished]);
     },

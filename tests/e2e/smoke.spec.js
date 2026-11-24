@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { CONTROL_PRESET_STORAGE_KEY } from '../../src/ui/lib/control-preset-store.js';
 
 /**
  * Smoke path through the shipped build: the home page lists the vehicles and maps, a run of
@@ -14,6 +15,11 @@ import { expect, test } from '@playwright/test';
 async function hudSpeed(page) {
   return Number(await page.getByTestId('hud-speed').innerText());
 }
+
+// These runs drive the Thực tế preset (manual gears, separate brakes); the preset is stored before load.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [CONTROL_PRESET_STORAGE_KEY, 'real']);
+});
 
 test('the app loads, drives, and its pages render without console errors', async ({ page }) => {
   const problems = [];

@@ -1,11 +1,16 @@
 /**
- * Keyboard input from `KEY_BINDINGS`. Held keys become ramped analogue values, `press` keys become
- * edge commands delivered once by the next `sample()`, and the pause key is handled outside the
- * sim step through `onPause`, so it keeps working while the run is paused.
+ * The input mixer: the keyboard (`KEY_BINDINGS`) and the on-screen controls feed one held set and
+ * one press path. Held actions become ramped analogue values, `press` actions become edge commands
+ * delivered once by the next `sample()`, and the pause action is handled outside the sim step
+ * through `onPause`, so it keeps working while the run is paused.
  *
+ * - Holds are kept per source, a key code or the on-screen control of an action, and an action is
+ *   held while any source holds it, so a key and a finger on the same action release correctly.
  * - `event.repeat` key-downs never emit a command again.
  * - Key-downs with Ctrl, Alt or Meta are left to the browser.
- * - Losing focus (`blur`) releases every held key.
+ * - Losing focus (`blur`) or a hidden tab (`visibilitychange`) releases every source.
+ * - While an on-screen steering pointer is down its value is the steering; on release the ramp
+ *   takes over from that value and returns it to centre.
  * - While input is enabled, bound keys have their default action prevented, so Space does not
  *   click a focused button and the arrows do not scroll.
  * - Throttle ramps 0 → 1 in `THROTTLE_RAMP_S`; steering ramps to full lock in `STEER_RAMP_S` and
@@ -51,12 +56,33 @@ function approach(value, target, maxStep) {
   return Math.max(target, value - maxStep);
 }
 
+
+/** @type {ReadonlyMap<ControlAction, import('../contracts/controls.js').KeyBinding>} */
+const BINDING_BY_ACTION = new Map(KEY_BINDINGS.map((b) => [b.action, b]));
+
+/**
+ * The binding of an on-screen control's action, checked against the mode the call needs.
+ * @param {unknown} action Action from the UI.
+ * @param {'hold' | 'press'} mode Mode the call needs.
+ * @returns {import('../contracts/controls.js').KeyBinding} Binding.
+ */
+function bindingFor(action, mode) {
+  const binding = BINDING_BY_ACTION.get(/** @type {ControlAction} */ (action));
+  if (!binding) throw new RangeError(`Unknown control action "${String(action)}"`);
+  if (binding.mode !== mode) throw new RangeError(`Control action "${binding.action}" is a ${binding.mode} action, not a ${mode} action`);
+  return binding;
+}
+
 /**
  * @typedef {object} InputOptions
  * @property {LegalClass} legalClass Vehicle class; picks the brake mapping.
  * @property {number} surfaceGrip Map surface grip (1 dry asphalt).
  * @property {EventTarget} target Where key events arrive (the window).
- * @property {() => void} [onPause] Called on a pause key press while input is enabled.
+ * @property {{visibilityState: string} & EventTarget} [visibility] Releases every source when it
+ *   reports `hidden` (the document).
+ * @property {() => void} [onPause] Called on a pause press while input is enabled.
+ * @property {number} [combinedRearPerGrip] Motorbike: the rear brake the brake action adds, per unit
+ *   of surface grip, next to the front brake. 0 (default) keeps the brakes separate.
  */
 
 /**
@@ -65,38 +91,57 @@ function approach(value, target, maxStep) {
  *   consumes the pending edge commands.
  * @property {(enabled: boolean) => void} setEnabled Whether the run listens (running or paused).
  * @property {(driving: boolean) => void} setDriving Whether edge commands are latched (running).
+ * @property {(action: ControlAction, on: boolean) => void} hold On-screen control: hold or release
+ *   a `hold` action. Ignored while input is disabled, except a release.
+ * @property {(action: ControlAction) => void} press On-screen control: fire a `press` action once,
+ *   on the same path as its key.
+ * @property {(value: number | null) => void} steer On-screen steering −1..1 while its pointer is
+ *   down; null hands the steering back to the ramp.
  * @property {() => void} dispose Removes the listeners.
  */
 
 /**
- * Creates the keyboard input.
+ * Creates the input mixer.
  * @param {InputOptions} options Options.
  * @returns {Input} Input.
  */
-export function createInput({ legalClass, surfaceGrip, target, onPause }) {
+export function createInput({ legalClass, surfaceGrip, target, visibility, onPause, combinedRearPerGrip = 0 }) {
   if (!Number.isFinite(surfaceGrip) || surfaceGrip <= 0) throw new RangeError('createInput needs a positive surfaceGrip');
+  if (!Number.isFinite(combinedRearPerGrip) || combinedRearPerGrip < 0) throw new RangeError('createInput needs a combinedRearPerGrip ≥ 0');
   const motorbike = legalClass !== 'car';
   const frontBrake = motorbike ? Math.min(1, SCOOTER_FRONT_BRAKE_PER_GRIP * surfaceGrip) : 1;
+  const combinedRear = motorbike && combinedRearPerGrip > 0 ? Math.min(1, combinedRearPerGrip * surfaceGrip) : 0;
   /** @type {Set<string>} */
   const heldCodes = new Set();
+  /** @type {Set<ControlAction>} Actions held by their on-screen control. */
+  const heldControls = new Set();
   /** @type {{gearCmd: ControlInput['gearCmd'], signalCmd: ControlInput['signalCmd'], cycle: boolean}} */
   let edges = { gearCmd: null, signalCmd: null, cycle: false };
   let throttle = 0;
   let steer = 0;
+  /** @type {number | null} On-screen steering while its pointer is down. */
+  let steerOverride = null;
   let enabled = false;
   let driving = false;
 
   /**
    * @param {ControlAction} action Action.
-   * @returns {boolean} Some key of the action is held.
+   * @returns {boolean} Some source holds the action.
    */
   const held = (action) => {
+    if (heldControls.has(action)) return true;
     for (const code of heldCodes) if (BINDING_BY_CODE.get(code)?.action === action) return true;
     return false;
   };
 
+  const releaseAll = () => {
+    heldCodes.clear();
+    heldControls.clear();
+    steerOverride = null;
+  };
+
   /** @param {ControlAction} action Pressed action. */
-  const press = (action) => {
+  const firePress = (action) => {
     if (action === 'pause') {
       onPause?.();
       return;
@@ -118,7 +163,7 @@ export function createInput({ legalClass, surfaceGrip, target, onPause }) {
     if (!binding || !enabled) return;
     e.preventDefault();
     if (binding.mode === 'hold') heldCodes.add(e.code);
-    else if (!e.repeat) press(binding.action);
+    else if (!e.repeat) firePress(binding.action);
   };
 
   /** @param {Event} ev Key event. */
@@ -130,26 +175,34 @@ export function createInput({ legalClass, surfaceGrip, target, onPause }) {
     if (enabled) e.preventDefault();
   };
 
-  const onBlur = () => heldCodes.clear();
+  const onBlur = () => releaseAll();
+  const onVisibility = () => {
+    if (visibility?.visibilityState === 'hidden') releaseAll();
+  };
 
   target.addEventListener('keydown', onKeyDown);
   target.addEventListener('keyup', onKeyUp);
   target.addEventListener('blur', onBlur);
+  visibility?.addEventListener('visibilitychange', onVisibility);
 
   return {
     sample(dt = DT) {
       throttle = held('throttle') ? approach(throttle, 1, dt / THROTTLE_RAMP_S) : approach(throttle, 0, dt / THROTTLE_RELEASE_S);
-      const steerTarget = (held('steerRight') ? 1 : 0) - (held('steerLeft') ? 1 : 0);
-      // Back toward centre (released, or counter-steering) at the return rate, outward at the ramp rate.
-      const rate = steerTarget === 0 || steer * steerTarget < 0 ? dt / STEER_RETURN_S : dt / STEER_RAMP_S;
-      steer = approach(steer, steerTarget, rate);
+      if (steerOverride !== null) {
+        steer = steerOverride;
+      } else {
+        const steerTarget = (held('steerRight') ? 1 : 0) - (held('steerLeft') ? 1 : 0);
+        // Back toward centre (released, or counter-steering) at the return rate, outward at the ramp rate.
+        const rate = steerTarget === 0 || steer * steerTarget < 0 ? dt / STEER_RETURN_S : dt / STEER_RAMP_S;
+        steer = approach(steer, steerTarget, rate);
+      }
       const brake = held('brake');
       const space = held('handbrake');
       const input = neutralInput();
       input.throttle = throttle;
       input.steer = steer;
       input.brakeFront = brake ? frontBrake : 0;
-      input.brakeRear = motorbike && space ? 1 : 0;
+      input.brakeRear = motorbike ? Math.max(space ? 1 : 0, brake ? combinedRear : 0) : 0;
       input.handbrake = !motorbike && space;
       input.horn = held('horn');
       input.gearCmd = edges.gearCmd;
@@ -160,17 +213,37 @@ export function createInput({ legalClass, surfaceGrip, target, onPause }) {
     },
     setEnabled(value) {
       enabled = value;
-      if (!value) heldCodes.clear();
+      if (!value) releaseAll();
     },
     setDriving(value) {
       driving = value;
       if (!value) edges = { gearCmd: null, signalCmd: null, cycle: false };
     },
+    hold(action, on) {
+      const binding = bindingFor(action, 'hold');
+      if (!on) heldControls.delete(binding.action);
+      else if (enabled) heldControls.add(binding.action);
+    },
+    press(action) {
+      const binding = bindingFor(action, 'press');
+      if (enabled) firePress(binding.action);
+    },
+    steer(value) {
+      if (value === null) {
+        steerOverride = null;
+        return;
+      }
+      if (typeof value !== 'number' || !Number.isFinite(value)) throw new RangeError(`steer needs a finite number or null, got ${String(value)}`);
+      if (!enabled) return;
+      steerOverride = Math.max(-1, Math.min(1, value));
+      steer = steerOverride;
+    },
     dispose() {
       target.removeEventListener('keydown', onKeyDown);
       target.removeEventListener('keyup', onKeyUp);
       target.removeEventListener('blur', onBlur);
-      heldCodes.clear();
+      visibility?.removeEventListener('visibilitychange', onVisibility);
+      releaseAll();
     },
   };
 }

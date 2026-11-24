@@ -32,8 +32,8 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const MAPS = path.join(ROOT, 'data/maps');
 const SHIPPED = ['osm-pasteur', 'tutorial-01-co-ban', 'tutorial-02-nga-tu', 'tutorial-03-ban-dem'];
-const TRAFFIC_MAPS = ['osm-pasteur', 'tutorial-02-nga-tu'];
-const NO_TRAFFIC_MAPS = ['tutorial-01-co-ban', 'tutorial-03-ban-dem'];
+const TRAFFIC_MAPS = ['osm-pasteur', 'tutorial-02-nga-tu', 'tutorial-03-ban-dem'];
+const NO_TRAFFIC_MAPS = ['tutorial-01-co-ban'];
 
 /**
  * The hand-written junction fixture without its lane graph.
@@ -53,7 +53,9 @@ const built = new Map();
 
 beforeAll(async () => {
   signCodes = await loadSignCodes(ROOT);
-  for (const id of SHIPPED) built.set(id, await buildOne(MAPS, id, signCodes));
+  // Without buildings and props, so a map compares against its compiled spec plus the lane graph;
+  // props.test.js covers what the scenery adds.
+  for (const id of SHIPPED) built.set(id, await buildOne(MAPS, id, signCodes, { scenery: false }));
 });
 
 /**
@@ -273,6 +275,9 @@ describe('lane graph of the shipped maps', () => {
     expect(map.laneJoins).toEqual(g.joins);
     expect(g.starts.get('rong-f0')).toEqual({ kind: 'taper' });
     expect(g.ends.get('rong-b0')).toEqual({ kind: 'taper' });
+    const t = /** @type {import('../../../src/contracts/map.js').TrafficConfig} */ (map.traffic);
+    expect(t.sources.map((x) => x.laneId)).not.toContain('rong-f0');
+    expect(t.sinks).not.toContain('rong-b0');
   });
 
   it('keeps traffic off the closed road on tutorial 02', () => {

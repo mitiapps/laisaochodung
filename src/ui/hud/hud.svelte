@@ -3,145 +3,165 @@
   import NavArrow from './nav-arrow.svelte';
   import NoticeToast from './notice-toast.svelte';
   import SpeedLimitSign from './speed-limit-sign.svelte';
+  import ControlButton from './controls/control-button.svelte';
+  import KeyBadge from './controls/key-badge.svelte';
+  import Pedal from './controls/pedal.svelte';
+  import RoundButton from './controls/round-button.svelte';
+  import SteeringSlider from './controls/steering-slider.svelte';
   import { formatGear, formatScore, formatSpeed } from '../lib/format.js';
-  import { indicatorLamps, noticeItems, pedalBars, rpmFraction, steerPosition } from '../lib/hud-view.js';
+  import { actionLabel, arcButtons, noticeItems, pedalControls, rpmFraction } from '../lib/hud-view.js';
+  import { watchBadgeVisibility } from '../lib/key-label.js';
 
   /**
+   * The HUD is a control surface: readouts plus a working on-screen control for every action, each
+   * with its key badge, laid out where touch controls sit on a phone in landscape.
    * @type {{
    *   state: import('../../contracts/hud.js').HudState,
    *   vehicle: import('../../contracts/vehicle.js').VehicleInfo,
    *   toasts: import('../lib/toast-stack.js').Toast[],
+   *   controls: import('../../contracts/hud.js').GameControls,
    *   onpause: () => void,
    *   ondismiss: (episodeId: string) => void,
    * }}
    */
-  let { state, vehicle, toasts, onpause, ondismiss } = $props();
+  let { state: hud, vehicle, toasts, controls, onpause, ondismiss } = $props();
 
-  const lamps = $derived(indicatorLamps(state.indicators));
   const isCar = $derived(vehicle.legalClass === 'car');
-  const paused = $derived(state.runStatus === 'paused');
-  const pedals = $derived(pedalBars(state.controls, isCar));
-  const notices = $derived(noticeItems(state.notices));
+  const paused = $derived(hud.runStatus === 'paused');
+  const rows = $derived(arcButtons(hud));
+  const pedals = $derived(pedalControls(hud.controls, isCar, hud.controlPreset));
+  const notices = $derived(noticeItems(hud.notices));
+
+  let showBadges = $state(true);
+  $effect(() =>
+    watchBadgeVisibility(window, (shown) => {
+      showBadges = shown;
+    }),
+  );
+
+  /**
+   * Hold handler of an action.
+   * @param {import('../../contracts/controls.js').ControlAction} action Action.
+   * @returns {(on: boolean) => void} Handler.
+   */
+  const holdOf = (action) => (on) => controls.hold(action, on);
+
+  /**
+   * Press handler of an action.
+   * @param {import('../../contracts/controls.js').ControlAction} action Action.
+   * @returns {() => void} Handler.
+   */
+  const pressOf = (action) => () => controls.press(action);
 </script>
 
-<div class="pointer-events-none absolute inset-0 flex flex-col justify-between p-4 text-stone-900" data-testid="hud">
-  <div class="flex items-start justify-between gap-4">
-    <div class="rounded-lg border border-white/60 bg-white/90 shadow-md backdrop-blur px-3 py-2">
-      <p class="text-xs text-stone-600">Điểm</p>
-      <p class="text-2xl font-bold" data-testid="hud-score">{formatScore(state.score)}</p>
-    </div>
-    <div class="rounded-lg border border-white/60 bg-white/90 shadow-md backdrop-blur px-3 py-2">
-      <NavArrow nav={state.nav} headingRad={state.headingRad} />
-    </div>
-    <button
-      type="button"
-      class="pointer-events-auto rounded-lg border border-police-600 bg-police-500 px-4 py-2 font-semibold text-stone-900 shadow-md hover:bg-police-400"
-      data-testid="hud-pause"
-      onclick={onpause}
-    >
-      {paused ? 'Tiếp tục' : 'Tạm dừng'}
-    </button>
-  </div>
-
-  <div class="flex items-end justify-between gap-4">
-    <div class="flex items-end gap-3 rounded-lg border border-white/60 bg-white/90 shadow-md backdrop-blur p-3">
-      <SpeedLimitSign limitKmh={state.speedLimitKmh} verified={state.speedLimitVerified} />
-      <div>
-        <p class="text-5xl font-bold tabular-nums leading-none" data-testid="hud-speed">{formatSpeed(state.speedKmh)}</p>
-        <p class="text-xs text-stone-600">km/h</p>
-      </div>
-      <div class="ml-2 text-center">
-        <p class="text-xs text-stone-600">Số</p>
-        <p class="text-3xl font-bold" data-testid="hud-gear">{formatGear(state.gear)}</p>
-      </div>
-      {#if isCar}
-        <div class="ml-2 w-32" data-testid="hud-rpm">
-          <p class="text-xs text-stone-600">Vòng tua</p>
-          <div class="h-2 overflow-hidden rounded bg-stone-200">
-            <div class="h-full bg-police-700" style="width: {rpmFraction(state.rpm) * 100}%"></div>
-          </div>
-          <p class="text-xs tabular-nums text-stone-700">{Math.round(state.rpm)} v/ph</p>
-        </div>
-      {/if}
-      <div class="ml-2 flex items-end gap-2" data-testid="hud-controls">
-        {#each pedals as bar (bar.id)}
-          <div class="flex flex-col items-center" data-testid="hud-{bar.id}" data-value={bar.fraction.toFixed(2)}>
-            <div class="flex h-12 w-3 flex-col justify-end overflow-hidden rounded bg-stone-200" aria-hidden="true">
-              <div class={bar.id === 'throttle' ? 'bg-emerald-700' : 'bg-kepi-500'} style="height: {bar.fraction * 100}%"></div>
-            </div>
-            <p class="mt-1 text-[10px] text-stone-600">{bar.label}</p>
-          </div>
-        {/each}
-        <div class="flex flex-col items-center" data-testid="hud-steer" data-value={state.controls.steer.toFixed(2)}>
-          <div class="relative h-3 w-20 rounded bg-stone-200" aria-hidden="true">
-            <div class="absolute inset-y-0 left-1/2 w-px bg-stone-500"></div>
-            <div class="absolute inset-y-0 w-1.5 -translate-x-1/2 rounded bg-police-700" style="left: {steerPosition(state.controls.steer) * 100}%"></div>
-          </div>
-          <p class="mt-1 text-[10px] text-stone-600">Tay lái</p>
-        </div>
-        {#if isCar}
-          <p
-            class={state.controls.handbrake ? 'rounded bg-kepi-500 px-1.5 py-0.5 text-xs font-semibold text-white' : 'rounded px-1.5 py-0.5 text-xs text-stone-600'}
-            data-testid="hud-handbrake"
-            data-on={state.controls.handbrake}
+<div class="pointer-events-none absolute inset-0 text-stone-900" data-testid="hud">
+  <div
+    class="absolute inset-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-[max(0.75rem,env(safe-area-inset-top))]"
+  >
+    <div class="relative h-full w-full">
+      <!-- The control layer: the only part of the HUD that takes pointers. -->
+      <div
+        class="pointer-events-auto absolute inset-0 touch-none select-none"
+        data-testid="hud-controls"
+        role="presentation"
+        onpointerdown={(e) => e.preventDefault()}
+        oncontextmenu={(e) => e.preventDefault()}
+      >
+        <div class="absolute right-0 top-0">
+          <ControlButton
+            action="pause"
+            mode="press"
+            label={actionLabel('pause')}
+            onpress={onpause}
+            testid="hud-pause"
+            class="h-14 min-w-14 rounded-xl border border-police-600 bg-police-500 px-3 text-sm font-semibold text-stone-900 shadow-md"
           >
-            Phanh tay
+            {paused ? 'Tiếp tục' : 'Tạm dừng'}
+            <KeyBadge action="pause" shown={showBadges} class="-bottom-2 right-1" />
+          </ControlButton>
+        </div>
+
+        <div class="absolute bottom-0 left-0">
+          <SteeringSlider steer={hud.controls.steer} {showBadges} onsteer={(v) => controls.steer(v)} />
+        </div>
+
+        <div class="absolute bottom-0 right-0 flex flex-col items-end gap-2">
+          {#each rows as row, i (i)}
+            <div class="flex gap-2">
+              {#each row as button (button.action)}
+                <RoundButton {button} lights={hud.lights} {showBadges} onhold={holdOf(button.action)} onpress={pressOf(button.action)} />
+              {/each}
+            </div>
+          {/each}
+          <div class="flex items-end gap-2">
+            {#each pedals as control (control.action)}
+              <Pedal {control} {showBadges} onhold={holdOf(control.action)} />
+            {/each}
+          </div>
+        </div>
+      </div>
+
+      <!-- Readouts: no actions. -->
+      <div class="absolute left-0 top-0 flex items-start gap-2">
+        <div class="rounded-lg border border-white/60 bg-white/90 px-3 py-1.5 shadow-md backdrop-blur">
+          <p class="text-xs text-stone-600">Điểm</p>
+          <p class="text-2xl font-bold" data-testid="hud-score">{formatScore(hud.score)}</p>
+        </div>
+        <div class="rounded-lg border border-white/60 bg-white/90 px-2 py-1 shadow-md backdrop-blur">
+          <NavArrow nav={hud.nav} headingRad={hud.headingRad} />
+        </div>
+      </div>
+
+      <div
+        class="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-end gap-2 rounded-lg border border-white/60 bg-white/90 p-2 shadow-md backdrop-blur"
+        data-testid="hud-speed-panel"
+      >
+        <SpeedLimitSign limitKmh={hud.speedLimitKmh} verified={hud.speedLimitVerified} />
+        <div class="text-center">
+          <p class="text-4xl font-bold tabular-nums leading-none" data-testid="hud-speed">{formatSpeed(hud.speedKmh)}</p>
+          <p class="text-xs text-stone-600">km/h</p>
+        </div>
+        <div class="text-center">
+          <p class="text-xs text-stone-600">Số</p>
+          <p class="text-3xl font-bold leading-none" data-testid="hud-gear">{formatGear(hud.gear)}</p>
+        </div>
+        <div class="flex flex-col items-start gap-1">
+          {#if isCar}
+            <div class="w-20" data-testid="hud-rpm">
+              <p class="text-[10px] text-stone-600">Vòng tua</p>
+              <div class="h-2 overflow-hidden rounded bg-stone-200">
+                <div class="h-full bg-police-700" style:width="{rpmFraction(hud.rpm) * 100}%"></div>
+              </div>
+              <p class="text-[10px] tabular-nums text-stone-700">{Math.round(hud.rpm)} v/ph</p>
+            </div>
+          {/if}
+          <p
+            class={hud.skid ? 'rounded bg-kepi-500 px-1.5 py-0.5 text-[10px] font-semibold text-white' : 'rounded px-1.5 py-0.5 text-[10px] text-stone-500'}
+            data-testid="hud-skid"
+            data-on={hud.skid}
+          >
+            Trượt bánh
           </p>
+        </div>
+      </div>
+
+      <!-- Toasts: top centre, height capped clear of the arc, the pedals and the pause button; the
+           newest first, so the cap never hides it. -->
+      <div
+        class="absolute left-1/2 top-0 flex max-h-[calc(100dvh-16rem)] w-72 max-w-[calc(100%-26rem)] min-w-60 -translate-x-1/2 flex-col gap-2 overflow-y-auto overflow-x-hidden"
+        data-testid="toast-stack"
+      >
+        {#if notices.length > 0}
+          <div class="flex flex-col gap-2" data-testid="notice-stack">
+            {#each [...notices].reverse() as item (item.key)}
+              <NoticeToast notice={item.notice} />
+            {/each}
+          </div>
         {/if}
+        {#each [...toasts].reverse() as toast (toast.episodeId)}
+          <BreachToast breach={toast.breach} ondismiss={() => ondismiss(toast.episodeId)} />
+        {/each}
       </div>
     </div>
-
-    <ul class="flex items-center gap-3 rounded-lg border border-white/60 bg-white/90 shadow-md backdrop-blur px-3 py-2 text-sm">
-      <li
-        class={lamps.left ? 'animate-blink text-police-700' : 'text-stone-400'}
-        data-testid="hud-indicator-left"
-        data-on={lamps.left}
-        aria-label="Xi nhan trái"
-      >
-        <svg viewBox="0 0 20 20" class="h-6 w-6" aria-hidden="true"><path d="M2 10 L12 2 V7 H18 V13 H12 V18 Z" fill="currentColor" /></svg>
-      </li>
-      <li
-        class={lamps.hazard ? 'animate-blink text-kepi-500' : 'text-stone-400'}
-        data-testid="hud-hazard"
-        data-on={lamps.hazard}
-        aria-label="Đèn cảnh báo nguy hiểm"
-      >
-        <svg viewBox="0 0 20 20" class="h-6 w-6" aria-hidden="true"><path d="M10 2 L19 18 H1 Z M10 7 L5 15.5 H15 Z" fill="currentColor" fill-rule="evenodd" /></svg>
-      </li>
-      <li
-        class={lamps.right ? 'animate-blink text-police-700' : 'text-stone-400'}
-        data-testid="hud-indicator-right"
-        data-on={lamps.right}
-        aria-label="Xi nhan phải"
-      >
-        <svg viewBox="0 0 20 20" class="h-6 w-6" aria-hidden="true"><path d="M18 10 L8 2 V7 H2 V13 H8 V18 Z" fill="currentColor" /></svg>
-      </li>
-      <li class={state.lights === 'low' ? 'rounded bg-police-500 px-1.5 py-0.5 font-semibold text-stone-900' : 'rounded px-1.5 py-0.5 text-stone-600'} data-testid="hud-low-beam" data-on={state.lights === 'low'}>
-        Đèn cốt
-      </li>
-      <li class={state.lights === 'high' ? 'rounded bg-police-500 px-1.5 py-0.5 font-semibold text-stone-900' : 'rounded px-1.5 py-0.5 text-stone-600'} data-testid="hud-high-beam" data-on={state.lights === 'high'}>
-        Đèn pha
-      </li>
-      <li class={state.horn ? 'rounded bg-police-500 px-1.5 py-0.5 font-semibold text-stone-900' : 'rounded px-1.5 py-0.5 text-stone-600'} data-testid="hud-horn" data-on={state.horn}>Còi</li>
-      <li class={state.skid ? 'rounded bg-kepi-500 px-1.5 py-0.5 font-semibold text-white' : 'rounded px-1.5 py-0.5 text-stone-600'} data-testid="hud-skid" data-on={state.skid}>
-        Trượt bánh
-      </li>
-    </ul>
   </div>
-
-  {#if notices.length > 0}
-    <div class="absolute left-4 top-24 flex flex-col gap-2" data-testid="notice-stack">
-      {#each notices as item (item.key)}
-        <NoticeToast notice={item.notice} />
-      {/each}
-    </div>
-  {/if}
-
-  {#if toasts.length > 0}
-    <div class="absolute bottom-28 right-4 top-20 flex flex-col gap-2 overflow-hidden" data-testid="toast-stack">
-      {#each toasts as toast (toast.episodeId)}
-        <BreachToast breach={toast.breach} ondismiss={() => ondismiss(toast.episodeId)} />
-      {/each}
-    </div>
-  {/if}
 </div>

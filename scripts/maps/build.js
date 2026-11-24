@@ -4,7 +4,7 @@
  *
  * Reads every `data/maps/<id>/source.yaml` (tutorial, or OSM with `raw.overpass.json` and
  * `overrides.yaml`), converts it, validates it with `assertMap` against the sign codes in
- * `data/signs/signs.yaml`, and writes byte-stable JSON to `public/maps/<id>.json` plus
+ * `data/signs/signs.yaml`, adds typed buildings and street props, and writes byte-stable JSON to `public/maps/<id>.json` plus
  * `public/maps/index.json` (`MapIndexEntry[]`). Exits non-zero on any error. Never fetches.
  */
 
@@ -16,9 +16,24 @@ import { parse } from 'yaml';
 import { assertMap } from '../../src/contracts/assert-map.js';
 import { MAP_COLLECTIONS, OPTIONAL_MAP_COLLECTIONS } from '../../src/contracts/map.js';
 import { angleDiff, headingOf } from '../../src/geometry/index.js';
+import { frontageRows, importOsmBuildings, parseLandmarks, typeTutorialRows } from './lib/buildings.js';
 import { buildLaneGraph } from './lib/connectors.js';
-import { compileMap, routeLength } from './lib/elements.js';
+import { compileMap, routeLength, topologyOf } from './lib/elements.js';
 import { wayPoints } from './lib/graph.js';
+import { createProjection } from './lib/project.js';
+import {
+  Blockers,
+  PROP_SPECS,
+  PropSet,
+  fillForecourts,
+  fillPavements,
+  importOsmProps,
+  mapBlockers,
+  parsePropList,
+  placePropList,
+  propSpecFootprint,
+  roadSides,
+} from './lib/props.js';
 import { osmSpec, tutorialSpec } from './lib/source.js';
 import { parseTrafficSource, trafficConfig, trafficTimeLimit } from './lib/traffic.js';
 
@@ -33,6 +48,8 @@ const TURN_MIN_RAD = Math.PI / 4;
 /** @typedef {import('../../src/contracts/catalog.js').MapIndexEntry} MapIndexEntry */
 /** @typedef {import('./lib/source.js').MapSpec} MapSpec */
 /** @typedef {import('./lib/source.js').SourceYaml} SourceYaml */
+/** @typedef {import('./lib/buildings.js').OsmBuildingElement} OsmBuildingElement */
+/** @typedef {import('./lib/props.js').OsmPropElement} OsmPropElement */
 
 /**
  * Canonical JSON value: numbers rounded (millimetres, or 1e-7° under `origin`), no −0, object
@@ -199,14 +216,104 @@ export function addLaneGraphAndTraffic(map, trafficSrc, where) {
 }
 
 /**
+ * Scenery sources of one map.
+ * @typedef {object} ScenerySource
+ * @property {string} file Source file name for messages.
+ * @property {unknown} props Tutorial `props:` list (a layout's when the map sets none).
+ * @property {{raw: {elements: Array<OsmBuildingElement & OsmPropElement>}, landmarks: unknown} | null} osm OSM extract and the
+ *   `landmarks` overrides, for OSM maps.
+ */
+
+/**
+ * Adds typed buildings and street props to a compiled map: OSM footprints and furniture on OSM
+ * maps; shophouse typing of the written rows, generated rows along every free pavement edge and
+ * the `props:` list on tutorial maps; then a seeded fill of trees, lamps, poles and parked
+ * motorbikes on every map. Only building fields, new building obstacles and `props` are added;
+ * nothing else in the map changes.
+ * @param {GameMap} map Compiled map (changed in place).
+ * @param {MapSpec} spec Its spec.
+ * @param {ScenerySource} source Scenery sources.
+ * @returns {string[]} Build notes worth logging.
+ */
+export function addScenery(map, spec, source) {
+  const topo = topologyOf(spec);
+  const sides = roadSides(topo);
+  const roadLines = topo.roads.map((r) => r.points);
+  const lanes = new Blockers();
+  for (const road of map.roads) for (const lane of road.lanes) lanes.add(lane.polygon, `lane ${lane.id}`);
+  for (const j of map.junctions) lanes.add(j.polygon, `junction ${j.id}`);
+  /** @type {string[]} */
+  const notes = [];
+
+  const toXZ = spec.origin ? createProjection(spec.origin).toXZ : null;
+  if (source.osm) {
+    if (!toXZ) throw new Error(`${source.file}: an OSM map needs a projection origin`);
+    const landmarks = parseLandmarks(source.osm.landmarks, source.file);
+    const imported = importOsmBuildings(source.osm.raw, toXZ, { mapId: map.id, lanes, landmarks, roadLines });
+    map.obstacles.push(...imported.obstacles);
+    notes.push(...imported.notes);
+  }
+  typeTutorialRows(map.obstacles, roadLines);
+
+  const specs = parsePropList(source.props, topo, sides, source.file);
+  /** @type {import('./lib/props.js').Forecourt[]} */
+  let forecourts = [];
+  if (map.kind === 'tutorial') {
+    const rowBlockers = new Blockers();
+    for (const it of lanes.items) rowBlockers.add(it.ring, it.what);
+    for (const pv of map.pavements) rowBlockers.add(pv.polygon, `pavement ${pv.id}`);
+    for (const o of map.obstacles) rowBlockers.add(o.footprint, `obstacle ${o.id}`);
+    const frontage = specs.filter((p) => PROP_SPECS[p.kind].frontage).map(propSpecFootprint);
+    const generated = frontageRows(map.id, sides, rowBlockers, frontage);
+    map.obstacles.push(...generated.rows);
+    forecourts = generated.forecourts;
+    notes.push(`buildings: ${generated.rows.length} shophouse rows generated, ${forecourts.length} with a forecourt`);
+  }
+
+  const set = new PropSet(sides, mapBlockers(map));
+  placePropList(set, specs, source.file);
+  if (source.osm && toXZ) notes.push(...importOsmProps(source.osm.raw, toXZ, topo, set));
+  fillForecourts(set, map.id, forecourts);
+  fillPavements(set, map.id, map.kind === 'tutorial');
+  map.props = set.props;
+  /** @type {Record<string, number>} */
+  const byKind = {};
+  for (const p of set.props) byKind[p.kind] = (byKind[p.kind] ?? 0) + 1;
+  notes.push(`props: ${Object.keys(byKind).sort().map((k) => `${byKind[k]} ${k}`).join(', ') || 'none'}`);
+  return notes;
+}
+
+/**
+ * Scenery sources of one map directory.
+ * @param {string} mapsDir `data/maps` directory.
+ * @param {string} id Map id.
+ * @param {SourceYaml} src Parsed `source.yaml`.
+ * @returns {Promise<ScenerySource>} Sources.
+ */
+async function scenerySource(mapsDir, id, src) {
+  const file = `${id}/source.yaml`;
+  if (src.kind === 'osm') {
+    const dir = path.join(mapsDir, id);
+    const raw = JSON.parse(await readFile(path.join(dir, 'raw.overpass.json'), 'utf8'));
+    const overrides = await readYaml(path.join(dir, 'overrides.yaml'));
+    return { file: `${id}/overrides.yaml`, props: undefined, osm: { raw, landmarks: overrides.landmarks } };
+  }
+  let props = src.props;
+  if (props === undefined && typeof src.layout === 'string') props = (await readYaml(path.join(mapsDir, src.layout, 'source.yaml'))).props;
+  return { file, props, osm: null };
+}
+
+/**
  * Builds one map.
  * @param {string} mapsDir `data/maps` directory.
  * @param {string} id Map id.
  * @param {string[]} signCodes Allowed sign codes.
+ * @param {{scenery?: boolean}} [options] `scenery: false` leaves out typed buildings and props,
+ *   for comparing a build without them.
  * @returns {Promise<{map: GameMap, json: string, entry: MapIndexEntry, spec: MapSpec, notes: string[]}>} Result
- *   and the notes worth logging (stubs kept short, traffic values).
+ *   and the notes worth logging (stubs kept short, traffic values, scenery counts).
  */
-export async function buildOne(mapsDir, id, signCodes) {
+export async function buildOne(mapsDir, id, signCodes, options = {}) {
   const spec = await loadSpec(mapsDir, id);
   for (const s of spec.signs) {
     if (!signCodes.includes(s.code)) throw new Error(`${id}: sign ${s.id} uses code ${s.code}, which is not in data/signs/signs.yaml`);
@@ -215,6 +322,7 @@ export async function buildOne(mapsDir, id, signCodes) {
   const src = await readYaml(path.join(mapsDir, id, 'source.yaml'));
   const notes = (spec.stubNotes ?? []).map((n) => `stub of way ${n.osmWayId} at ${n.nodeId} (${n.side}) kept at ${n.lengthM.toFixed(0)} m: ${n.reason}`);
   notes.push(...addLaneGraphAndTraffic(compiled, src.traffic, `${id}/source.yaml`));
+  if (options.scenery !== false) notes.push(...addScenery(compiled, spec, await scenerySource(mapsDir, id, src)));
   const json = serializeMap(compiled);
   const map = /** @type {GameMap} */ (JSON.parse(json));
   assertMap(map, { signCodes });

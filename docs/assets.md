@@ -9,23 +9,50 @@ missing file, a CC BY record lacks its credit line, or the model payload reaches
 
 | Files | Source | Licence | Used as |
 | --- | --- | --- | --- |
-| `models/car-kit/sedan.glb` | [Kenney Car Kit 3.1](https://kenney.nl/assets/car-kit) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | Player car (`car-sedan`) |
-| `models/car-kit/taxi.glb`, `hatchback-sports.glb` | same | CC0 1.0 | NPC cars (`npc-sedan`, `npc-hatchback`) |
-| `models/car-kit/Textures/colormap.png` | same | CC0 1.0 | Shared texture the GLBs reference by relative path |
+| `models/car-kit/sedan.glb` | [Kenney Car Kit 3.1](https://kenney.nl/assets/car-kit) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | Player car (`car-sedan`); traffic `car` |
+| `models/car-kit/taxi.glb`, `hatchback-sports.glb` | same | CC0 1.0 | Scripted cars (`npc-sedan`, `npc-hatchback`); traffic `taxi` and `car` |
+| `models/car-kit/suv.glb` | same | CC0 1.0 | Traffic `car` |
+| `models/car-kit/van.glb`, `truck.glb`, `delivery.glb`, `truck-flat.glb` | same | CC0 1.0 | Traffic `truck` |
+| `models/car-kit/debris-bumper.glb`, `debris-door.glb`, `debris-tire.glb` | same | CC0 1.0 | Debris beside a wreck |
+| `models/car-kit/Textures/colormap.png` | same | CC0 1.0 | Shared texture the Car Kit GLBs reference by relative path |
+| `models/mini-characters/character-male-b.glb`, `character-female-b.glb` | [Kenney Mini Characters 2.0](https://kenney.nl/assets/mini-characters) | CC0 1.0 | Motorbike riders (`drive` clip baked), the player's rider, fallen riders (`die` clip) |
+| `models/mini-characters/character-female-e.glb` | same | CC0 1.0 | Pillion passengers (`sit` clip baked); a pedestrian |
+| `models/mini-characters/character-male-a.glb`, `character-female-c.glb`, `character-male-e.glb` | same | CC0 1.0 | Scripted pedestrians (`walk` and `idle` clips) |
+| `models/mini-characters/Textures/colormap.png` | same | CC0 1.0 | The characters' texture, also sampled by the procedural motorbikes and bus |
+| `models/city-kit/roads/light-curved.glb`, `light-square.glb`, `electricity-pole.glb`, `electricity-wires.glb`, `dumpster.glb`, `Textures/colormap.png` | [Kenney City Kit Roads 2.2](https://kenney.nl/assets/city-kit-roads) | CC0 1.0 | Street props |
+| `models/city-kit/commercial/detail-awning.glb`, `detail-awning-wide.glb`, `detail-parasol-a.glb`, `detail-parasol-b.glb`, `Textures/colormap.png` | [Kenney City Kit Commercial 2.1](https://kenney.nl/assets/city-kit-commercial) | CC0 1.0 | Shop-front props |
+| `models/city-kit/suburban/tree-large.glb`, `tree-small.glb`, `planter.glb`, `Textures/colormap.png` | [Kenney City Kit Suburban 2.0](https://kenney.nl/assets/city-kit-suburban) | CC0 1.0 | Trees and planters |
 
-The licence was read on the Kenney page and in the kit's `License.txt`. The kit's GLBs face +Z with
-left at +X, and each wheel is a separate node (`wheel-front-left`, `wheel-front-right`,
-`wheel-back-left`, `wheel-back-right`).
+The licences were read on each Kenney page and in each kit's `License.txt`. Each kit ships its own
+`colormap.png` under the same relative name, so each City Kit has its own folder. The Car Kit GLBs
+face +Z with left at +X, and each wheel is a separate node (`wheel-front-left`,
+`wheel-front-right`, `wheel-back-left`, `wheel-back-right`).
 
-The scooter is drawn from primitives. The model the plan named, "Scooter" by Julien Savoie
-([poly.pizza/m/5FDNl4MP9H3](https://poly.pizza/m/5FDNl4MP9H3), CC BY 3.0), is a kick scooter, so it
-is not shipped. Two CC BY 3.0 motor scooters on Poly Pizza would fit: "low poly scooter" by
-Thomas Saint Pierre ([awXCP7LUcz6](https://poly.pizza/m/awXCP7LUcz6)) and "Scooter" by Poly by
-Google ([eHdEFPwUfCt](https://poly.pizza/m/eHdEFPwUfCt)).
+### Procedural models
 
-Pedestrians are primitive figures. Any vehicle or actor whose GLB is missing or fails to load is
-drawn as a generated box car or primitive scooter of its footprint size, and the console shows the
-error.
+No CC0 motor scooter or city bus exists in the Kenney style, so these are our own code
+(Apache-2.0 with the game), built in `src/render/vehicles/`:
+
+- `motorbike.js`: a scooter (xe tay ga) and an underbone (xe số), extruded side-profile outlines
+  (body, seat, leg shield, mudguards) plus rods, 500–550 triangles each without the two separate
+  wheels. Traffic motorbikes and the player's scooter use them, with a baked rider.
+- `bus.js`: a 10.5 m city bus in a green and white livery.
+
+Their UVs point at cells of the Mini Characters colour map, so a motorbike and its baked rider
+share one material and one draw call.
+
+### Riders, pedestrians and paint
+
+- `src/render/rider-bake.js` poses a Mini Character on the CPU and bakes it into static geometry,
+  with adult proportions (smaller head, longer legs, torso and arms) and a helmet. Scripted
+  pedestrians stay skinned and animated, at most 8 at once.
+- Variant colours touch only the paint: Car Kit bodies list their paint cells of the colour map
+  (`KENNEY_BODIES` in `src/render/vehicles/index.js`), and the shader patch in
+  `src/render/vehicles/look-material.js` repaints only those texels, so glass, tyres and lamps
+  keep their colour.
+
+Any vehicle whose GLB is missing or fails to load is drawn as a generated box car of its footprint
+size, and the console shows the error; a rider or passenger that fails to load is left out.
 
 ### Adding a model
 
@@ -35,9 +62,9 @@ error.
 3. Copy it under `public/models/` and add its `Credit` record. A CC BY work needs the exact
    `creditLine`.
 4. Point a config at it: a vehicle in `src/render/vehicles/<vehicleId>.js` (registered in
-   `src/render/vehicles/index.js`), or an actor `model` key in `ACTOR_MODELS`. The renderer scales
-   the model per axis to the footprint (width on X, length on Z), stands it on the ground and turns
-   it to +X forward.
+   `src/render/vehicles/index.js`), or a Car Kit body in `KENNEY_BODIES` with its paint cells and
+   a model key that uses it in `resolveLook`. The renderer scales the model per axis to the
+   footprint (width on X, length on Z), stands it on the ground and turns it to +X forward.
 
 ## Signs
 

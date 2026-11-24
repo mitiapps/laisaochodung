@@ -1,7 +1,7 @@
 [
   {
     "id": "car-sedan",
-    "name": { "vi": "Ô tô con (số sàn không côn)" },
+    "name": { "vi": "Ô tô con" },
     "legalClass": "car",
     "decreeGroup": "D6",
     "lengthM": 4.5,

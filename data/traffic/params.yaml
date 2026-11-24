@@ -220,6 +220,9 @@ models:
       variants: design
 
 # Personality rows (all design except the normal HDM errors and b_stop).
+# Tuned headless on osm-pasteur (20 seeds x 5 min): distractionIntervalS doubled on every row
+# (careful 240, normal 120, reckless 40) brought NPC incidents from about 1.3 to inside the
+# incidentBand; inattention was the cause of most of them.
 # Shares sum to 1. Violation rates are motorbike values; other classes scale some by
 # violations.carScale.
 personalities:
@@ -240,7 +243,7 @@ personalities:
     mobilSafeDecelMps2: 3
     criticalGapFactor: 1.2
     yellowStopDecelMps2: 4.0
-    distractionIntervalS: 120
+    distractionIntervalS: 240
     violations:
       redLight: 0
       earlyStart: 0
@@ -289,7 +292,7 @@ personalities:
     mobilSafeDecelMps2: 4
     criticalGapFactor: 1.0
     yellowStopDecelMps2: 3.1
-    distractionIntervalS: 60
+    distractionIntervalS: 120
     violations:
       redLight: 0.04
       earlyStart: 0.05
@@ -338,7 +341,7 @@ personalities:
     mobilSafeDecelMps2: 6
     criticalGapFactor: 0.6
     yellowStopDecelMps2: 2.0
-    distractionIntervalS: 20
+    distractionIntervalS: 40
     violations:
       redLight: 0.35
       earlyStart: 0.4

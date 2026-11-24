@@ -1,6 +1,16 @@
 /**
  * Scene environment: sun and sky light from `env.clockMin`, fog, a wet look and rain streaks in
- * rain, and the smoothed chase camera. No cockpit or rider view in the MVP.
+ * rain, night emissives, and the smoothed chase camera. No cockpit or rider view in the MVP.
+ *
+ * - Far plane 300 m. The day fog leaves about 1% of a surface's colour at that distance, so the
+ *   cut never shows, and it lets distant scenery chunks be culled.
+ * - Shadows: the sun's shadow camera is set up and follows the camera focus, but `castShadow` on
+ *   the sun and `renderer.shadowMap` stay off until the integration enables them. Only the ego and
+ *   traffic cast; scenery and road only receive.
+ * - Night: materials with a numeric `userData.nightEmissive` get `emissiveIntensity = night × value`
+ *   (lit windows, sign boards), and objects with a numeric `userData.nightOnly` show only from that
+ *   night factor on (lamp glow sprites). The scene is scanned again whenever its child count
+ *   changes, so builders added later are picked up.
  */
 
 import {
@@ -27,6 +37,10 @@ const NIGHT_SKY = new Color(0x0b1020);
 const RAIN_SKY = new Color(0x6d7680);
 const RAIN_DROPS = 1500;
 const RAIN_BOX_M = 40;
+/** Camera far plane in metres. */
+export const FAR_M = 300;
+/** Half side of the square the sun's shadow covers around the focus, in metres (design). */
+export const SHADOW_HALF_M = 45;
 
 /**
  * Pure: light and fog settings for an environment.
@@ -40,7 +54,7 @@ export function environmentLook(env) {
     day,
     sunIntensity: day * (rain ? 0.6 : 2.2),
     hemiIntensity: 0.18 + day * (rain ? 0.8 : 1.1),
-    fogDensity: rain ? 0.018 : 0.004 + (1 - day) * 0.006,
+    fogDensity: rain ? 0.018 : 0.007 + (1 - day) * 0.006,
     night: 1 - day,
   };
 }
@@ -61,6 +75,15 @@ export function createEnvironment(scene, asphalt) {
   const hemi = new HemisphereLight(0xdfefff, 0x4a4535, 1);
   scene.add(hemi);
   const sun = new DirectionalLight(0xfff1d8, 2);
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.left = -SHADOW_HALF_M;
+  sun.shadow.camera.right = SHADOW_HALF_M;
+  sun.shadow.camera.top = SHADOW_HALF_M;
+  sun.shadow.camera.bottom = -SHADOW_HALF_M;
+  sun.shadow.camera.near = 1;
+  sun.shadow.camera.far = 250;
+  sun.shadow.bias = -0.0005;
+  sun.shadow.normalBias = 0.02;
   scene.add(sun);
   scene.add(sun.target);
   const fog = new FogExp2(DAY_SKY.getHex(), 0.004);
@@ -88,9 +111,18 @@ export function createEnvironment(scene, asphalt) {
   rain.visible = false;
   scene.add(rain);
 
+  /** @type {NightTargets} */
+  let night = { materials: [], objects: [] };
+  let scannedChildren = -1;
+
   return {
     update(env, focus, nowS) {
       const look = environmentLook(env);
+      if (scene.children.length !== scannedChildren) {
+        night = nightTargets(scene);
+        scannedChildren = scene.children.length;
+      }
+      applyNight(night, look.night);
       const isRain = env.weather === 'rain';
       sky.copy(NIGHT_SKY).lerp(isRain ? RAIN_SKY : DAY_SKY, look.day);
       fog.color.copy(sky);
@@ -126,6 +158,46 @@ export function createEnvironment(scene, asphalt) {
 }
 
 /**
+ * @typedef {object} NightTargets
+ * @property {{material: MeshStandardMaterial, scale: number}[]} materials Emissive materials.
+ * @property {{object: import('three').Object3D, from: number}[]} objects Night-only objects.
+ */
+
+/**
+ * Collects the night emissive materials and night-only objects of a scene.
+ * @param {Scene} scene Scene.
+ * @returns {NightTargets} Targets.
+ */
+export function nightTargets(scene) {
+  /** @type {NightTargets} */
+  const out = { materials: [], objects: [] };
+  const seen = new Set();
+  scene.traverse((o) => {
+    if (typeof o.userData.nightOnly === 'number') out.objects.push({ object: o, from: o.userData.nightOnly });
+    const mesh = /** @type {import('three').Mesh} */ (o);
+    if (!mesh.isMesh) return;
+    const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const m of list) {
+      const scale = m.userData.nightEmissive;
+      if (typeof scale !== 'number' || seen.has(m) || !('emissiveIntensity' in m)) continue;
+      seen.add(m);
+      out.materials.push({ material: /** @type {MeshStandardMaterial} */ (m), scale });
+    }
+  });
+  return out;
+}
+
+/**
+ * Applies a night factor to the targets.
+ * @param {NightTargets} targets Targets.
+ * @param {number} night Night factor 0..1.
+ */
+export function applyNight(targets, night) {
+  for (const { material, scale } of targets.materials) material.emissiveIntensity = night * scale;
+  for (const { object, from } of targets.objects) object.visible = night >= from;
+}
+
+/**
  * Pure: chase-camera eye and look-at points for a pose.
  * @param {{x: number, y: number, z: number, heading: number}} pose Target pose.
  * @param {'car' | 'motorbike' | 'moped'} legalClass Vehicle class (sets distance and height).
@@ -149,7 +221,7 @@ export function chaseTarget(pose, legalClass) {
  * @returns {{camera: PerspectiveCamera, follow: (pose: {x: number, y: number, z: number, heading: number}, dtS: number, snap: boolean, shake: [number, number, number]) => void}} Camera.
  */
 export function createChaseCamera(aspect, legalClass) {
-  const camera = new PerspectiveCamera(60, aspect, 0.1, 1500);
+  const camera = new PerspectiveCamera(60, aspect, 0.1, FAR_M);
   const eye = new Vector3();
   const look = new Vector3();
   let primed = false;

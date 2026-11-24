@@ -1,6 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { pointInPolygon, polylineLength } from '../../../src/geometry/index.js';
-import { compileMap } from './elements.js';
+import { polygonSignedArea, polygonsIntersect } from '../../../src/geometry/index.js';
+import { addScenery } from '../build.js';
+import {
+  MAX_DROPPED_SHARE,
+  cleanRing,
+  frontEdgeOf,
+  frontageRows,
+  importOsmBuildings,
+  parseLandmarks,
+  shophouseFloors,
+  shophouseHeight,
+  typeOsmBuilding,
+} from './buildings.js';
+import { compileMap, topologyOf } from './elements.js';
+import { Blockers, roadSides } from './props.js';
 import { STUB_M, carriageway, continuation, laneSpan, locateOnWay, osmCorridor, splitNetwork } from './graph.js';
 import { buildRoad, convexHull, growPolygon, parseLineSpec } from './lanes.js';
 import { bboxCentre, createProjection } from './project.js';
@@ -407,5 +421,157 @@ describe('side-road stubs', () => {
     expect(stubNotes.map((n) => [n.osmWayId, n.side])).toEqual([[20, 'out'], [30, 'out']]);
     expect(stubNotes[0].reason).toMatch(/ends after 40 m/);
     expect(stubNotes[1].reason).toMatch(/overlaps w10-2-out/);
+  });
+});
+
+describe('buildings', () => {
+  it('follows the height rule: height, then levels times the storey of the type, then a type default', () => {
+    expect(typeOsmBuilding({ building: 'yes', height: '13.5', heritage: 'yes' }, 800, 1, null)).toEqual({ use: 'civic', floors: 3, height: 13.5 });
+    expect(typeOsmBuilding({ building: 'yes', 'building:levels': '22' }, 900, 1, null)).toEqual({ use: 'tower', floors: 22, height: 22 * 3.4 });
+    expect(typeOsmBuilding({ building: 'apartments', 'building:levels': '5' }, 300, 1, null)).toEqual({ use: 'compound', floors: 5, height: 19 });
+    expect(typeOsmBuilding({ building: 'civic', 'building:levels': '3' }, 3000, 1, null)).toEqual({ use: 'civic', floors: 3, height: 13.5 });
+    expect(typeOsmBuilding({ building: 'roof' }, 200, 1, null)).toEqual({ use: 'compound', floors: 1, height: 4.5 });
+    expect(typeOsmBuilding({ building: 'house' }, 80, 1, null)).toEqual({ use: 'shophouse', floors: 4, height: 4 * 3.4 });
+    // An untagged building gets 3–5 storeys from its seed; a large one is a compound.
+    for (const seed of [0, 1, 2, 3]) expect(typeOsmBuilding({ building: 'yes' }, 100, seed, null).floors).toBe(3 + (seed % 3));
+    expect(typeOsmBuilding({ building: 'yes' }, 2000, 0, null).use).toBe('compound');
+    // A building:part inside lifts an outline with no height of its own.
+    expect(typeOsmBuilding({ building: 'church' }, 1000, 0, 18.5)).toEqual({ use: 'civic', floors: 4, height: 18.5 });
+  });
+
+  it('cleans rings to points listed once in the converter winding, and finds the street-facing edge', () => {
+    const ring = cleanRing([
+      [0, 0],
+      [10, 0],
+      [10, 0],
+      [10, 8],
+      [0, 8],
+      [0, 0],
+    ]);
+    expect(ring).toHaveLength(4);
+    expect(polygonSignedArea(ring)).toBeLessThan(0);
+    const road = /** @type {[number, number][]} */ ([
+      [-50, -5],
+      [50, -5],
+    ]);
+    const front = /** @type {number} */ (frontEdgeOf(ring, [road]));
+    const a = ring[front];
+    const b = ring[(front + 1) % ring.length];
+    expect(a[1]).toBe(0);
+    expect(b[1]).toBe(0);
+    expect(frontEdgeOf(ring, [[[-50, -500], [50, -500]]])).toBeUndefined();
+    expect(shophouseHeight(4)).toBeCloseTo(13.8);
+    expect(shophouseFloors(shophouseHeight(4))).toBe(4);
+    expect(shophouseFloors(2)).toBe(1);
+  });
+
+  it('parses landmark overrides with a reason each', () => {
+    expect(parseLandmarks([{ osm: 'way/12', heightM: 21, reason: 'r' }], 'o')).toEqual(new Map([['way/12', { heightM: 21 }]]));
+    expect(parseLandmarks([{ osm: 'way/12', colour: '#b5543c', reason: 'r' }], 'o')).toEqual(new Map([['way/12', { colour: '#b5543c' }]]));
+    expect(() => parseLandmarks([{ osm: 'way/12', colour: 'red', reason: 'r' }], 'o')).toThrow(/#rrggbb/);
+    expect(() => parseLandmarks([{ osm: 'way/12' }], 'o')).toThrow(/reason/);
+    expect(() => parseLandmarks([{ osm: 'node/12', reason: 'r' }], 'o')).toThrow(/way\/<id>/);
+    expect(() => parseLandmarks([{ osm: 'way/1', reason: 'r' }, { osm: 'way/1', reason: 'r' }], 'o')).toThrow(/twice/);
+  });
+
+  it('imports OSM outlines, drops and logs those on a lane, and stops above the drop cap', () => {
+    const proj = createProjection({ lat: 10, lon: 106 });
+    const square = (/** @type {number} */ x, /** @type {number} */ z, /** @type {number} */ size) => {
+      const pts = [
+        [x, z],
+        [x + size, z],
+        [x + size, z + size],
+        [x, z + size],
+        [x, z],
+      ];
+      // Inverse of the projection near the origin, good to well under a millimetre here.
+      return pts.map(([px, pz]) => ({ lat: 10 - pz / 111194.93, lon: 106 + px / (111194.93 * Math.cos((10 * Math.PI) / 180)) }));
+    };
+    const lanes = new Blockers();
+    lanes.add(
+      [
+        [-100, -2],
+        [100, -2],
+        [100, 2],
+        [-100, 2],
+      ],
+      'lane x',
+    );
+    /**
+     * @param {number} count Buildings clear of the lane.
+     * @returns {Parameters<typeof importOsmBuildings>[0]} Extract.
+     */
+    const raw = (count) => /** @type {Parameters<typeof importOsmBuildings>[0]} */ ({
+      elements: [
+        { type: 'way', id: 1, tags: { building: 'yes', name: 'On the road' }, geometry: square(0, -1, 4) },
+        ...Array.from({ length: count }, (_, i) => ({ type: 'way', id: 10 + i, tags: { building: 'yes' }, geometry: square(i * 10, 10, 8) })),
+        { type: 'way', id: 9, tags: { 'building:part': 'yes', height: '30' }, geometry: square(1, 11, 3) },
+        { type: 'relation', id: 5, tags: { building: 'yes', height: '9' }, members: [{ type: 'way', role: 'outer', geometry: square(-30, 10, 8) }] },
+      ],
+    });
+    /** @type {Parameters<typeof importOsmBuildings>[2]} */
+    const context = { mapId: 'm', lanes, landmarks: parseLandmarks([{ osm: 'relation/5', colour: '#b5543c', reason: 'r' }], 'o'), roadLines: [[[-100, 0], [100, 0]]] };
+    const { obstacles, notes } = importOsmBuildings(raw(12), proj.toXZ, context);
+    expect(obstacles.map((o) => o.id)).toContain('bd-osm-r5');
+    expect(obstacles.map((o) => o.id)).not.toContain('bd-osm-w1');
+    expect(notes).toContain('building way/1 (On the road) overlaps lane x: dropped');
+    const first = /** @type {import('../../../src/contracts/map.js').Obstacle} */ (obstacles.find((o) => o.id === 'bd-osm-w10'));
+    expect(first.height).toBe(30);
+    expect(first.footprint).toHaveLength(4);
+    expect(first.frontEdge).toBeDefined();
+    expect(obstacles.find((o) => o.id === 'bd-osm-r5')).toMatchObject({ use: 'landmark', height: 9, colour: '#b5543c' });
+    expect(first.colour).toBeUndefined();
+    expect(() => importOsmBuildings(raw(12), proj.toXZ, ({ ...context, landmarks: parseLandmarks([{ osm: 'way/999', reason: 'r' }], 'o') }))).toThrow(
+      /landmark way\/999/,
+    );
+    // One dropped of seven is over the cap.
+    const few = 5;
+    expect(1 / (few + 2)).toBeGreaterThan(MAX_DROPPED_SHARE);
+    expect(() => importOsmBuildings(raw(few), proj.toXZ, context)).toThrow(/overlap a lane or junction, over 10%/);
+  });
+
+  it('fills every free pavement edge of a tutorial with seeded shophouse rows clear of the road', () => {
+    const spec = tutorialSpec('t', tutorialSource({ buildings: [{ way: 'w1', side: 'right', fromS: 10, toS: 90 }] }), () => ({}));
+    const map = compileMap(spec);
+    const sides = roadSides(topologyOf(spec));
+    const blockers = new Blockers();
+    for (const r of map.roads) for (const l of r.lanes) blockers.add(l.polygon, 'lane');
+    for (const j of map.junctions) blockers.add(j.polygon, 'junction');
+    for (const pv of map.pavements) blockers.add(pv.polygon, 'pavement');
+    for (const o of map.obstacles) blockers.add(o.footprint, o.id);
+    const { rows, forecourts } = frontageRows('t', sides, blockers, []);
+    expect(rows.length).toBeGreaterThan(4);
+    const again = frontageRows('t', sides, (() => {
+      const b = new Blockers();
+      for (const r of map.roads) for (const l of r.lanes) b.add(l.polygon, 'lane');
+      for (const j of map.junctions) b.add(j.polygon, 'junction');
+      for (const pv of map.pavements) b.add(pv.polygon, 'pavement');
+      for (const o of map.obstacles) b.add(o.footprint, o.id);
+      return b;
+    })(), []);
+    expect(again.rows).toEqual(rows);
+    const road = [...map.roads.flatMap((r) => r.lanes.map((l) => l.polygon)), ...map.junctions.map((j) => j.polygon), ...map.pavements.map((p) => p.polygon)];
+    for (const r of rows) {
+      expect(road.some((q) => polygonsIntersect(r.footprint, q)), r.id).toBe(false);
+      expect(r.floors).toBeGreaterThanOrEqual(3);
+      expect(r.floors).toBeLessThanOrEqual(5);
+      expect(r.height).toBeCloseTo(shophouseHeight(/** @type {number} */ (r.floors)));
+    }
+    // The written row on w1 keeps its stretch: no generated row overlaps it.
+    const written = /** @type {import('../../../src/contracts/map.js').Obstacle} */ (map.obstacles.find((o) => o.kind === 'building'));
+    for (const r of rows) expect(polygonsIntersect(r.footprint, written.footprint)).toBe(false);
+    for (const f of forecourts) expect(rows.some((r) => r.id === f.rowId)).toBe(true);
+  });
+
+  it('types written rows and adds rows and props only through the scenery pass', () => {
+    const spec = tutorialSpec('t', tutorialSource({ buildings: [{ way: 'w1', side: 'right', fromS: 10, toS: 90, heightM: 18 }] }), () => ({}));
+    const map = compileMap(spec);
+    const notes = addScenery(map, spec, { file: 't/source.yaml', props: [{ kind: 'bus-stop', way: 'w1', side: 'left', s: 50 }], osm: null });
+    expect(map.obstacles.find((o) => o.id === 'bd-1')).toMatchObject({ use: 'shophouse', floors: 5 });
+    expect(map.props?.find((p) => p.id === 'pr-1')).toMatchObject({ kind: 'bus-stop', solid: true });
+    expect(notes.some((n) => n.startsWith('buildings: '))).toBe(true);
+    expect(() => addScenery(compileMap(spec), spec, { file: 't/source.yaml', props: [{ kind: 'bus-stop', way: 'w1', side: 'left', s: 50, offsetM: 0 }], osm: null })).toThrow(
+      /touches lane/,
+    );
   });
 });

@@ -64,3 +64,33 @@ export function signalDecision(state, distM, v, yellowLeftS, bStop, bMax, margin
   if (reachesBeforeRed(distM, v, yellowLeftS, marginS)) return 'go';
   return need <= bMax ? 'stop' : 'go';
 }
+
+/**
+ * Seconds of red left at `t`, or 0 outside the red phase (same wrap as `yellowRemaining`).
+ * @param {Signal} signal Signal.
+ * @param {number} t Run time.
+ * @returns {number} Seconds.
+ */
+export function redRemaining(signal, t) {
+  const { green, yellow, red, offset } = signal.cycle;
+  const period = green + yellow + red;
+  const u = (((t + offset) % period) + period) % period;
+  return u >= green + yellow ? period - u : 0;
+}
+
+/**
+ * Probability that a driver stops at the yellow onset: `1 / (1 + exp(k · (b_req − b_stop)))`,
+ * with `b_req = v² / (2d)` the deceleration a stop needs, so the choice is bimodal around the
+ * dilemma zone. A stop beyond the braking limit is never chosen.
+ * @param {number} distM Distance from the front to the stop line.
+ * @param {number} v Speed.
+ * @param {number} bStop The driver's `b_stop`.
+ * @param {number} bMax Braking limit.
+ * @param {number} k Steepness, s²/m (`ViolationParams.yellowLogisticK`).
+ * @returns {number} Probability in [0, 1].
+ */
+export function yellowStopProbability(distM, v, bStop, bMax, k) {
+  const need = distM > 0.05 ? (v * v) / (2 * distM) : v > 0.05 ? Infinity : 0;
+  if (need > bMax) return 0;
+  return 1 / (1 + Math.exp(k * (need - bStop)));
+}

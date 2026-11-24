@@ -48,6 +48,7 @@ test(`traffic step with ${AGENTS} agents`, async ({ bench }) => {
   expect(st.activeCount).toBeGreaterThanOrEqual(AGENTS * 0.95);
   const result = await bench('stepTraffic', step).run({ iterations: 10_000, time: 0 });
   expect(st.activeCount).toBeGreaterThanOrEqual(AGENTS * 0.9);
+  console.log(`stepTraffic, ${st.activeCount} agents: mean ${result.latency.mean.toFixed(3)} ms, p99 ${result.latency.p99.toFixed(3)} ms`);
   expect(result.latency.mean).toBeLessThanOrEqual(BUDGET.meanMs);
   expect(result.latency.p99).toBeLessThanOrEqual(BUDGET.p99Ms);
 });

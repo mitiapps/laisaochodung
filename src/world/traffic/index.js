@@ -3,35 +3,53 @@
  * deterministic: the same map, parameters, run seed and inputs give the same poses.
  *
  * Each `stepTraffic` call, at the input time `t`:
- * 1. applies the step's events: ego contacts make wrecks that stop dead, an ego reset
- *    clears agents around the ego, wrecks clear, agents despawn, sources and the ring spawner
- *    spawn;
+ * 1. applies the step's events: ego contacts make wrecks that stop dead, an ego reset clears
+ *    agents around the ego (and the perception of agents near it), wrecks clear, agents despawn,
+ *    sources and the ring spawner spawn;
  * 2. returns the poses at `t` (like `stepActors`, so the frame of tick k shows the poses after k
- *    steps of motion);
- * 3. computes every agent's acceleration and junction request from the state at `t` (IDM with the
- *    nearest of: the agent ahead on its route, the stop line or keep-clear hold point, and the ego
- *    or scripted actors in its corridor), then grants junction claims and integrates every agent,
- *    in ascending spawn index (two phases).
+ *    steps of motion), with each agent's latched violation flags;
+ * 3. lateral decisions, in ascending spawn index: mandatory lane changes out of closed lanes
+ *    (`lane-change.js`), discretionary lane changes of cars (`mobil.js`) and lateral slots of
+ *    motorbikes (`moto-slots.js`), each signalled before it is made unless the driver drew none;
+ * 4. computes every agent's acceleration and junction request from the state at `t`: IDM against
+ *    the agent ahead on its route that overlaps it laterally, as the driver perceives it
+ *    (`human-factors.js`: reaction delay, perception error, distraction), and against the stop
+ *    line or keep-clear hold point, a red stop line just past the junction, and, perceived
+ *    exactly, the ego, scripted actors, static map obstacles and agents moving across lanes in its
+ *    corridor; an ego signalling into the agent's lane and moving across counts as a leader for
+ *    agents that give way to it. Signal choices may break the rules (red-light run, early start,
+ *    yellow by a logistic choice), drawn per approach;
+ * 5. grants junction claims (the ego is a party to gap acceptance, `junctions.js`) and integrates
+ *    every agent, in ascending spawn index (two phases); car wrecks slide to a stop;
+ * 6. detects NPC contacts (`contacts.js`), which make wrecks and incidents, and latches the
+ *    violation flags raised from the true state this step (`violations.js`).
+ *
+ * A lane that joins another lane (`map.laneJoins`) runs straight on into it with no hold point and
+ * no claim.
  *
  * `stepWorld` is the one composite step, scripted actors then traffic, shared by the sim and
  * the test frame builder.
- *
- * Scope: collision-free traffic that moves, stops, turns and leaves. Agents obey signals and never
- * raise violation flags, so every pose carries `NO_VIOLATIONS` and `incidents` stays empty; there
- * are no human factors, violations, lateral manoeuvres or NPC–NPC contacts yet.
  */
 
-import { ACTOR_LIGHTS, NO_VIOLATIONS } from '../../contracts/telemetry.js';
-import { DT } from '../../contracts/units.js';
-import { footprint, polygonsIntersect } from '../../geometry/index.js';
+import { ACTOR_LIGHTS } from '../../contracts/telemetry.js';
+import { DT, TICK_HZ } from '../../contracts/units.js';
+import { angleDiff, footprint, polygonsIntersect, projectOntoPolyline } from '../../geometry/index.js';
 import { createActorState, stepActors } from '../actors.js';
+import { createStream, hash32, uniform } from '../random.js';
 import { trafficLightStates } from '../signals.js';
 import { idmAcceleration, integrate } from './idm.js';
 import { corridorObstacle } from './perception.js';
-import { reachesBeforeRed, signalDecision, yellowRemaining } from './signals.js';
-import { breaksDeadlock, checkConflicts, claimBlocking, exitRoom, laneLight, zoneClaimed } from './junctions.js';
+import { reachesBeforeRed, redRemaining, signalDecision, yellowRemaining, yellowStopProbability } from './signals.js';
+import { breaksDeadlock, checkConflicts, claimBlocking, defersToWaiter, exitRoom, laneLight, zoneClaimed, zonesOccupied } from './junctions.js';
+import { FLAG, draw, latch, raise, rateOf, violationsOf } from './violations.js';
+import { distracted, perceiveLeader, resetPerception } from './human-factors.js';
+import { chooseSlot, inTurnBand, moveTouches, overlapsAt, pathBlocked } from './moto-slots.js';
+import { stepMobil } from './mobil.js';
+import { detectContacts } from './contacts.js';
 import { STOPPED_MPS, createSpawner, inViewCone, runSpawner } from './spawner.js';
-import { rebuildGrid } from './grid.js';
+import { queryGrid, rebuildGrid } from './grid.js';
+import { changingLane, moveAcross, tryMandatoryLaneChange } from './lane-change.js';
+import { edgePoint, lanesUnder } from './lane-graph.js';
 import {
   chooseNext,
   claimAdd,
@@ -39,6 +57,7 @@ import {
   createTrafficState,
   despawnAgent,
   edgeInsert,
+  posePreview,
   edgeRemove,
   refreshBaseSpeed,
   sortEdgeLists,
@@ -65,6 +84,8 @@ export { DESPAWN_REASONS } from './state.js';
  * @property {number} speed Signed speed along the heading (negative while reversing).
  * @property {number} lengthM Length.
  * @property {number} widthM Width.
+ * @property {import('../../contracts/telemetry.js').Indicators} [indicators] Turn signals before
+ *   the step; absent counts as `off` (the pre-roll and tests).
  */
 
 /**
@@ -78,13 +99,7 @@ export { DESPAWN_REASONS } from './state.js';
  * @property {number} t Run time of this step.
  */
 
-/**
- * An NPC–NPC incident (none are emitted yet).
- * @typedef {object} TrafficIncident
- * @property {number} t Time.
- * @property {string[]} agentIds Agents involved.
- * @property {string[]} causes Human-factor and violation causes.
- */
+/** @typedef {import('./contacts.js').TrafficIncident} TrafficIncident */
 
 /**
  * @typedef {object} TrafficStep
@@ -104,8 +119,30 @@ export const RESET_CLEAR_MARGIN_M = 4;
 export const SIBLING_DIVERGE_M = 8;
 /** Leaders farther than this along the route are ignored, metres (design). */
 export const LEADER_LOOK_M = 200;
+/** A stopped agent this close to the end of a sink lane leaves the map once out of view, metres (design). */
+export const SINK_EDGE_M = 10;
 /** Small clearance kept to an obstacle when the advance is clamped, metres. */
 const CLAMP_MARGIN_M = 0.05;
+/**
+ * The advance stops this far short of the true gap to the agent ahead, metres (design): a driver
+ * acting on a delayed view creeps up in a queue but never into contact unless distracted.
+ */
+export const QUEUE_BUFFER_M = 0.3;
+/** Below this speed an agent never counts as tailgating, m/s (design: queues creep close). */
+export const TAILGATE_MIN_MPS = 3;
+/** Deceleration the ego is taken to brake at for its stopping distance, m/s² (design). */
+export const EGO_STOP_DECEL_MPS2 = 6;
+/** Reaction time added to the ego's stopping distance, seconds (design). */
+export const EGO_REACTION_S = 0.5;
+/** Sideways speed above which a signalling ego counts as moving across, m/s (design). */
+export const EGO_SIDEWAYS_MPS = 0.2;
+/** A red stop line just past a junction is looked for this far beyond the braking distance, metres. */
+const DOWNSTREAM_LOOK_M = 30;
+/** Bits of `approachDraws`: red-light draw made, early-start draw made, running the red. */
+const RED_DRAWN = 1;
+const EARLY_DRAWN = 2;
+const RUNNING = 4;
+const VALID_INDICATORS = Object.freeze(['off', 'left', 'right', 'hazard']);
 
 /**
  * Per-step scratch, allocated once per state.
@@ -126,6 +163,21 @@ const CLAMP_MARGIN_M = 0.05;
  * @property {{x: number, z: number, lengthM: number}} egoMid Ego centre and length.
  * @property {import('./junctions.js').ConflictCheck} check Conflict check result.
  * @property {Obstacle[]} near Obstacles near the agent being computed.
+ * @property {{slot: number, obstacle: Obstacle}[]} movers Agents moving across after a lane change.
+ * @property {Obstacle[]} perceived Ego, scripted actors and static obstacles, for lane changes.
+ * @property {import('./lane-graph.js').LaneSpan[]} parked Lane stretches under scripted actors
+ *   not moving along their path, for lane changes.
+ * @property {Map<string, import('./lane-graph.js').LaneSpan[]>} parkedSpans Those stretches by
+ *   actor id and place.
+ * @property {Uint8Array} noYield 1 when going now enters inside another party's critical gap.
+ * @property {Uint8Array} runner 1 when the request is a red-light run (only occupied zones stop it).
+ * @property {Uint8Array} forcing 1 when going now forces the way in (a red run, or a gap shorter
+ *   than the class critical gap taken by choice).
+ * @property {Uint8Array} held Next value of `TrafficState.held`.
+ * @property {Float64Array} perceived2 Perceived leader pair.
+ * @property {Vec2[][]} feet Footprints before the step's motion, by slot.
+ * @property {import('./junctions.js').EgoParty} egoParty The ego at junctions this step.
+ * @property {Float64Array} laneBox Bounding box per lane edge, 4 per lane, with `egoOnLaneM` margin.
  */
 
 /** @type {WeakMap<TrafficState, Scratch>} */
@@ -154,12 +206,98 @@ function scratchOf(st) {
       requests: new Int32Array(n),
       pair: new Float64Array(2),
       egoMid: { x: 0, z: 0, lengthM: 0 },
-      check: { claimed: false, yields: false, maxYieldWait: -1, minYieldIndex: Infinity },
+      check: { claimed: false, yields: false, noYield: false, egoYield: false, maxYieldWait: -1, minYieldIndex: Infinity },
       near: [],
+      movers: [],
+      perceived: [],
+      parked: [],
+      parkedSpans: new Map(),
+      noYield: new Uint8Array(n),
+      runner: new Uint8Array(n),
+      forcing: new Uint8Array(n),
+      held: new Uint8Array(n),
+      perceived2: new Float64Array(2),
+      feet: new Array(n),
+      egoParty: { lane: -1, toLaneEnd: 0, speed: 0 },
+      laneBox: laneBoxes(st),
     };
     SCRATCH.set(st, sc);
   }
   return sc;
+}
+
+/**
+ * Bounding boxes of the lane edges, grown by `behaviour.egoOnLaneM`.
+ * @param {TrafficState} st State.
+ * @returns {Float64Array} `[minX, minZ, maxX, maxZ]` per lane edge.
+ */
+function laneBoxes(st) {
+  const m = st.params.behaviour.egoOnLaneM;
+  const out = new Float64Array(st.graph.laneCount * 4);
+  for (let i = 0; i < st.graph.laneCount; i += 1) {
+    const e = st.graph.edges[i];
+    let minX = Infinity;
+    let minZ = Infinity;
+    let maxX = -Infinity;
+    let maxZ = -Infinity;
+    for (let j = 0; j < e.xs.length; j += 1) {
+      minX = Math.min(minX, e.xs[j]);
+      maxX = Math.max(maxX, e.xs[j]);
+      minZ = Math.min(minZ, e.zs[j]);
+      maxZ = Math.max(maxZ, e.zs[j]);
+    }
+    out.set([minX - m, minZ - m, maxX + m, maxZ + m], i * 4);
+  }
+  return out;
+}
+
+/** @type {{x: number, z: number, heading: number}} */
+const LANE_POINT = { x: 0, z: 0, heading: 0 };
+
+/**
+ * The ego as a junction party: the nearest lane within `behaviour.egoOnLaneM` of its centre whose
+ * direction is within 60° of its heading; none in a junction, off the road or reversing.
+ * @param {TrafficState} st State.
+ * @param {EgoInput} ego Ego.
+ * @param {Scratch} sc Scratch.
+ * @returns {import('./junctions.js').EgoParty} The scratch party, filled.
+ */
+function egoPartyOf(st, ego, sc) {
+  const party = sc.egoParty;
+  party.lane = -1;
+  party.toLaneEnd = 0;
+  party.speed = Math.max(0, ego.speed);
+  const { x, z } = ego.pos;
+  const box = sc.laneBox;
+  let best = st.params.behaviour.egoOnLaneM;
+  for (let i = 0; i < st.graph.laneCount; i += 1) {
+    if (x < box[i * 4] || z < box[i * 4 + 1] || x > box[i * 4 + 2] || z > box[i * 4 + 3]) continue;
+    const e = st.graph.edges[i];
+    const pr = projectOntoPolyline([x, z], e.points);
+    if (pr.distance >= best || pr.s >= e.length) continue;
+    edgePoint(e, pr.s, LANE_POINT);
+    if (Math.abs(angleDiff(ego.heading, LANE_POINT.heading)) > Math.PI / 3) continue;
+    best = pr.distance;
+    party.lane = i;
+    party.toLaneEnd = e.length - (pr.s + ego.lengthM / 2);
+  }
+  return party;
+}
+
+/**
+ * The ego's forward corridor inside its stopping distance (reaction plus braking at
+ * `EGO_STOP_DECEL_MPS2`), or null when it stands or reverses.
+ * @param {EgoInput} ego Ego.
+ * @returns {Vec2[] | null} Corridor.
+ */
+function egoCorridorOf(ego) {
+  const v = ego.speed;
+  if (v < STOPPED_MPS) return null;
+  const reach = (v * v) / (2 * EGO_STOP_DECEL_MPS2) + v * EGO_REACTION_S;
+  const hx = Math.cos(ego.heading);
+  const hz = -Math.sin(ego.heading);
+  const d = ego.lengthM / 2 + reach / 2;
+  return footprint({ x: ego.pos.x + hx * d, z: ego.pos.z + hz * d }, ego.heading, reach, ego.widthM);
 }
 
 /**
@@ -173,6 +311,7 @@ function checkInput(input) {
     throw new TypeError('stepTraffic needs an ego pose with finite pos, heading and speed');
   }
   if (!(e.lengthM > 0) || !(e.widthM > 0)) throw new TypeError('stepTraffic needs a positive ego size');
+  if (e.indicators !== undefined && !VALID_INDICATORS.includes(e.indicators)) throw new TypeError(`Unknown ego indicators ${String(e.indicators)}`);
   if (!Number.isFinite(input.t)) throw new TypeError('stepTraffic needs a finite t');
   if (!Array.isArray(input.scripted) || !Array.isArray(input.egoContacts) || typeof input.lights !== 'object' || input.lights === null) {
     throw new TypeError('stepTraffic needs scripted poses, ego contacts and light states');
@@ -205,7 +344,7 @@ function poseOf(st, slot) {
   const key = st.modelKeys[st.model[slot]];
   const model = st.params.models[key];
   const wreck = st.wreck[slot] === 1;
-  const v = wreck ? 0 : st.v[slot];
+  const v = st.v[slot];
   return {
     id: st.ids[slot],
     kind: model.kind,
@@ -219,13 +358,15 @@ function poseOf(st, slot) {
     widthM: st.widthM[slot],
     lights: lightsOf(st, slot),
     state: wreck ? (model.kind === 'motorbike' ? 'fallen' : 'crashed') : v > 0 ? 'moving' : 'stopped',
-    violations: NO_VIOLATIONS,
+    violations: violationsOf(st, slot, st.t),
   };
 }
 
 /**
- * Lamps of one agent: hazards on a wreck; brake lamps while braking or stopped; the indicator of
- * the next turn within `behaviour.indicatorLeadS` of the junction and through it.
+ * Lamps of one agent: hazards on a wreck; brake lamps while braking or stopped; the indicator of a
+ * signalled lane change from its decision until the agent has settled in the new lane; else the
+ * indicator of the next turn within `behaviour.indicatorLeadS` of the junction and through it.
+ * A driver who drew no signal for the change or the turn shows none.
  * @param {TrafficState} st State.
  * @param {number} slot Slot.
  * @returns {Readonly<import('../../contracts/telemetry.js').ActorLights>} Shared lamp entry.
@@ -233,6 +374,11 @@ function poseOf(st, slot) {
 function lightsOf(st, slot) {
   if (st.wreck[slot]) return ACTOR_LIGHTS.hazard;
   const brake = st.acc[slot] < -st.params.behaviour.brakeLampMps2 || st.v[slot] < STOPPED_MPS;
+  if (st.intent[slot] !== 0) {
+    if (st.intentQuiet[slot]) return brake ? ACTOR_LIGHTS.brake : ACTOR_LIGHTS.off;
+    if (st.intent[slot] > 0) return brake ? ACTOR_LIGHTS['brake-left'] : ACTOR_LIGHTS.left;
+    return brake ? ACTOR_LIGHTS['brake-right'] : ACTOR_LIGHTS.right;
+  }
   const edges = st.graph.edges;
   const e = edges[st.edge[slot]];
   let turn = e.turn;
@@ -246,6 +392,7 @@ function lightsOf(st, slot) {
       }
     }
   }
+  if (st.noSignal[slot]) turn = null;
   if (turn === 'left' || turn === 'uturn') return brake ? ACTOR_LIGHTS['brake-left'] : ACTOR_LIGHTS.left;
   if (turn === 'right') return brake ? ACTOR_LIGHTS['brake-right'] : ACTOR_LIGHTS.right;
   return brake ? ACTOR_LIGHTS.brake : ACTOR_LIGHTS.off;
@@ -268,30 +415,35 @@ function accel(st, slot, v0, gap, vLead) {
 }
 
 /**
- * Takes the first agent of an edge as the leader when it is nearer than the one in `out`.
+ * Takes the first agent of an edge that overlaps the slot laterally as the leader when it is
+ * nearer than the one in `out`.
  * @param {TrafficState} st State.
+ * @param {number} slot Asking slot.
  * @param {number} edge Edge.
  * @param {number} offset Path distance from the asking agent's front to the edge start.
  * @param {number} maxRear Ignore an agent whose rear is farther along the edge than this.
  * @param {Float64Array} out `[gap, speed]`, updated.
+ * @param {boolean} sibling The edge is a sibling connector: its agents count whatever their offset.
  * @returns {void}
  */
-function considerFirst(st, edge, offset, maxRear, out) {
-  if (st.edgeCount[edge] === 0) return;
-  const k = st.edgeAgents[edge][0];
-  const rear = st.s[k] - st.lengthM[k] / 2;
-  if (rear > maxRear) return;
-  const gap = offset + rear;
-  if (gap < out[0]) {
-    out[0] = gap;
+function considerFirst(st, slot, edge, offset, maxRear, out, sibling) {
+  const list = st.edgeAgents[edge];
+  for (let i = 0; i < st.edgeCount[edge]; i += 1) {
+    const k = list[i];
+    const rear = st.s[k] - st.lengthM[k] / 2;
+    if (rear > maxRear || offset + rear >= out[0]) return;
+    if (!sibling && !overlapsAt(st, slot, st.lateral[slot], k)) continue;
+    out[0] = offset + rear;
     out[1] = st.v[k];
+    return;
   }
 }
 
 /**
- * The agent ahead on the slot's route: on its edge (and, on a connector, on its siblings until
- * they diverge), else first on the next edge (and on sibling connectors of a next connector, until
- * they diverge), else first on the exit lane of a next connector. Writes `[gap, speed]` into `out`; the gap is Infinity without one.
+ * The agent ahead on the slot's route that overlaps it laterally: on its edge (and, on a
+ * connector, on its siblings until they diverge), else first on the next edge (and on sibling
+ * connectors of a next connector, until they diverge), else first on the exit lane of a next
+ * connector. Writes the true `[gap, speed]` into `out`; the gap is Infinity without one.
  * @param {TrafficState} st State.
  * @param {number} slot Slot.
  * @param {Int32Array} listPos Positions in edge lists.
@@ -304,19 +456,25 @@ function leaderAhead(st, slot, listPos, out) {
   const edges = st.graph.edges;
   const e = st.edge[slot];
   const front = st.s[slot] + st.lengthM[slot] / 2;
-  const i = listPos[slot];
-  if (i + 1 < st.edgeCount[e]) {
-    const k = st.edgeAgents[e][i + 1];
-    out[0] = st.s[k] - st.lengthM[k] / 2 - front;
+  const lat = st.lateral[slot];
+  const list = st.edgeAgents[e];
+  for (let i = listPos[slot] + 1; i < st.edgeCount[e]; i += 1) {
+    const k = list[i];
+    const gap = st.s[k] - st.lengthM[k] / 2 - front;
+    if (gap > LEADER_LOOK_M) break;
+    if (!overlapsAt(st, slot, lat, k)) continue;
+    out[0] = gap;
     out[1] = st.v[k];
+    break;
   }
   // Connectors leaving the same lane share their first metres: the nearest agent ahead on a
-  // sibling counts until it has diverged.
+  // sibling counts until it has diverged, whatever its offset (the paths cross there). Side by
+  // side, the lower spawn index goes first.
   for (const sib of edges[e].siblings) {
-    const list = st.edgeAgents[sib];
+    const sl = st.edgeAgents[sib];
     for (let j = 0; j < st.edgeCount[sib]; j += 1) {
-      const k = list[j];
-      if (st.s[k] <= st.s[slot]) continue;
+      const k = sl[j];
+      if (st.s[k] < st.s[slot] || (st.s[k] === st.s[slot] && st.spawnIndex[k] > st.spawnIndex[slot])) continue;
       const rear = st.s[k] - st.lengthM[k] / 2;
       if (rear <= SIBLING_DIVERGE_M && rear - front < out[0]) {
         out[0] = rear - front;
@@ -329,15 +487,42 @@ function leaderAhead(st, slot, listPos, out) {
   const next = st.nextEdge[slot];
   if (next < 0) return;
   const rem = edges[e].length - front;
-  considerFirst(st, next, rem, Infinity, out);
+  considerFirst(st, slot, next, rem, Infinity, out, false);
   const ne = edges[next];
   if (ne.kind === 'connector') {
-    for (const sib of ne.siblings) considerFirst(st, sib, rem, SIBLING_DIVERGE_M, out);
-    if (out[0] === Infinity) considerFirst(st, ne.toEdge, rem + ne.length, Infinity, out);
+    for (const sib of ne.siblings) considerFirst(st, slot, sib, rem, SIBLING_DIVERGE_M, out, true);
+    if (out[0] === Infinity) considerFirst(st, slot, ne.toEdge, rem + ne.length, Infinity, out, false);
   }
   if (out[0] > LEADER_LOOK_M) {
     out[0] = Infinity;
     out[1] = 0;
+  }
+}
+
+/** An agent moving across watches agents of the adjacent lanes within this distance along them, metres. */
+const ACROSS_WATCH_M = 30;
+
+/**
+ * Adds the agents of a lane near `slot` (along the lane) to an obstacle list.
+ * @param {TrafficState} st State.
+ * @param {number} lane Lane edge.
+ * @param {number} slot Asking slot.
+ * @param {Obstacle[]} out Obstacles, appended to.
+ * @returns {void}
+ */
+function pushNeighbours(st, lane, slot, out) {
+  const list = st.edgeAgents[lane];
+  for (let i = 0; i < st.edgeCount[lane]; i += 1) {
+    const j = list[i];
+    if (Math.abs(st.s[j] - st.s[slot]) > ACROSS_WATCH_M) continue;
+    out.push({
+      footprint: footprint({ x: st.x[j], z: st.z[j] }, st.heading[j], st.lengthM[j], st.widthM[j]),
+      x: st.x[j],
+      z: st.z[j],
+      radius: Math.hypot(st.lengthM[j], st.widthM[j]) / 2,
+      vx: st.v[j] * Math.cos(st.heading[j]),
+      vz: -st.v[j] * Math.sin(st.heading[j]),
+    });
   }
 }
 
@@ -357,12 +542,18 @@ function applyEvents(st, input, ego) {
     st.wreckT[slot] = input.t;
     st.v[slot] = 0;
     st.acc[slot] = 0;
+    st.crossing[slot] = 0;
     // A wreck still on its approach lane never enters the junction: free its claim.
     const c = st.claim[slot];
     if (c >= 0 && st.edge[slot] === st.graph.edges[c].fromEdge) claimDrop(st, slot);
   }
   if (input.egoReset) {
     const e = input.ego;
+    const r = st.params.egoPerceptionM;
+    for (let i = 0; i < st.activeCount; i += 1) {
+      const k = st.active[i];
+      if (Math.hypot(st.x[k] - e.pos.x, st.z[k] - e.pos.z) <= r) resetPerception(st, k);
+    }
     const guard = footprint(e.pos, e.heading, e.lengthM + 2 * RESET_CLEAR_MARGIN_M, e.widthM + 2 * RESET_CLEAR_MARGIN_M);
     for (let i = st.activeCount - 1; i >= 0; i -= 1) {
       const k = st.active[i];
@@ -395,14 +586,89 @@ function applyEvents(st, input, ego) {
       continue;
     }
     const e = st.graph.edges[st.edge[k]];
-    if (e.deadEnd && st.v[k] < STOPPED_MPS && e.length - (st.s[k] + st.lengthM[k] / 2) < st.minGap[k] + 1 && !inViewCone(ego, st.x[k], st.z[k], st.params)) {
-      despawnAgent(st, k, 'dead-end');
-    }
+    const toEnd = e.length - (st.s[k] + st.lengthM[k] / 2);
+    if (st.v[k] >= STOPPED_MPS || inViewCone(ego, st.x[k], st.z[k], st.params)) continue;
+    if (e.deadEnd && toEnd < st.minGap[k] + 1) despawnAgent(st, k, 'dead-end');
+    // Held up at the edge of the map (by a scripted actor parked at the end of its path): it
+    // leaves as if it had reached the end.
+    else if (e.sink && toEnd < SINK_EDGE_M) despawnAgent(st, k, 'sink');
   }
 }
 
 /**
- * Computes every agent's accelerations and junction request from the state at `t`.
+ * Distance from the agent's front to the stop line of the lane just past its next junction (or
+ * past the connector it is on) when that light tells it to stop there, else Infinity: red while it
+ * can still stop with its braking limit, or yellow by the fixed stop rule. A short lane between two
+ * junctions is braked for before the agent reaches it.
+ * @param {TrafficState} st State.
+ * @param {number} slot Slot.
+ * @param {Record<string, LightState>} lights Light states.
+ * @param {number} t Time.
+ * @returns {number} Metres.
+ */
+function downstreamStop(st, slot, lights, t) {
+  const edges = st.graph.edges;
+  const e = edges[st.edge[slot]];
+  const front = st.s[slot] + st.lengthM[slot] / 2;
+  let exit;
+  let d;
+  if (e.kind === 'connector') {
+    exit = edges[e.toEdge];
+    d = e.length - front;
+  } else {
+    const next = st.nextEdge[slot];
+    if (next < 0 || edges[next].kind !== 'connector') return Infinity;
+    exit = edges[edges[next].toEdge];
+    d = e.length - front + edges[next].length;
+  }
+  if (exit.signalIndex < 0 || exit.next.length === 0) return Infinity;
+  const dist = d + exit.holdS;
+  const v = st.v[slot];
+  if (dist < 0 || dist > (v * v) / (2 * st.decelComfort[slot]) + DOWNSTREAM_LOOK_M) return Infinity;
+  const light = laneLight(st, exit, lights);
+  if (light === 'green') return Infinity;
+  const left = light === 'yellow' ? yellowRemaining(st.map.signals[exit.signalIndex], t) : 0;
+  const decision = signalDecision(light, dist, v, left, st.yellowStop[slot], st.decelMax[slot], st.params.behaviour.yellowGoMarginS);
+  return decision === 'stop' ? dist : Infinity;
+}
+
+/**
+ * Agents an ego signalling into `lane` and moving across it makes way for: the ego, ahead of the
+ * agent, counts as its leader. Writes `[gap, speed]` into `out` (Infinity when it does not apply).
+ * A driver ignores it with its `cutIn` rate, drawn once per signalling episode of the ego.
+ * @param {TrafficState} st State.
+ * @param {number} slot Slot.
+ * @param {EgoInput} ego Ego.
+ * @param {import('./junctions.js').EgoParty} party Ego party.
+ * @param {number} egoDist Distance to the ego.
+ * @param {Float64Array} out Output pair.
+ * @returns {void}
+ */
+function signallingEgo(st, slot, ego, party, egoDist, out) {
+  out[0] = Infinity;
+  out[1] = 0;
+  const ind = ego.indicators;
+  if ((ind !== 'left' && ind !== 'right') || party.lane < 0 || egoDist > st.params.egoPerceptionM) return;
+  const edges = st.graph.edges;
+  const e = edges[st.edge[slot]];
+  if (e.kind !== 'lane' || !edges[party.lane].neighbours.includes(e.index)) return;
+  const pr = projectOntoPolyline([ego.pos.x, ego.pos.z], e.points);
+  // Left of the agent's lane, the ego comes in signalling right, and the reverse.
+  if ((pr.lateral > 0 ? 'right' : 'left') !== ind) return;
+  edgePoint(e, Math.min(pr.s, e.length), LANE_POINT);
+  const sideways = -Math.sign(pr.lateral) * ego.speed * Math.sin(ego.heading - LANE_POINT.heading);
+  if (sideways < EGO_SIDEWAYS_MPS) return;
+  const gap = pr.s - ego.lengthM / 2 - (st.s[slot] + st.lengthM[slot] / 2);
+  if (gap < 0) return;
+  const rng = createStream(hash32(st.decisionSeed[slot], st.egoSignalEpisode, 0x4b14));
+  if (uniform(rng) < rateOf(st, slot, 'cutIn', egoDist)) return;
+  out[0] = gap;
+  out[1] = Math.max(0, ego.speed * Math.cos(ego.heading - LANE_POINT.heading));
+}
+
+/**
+ * Computes every agent's accelerations and junction request from the state at `t`, and raises the
+ * `tailgating` and `speeding` conditions.
  * @param {TrafficState} st State.
  * @param {TrafficStepInput} input Input.
  * @param {Obstacle[]} egoObs The ego as an obstacle (one entry).
@@ -413,14 +679,39 @@ function applyEvents(st, input, ego) {
 function computePhase(st, input, egoObs, scriptedObs, sc) {
   const edges = st.graph.edges;
   const yellowMargin = st.params.behaviour.yellowGoMarginS;
+  const viol = st.params.violations;
   const pair = sc.pair;
+  const seen = sc.perceived2;
   const ego = input.ego;
+  const t = input.t;
   const egoMid = sc.egoMid;
   egoMid.x = ego.pos.x;
   egoMid.z = ego.pos.z;
   egoMid.lengthM = ego.lengthM;
+  const party = sc.egoParty;
   const check = sc.check;
   const near = sc.near;
+  const statics = st.graph.staticObstacles;
+  const movers = sc.movers;
+  movers.length = 0;
+  for (let i = 0; i < st.activeCount; i += 1) {
+    const k = st.active[i];
+    if (st.wreck[k]) continue;
+    // Moving across lanes, or a rider out on the lane line: perceived exactly by everyone.
+    const out = Math.abs(st.lateral[k]) + st.widthM[k] / 2 > st.halfWidth[st.edge[k]];
+    if (!changingLane(st, k) && !out) continue;
+    movers.push({
+      slot: k,
+      obstacle: {
+        footprint: footprint({ x: st.x[k], z: st.z[k] }, st.heading[k], st.lengthM[k], st.widthM[k]),
+        x: st.x[k],
+        z: st.z[k],
+        radius: Math.hypot(st.lengthM[k], st.widthM[k]) / 2,
+        vx: st.v[k] * Math.cos(st.heading[k]),
+        vz: -st.v[k] * Math.sin(st.heading[k]),
+      },
+    });
+  }
   let nReq = 0;
 
   sc.reserved.fill(0);
@@ -435,14 +726,20 @@ function computePhase(st, input, egoObs, scriptedObs, sc) {
     sc.holds[k] = 0;
     sc.drops[k] = 0;
     sc.inZone[k] = 0;
+    sc.noYield[k] = 0;
+    sc.forcing[k] = 0;
+    sc.runner[k] = 0;
+    sc.held[k] = 0;
     sc.commit[k] = st.signalCommit[k];
-    if (st.wreck[k]) {
-      sc.accGo[k] = 0;
-      sc.advGo[k] = 0;
-      continue;
-    }
     const e = edges[st.edge[k]];
     const v = st.v[k];
+    if (st.wreck[k]) {
+      // A sliding wreck stops at anything ahead of it.
+      leaderAhead(st, k, sc.listPos, pair);
+      sc.accGo[k] = v > 0 ? -st.params.behaviour.wreckSlideDecelMps2 : 0;
+      sc.advGo[k] = e.kind === 'lane' && st.nextEdge[k] >= 0 && edges[st.nextEdge[k]].kind === 'connector' && st.claim[k] !== st.nextEdge[k] ? Math.min(pair[0], e.length - (st.s[k] + st.lengthM[k] / 2)) : pair[0];
+      continue;
+    }
     const half = st.lengthM[k] / 2;
     const front = st.s[k] + half;
     const b = st.decelComfort[k];
@@ -456,16 +753,29 @@ function computePhase(st, input, egoObs, scriptedObs, sc) {
     }
     v0 = Math.max(v0, 0.5);
 
+    // The agent ahead, as the driver perceives it; the advance stops at the true gap unless the
+    // driver is distracted.
     leaderAhead(st, k, sc.listPos, pair);
-    let gapGo = pair[0];
-    let accGo = accel(st, k, v0, pair[0], pair[1]);
+    const trueGap = pair[0];
+    if (trueGap < Infinity && v > TAILGATE_MIN_MPS && trueGap / v < st.tailgateGap[k]) raise(st, k, FLAG.tailgating);
+    if (e.limitKmh !== null && v > e.limitKmh / 3.6) raise(st, k, FLAG.speeding);
+    perceiveLeader(st, k, trueGap, pair[1], t, seen);
+    let gapGo = distracted(st, k, t) ? Infinity : trueGap - QUEUE_BUFFER_M;
+    let accGo = accel(st, k, v0, seen[0], seen[1]);
 
-    // Exact perception of the ego and scripted actors.
+    // Exact perception of the ego, scripted actors, static obstacles and agents moving across.
     near.length = 0;
     const edx = ego.pos.x - st.x[k];
     const edz = ego.pos.z - st.z[k];
-    if (edx * edx + edz * edz <= st.params.egoPerceptionM * st.params.egoPerceptionM) near.push(egoObs[0]);
+    const egoDist = Math.hypot(edx, edz);
+    if (egoDist <= st.params.egoPerceptionM) near.push(egoObs[0]);
     for (const o of scriptedObs) near.push(o);
+    for (const o of statics) near.push(o);
+    // Agents of its own lane are leaders already; only those moving across are not.
+    for (const m of movers) if (m.slot !== k && (st.edge[m.slot] !== st.edge[k] || changingLane(st, m.slot))) near.push(m.obstacle);
+    // Moving across, it still overlaps the lane it left: it keeps watching the agents there.
+    const across = changingLane(st, k);
+    if (across) for (const n of e.neighbours) pushNeighbours(st, n, k, near);
     if (near.length > 0) {
       const look = Math.max(8, Math.min(st.params.egoPerceptionM, (v * v) / (2 * b) + v * st.timeGap[k] + st.minGap[k] + 5));
       corridorObstacle(st, k, near, look, pair);
@@ -474,11 +784,30 @@ function computePhase(st, input, egoObs, scriptedObs, sc) {
         accGo = Math.min(accGo, accel(st, k, v0, pair[0], pair[1]));
       }
     }
+    // An ego signalling into this lane and moving across: make way.
+    signallingEgo(st, k, ego, party, egoDist, pair);
+    if (pair[0] < Infinity) accGo = Math.min(accGo, accel(st, k, v0, pair[0], pair[1]));
+    // A red stop line just past the junction ahead.
+    const dDown = downstreamStop(st, k, input.lights, t);
+    if (dDown < Infinity) {
+      accGo = Math.min(accGo, accel(st, k, v0, dDown, 0));
+      gapGo = Math.min(gapGo, dDown);
+    }
     sc.accGo[k] = accGo;
     sc.advGo[k] = gapGo;
 
-    // Hold point before the next connector, or the end of a dead-end lane.
+    // Hold point before the next connector, or the end of a dead-end lane. A lane that joins
+    // another has none, except for an agent still moving across, which keeps to its lane until it
+    // has settled.
     if (e.kind !== 'lane' || e.sink) continue;
+    if (next >= 0 && edges[next].kind === 'lane') {
+      if (across) {
+        const dEnd = e.length - front;
+        sc.accGo[k] = Math.min(accGo, accel(st, k, v0, dEnd, 0));
+        sc.advGo[k] = Math.min(gapGo, dEnd);
+      }
+      continue;
+    }
     const holdAt = next < 0 ? e.length : front > e.holdS + 0.01 ? e.length : e.holdS;
     const dHold = holdAt - front;
     sc.holdDist[k] = dHold;
@@ -491,21 +820,51 @@ function computePhase(st, input, egoObs, scriptedObs, sc) {
     const zone = dHold <= (v * v) / (2 * b) + st.minGap[k] + 0.5 * v + 3;
     const light = laneLight(st, e, input.lights);
     let signalGo = true;
-    if (light !== null && front <= e.holdS + 0.01) {
-      if (light === 'green') sc.commit[k] = 0;
-      else if (light === 'red') sc.commit[k] = signalDecision('red', Math.max(0, e.holdS - front), v, 0, st.yellowStop[k], st.decelMax[k], yellowMargin) === 'go' ? 2 : 1;
-      else {
-        const left = yellowRemaining(st.map.signals[e.signalIndex], input.t);
-        const d = Math.max(0, e.holdS - front);
+    if (light !== null && front <= e.holdS + 0.01 && distracted(st, k, t) && sc.commit[k] !== 1) {
+      // Distracted, the driver misses the change of light and goes on as before.
+      signalGo = true;
+    } else if (light !== null && front <= e.holdS + 0.01) {
+      const d = Math.max(0, e.holdS - front);
+      const signal = st.map.signals[e.signalIndex];
+      if (light === 'green') {
+        sc.commit[k] = 0;
+        st.approachDraws[k] &= ~RUNNING;
+      } else if (light === 'red') {
+        if (!(sc.commit[k] === 2 && st.approachDraws[k] & RUNNING)) {
+          sc.commit[k] = signalDecision('red', d, v, 0, st.yellowStop[k], st.decelMax[k], yellowMargin) === 'go' ? 2 : 1;
+          // Rule breaking, each drawn once per approach: running the red from the decision zone,
+          // or starting early from the stop line when the red is nearly over.
+          if (sc.commit[k] === 1 && zone && !(st.approachDraws[k] & RED_DRAWN)) {
+            st.approachDraws[k] |= RED_DRAWN;
+            if (draw(st, k, rateOf(st, k, 'redLight', egoDist))) st.approachDraws[k] |= RUNNING;
+          }
+          if (sc.commit[k] === 1 && v < STOPPED_MPS && d < st.minGap[k] + 1.5 && redRemaining(signal, t) < viol.earlyStartRedRemainingS && !(st.approachDraws[k] & EARLY_DRAWN)) {
+            st.approachDraws[k] |= EARLY_DRAWN;
+            if (draw(st, k, rateOf(st, k, 'earlyStart', egoDist))) st.approachDraws[k] |= RUNNING;
+          }
+          if (st.approachDraws[k] & RUNNING) sc.commit[k] = 2;
+        }
+      } else {
+        const left = yellowRemaining(signal, t);
         if (sc.commit[k] === 0) {
-          sc.commit[k] = signalDecision('yellow', d, v, left, st.yellowStop[k], st.decelMax[k], yellowMargin) === 'go' ? 2 : 1;
-        } else if (sc.commit[k] === 2 && !reachesBeforeRed(d, v, left, yellowMargin) && (v * v) / (2 * Math.max(d, 0.05)) <= st.decelMax[k]) {
+          // Stop or go at the yellow onset. Where both are lawful (the front reaches the line before
+          // the red, and a stop is within the braking limit) the choice is logistic around the
+          // driver's b_stop; otherwise the fixed stop rule decides.
+          const need = d > 0.05 ? (v * v) / (2 * d) : v > 0.05 ? Infinity : 0;
+          if (need <= st.decelMax[k] && reachesBeforeRed(d, v, left, yellowMargin)) {
+            const p = yellowStopProbability(d, v, st.yellowStop[k], st.decelMax[k], viol.yellowLogisticK);
+            sc.commit[k] = draw(st, k, p) ? 1 : 2;
+          } else {
+            sc.commit[k] = signalDecision('yellow', d, v, left, st.yellowStop[k], st.decelMax[k], yellowMargin) === 'go' ? 2 : 1;
+          }
+        } else if (sc.commit[k] === 2 && !(st.approachDraws[k] & RUNNING) && !reachesBeforeRed(d, v, left, yellowMargin) && (v * v) / (2 * Math.max(d, 0.05)) <= st.decelMax[k]) {
           // Went for the yellow, but slowed (a queue, a yield): stop while it still can.
           sc.commit[k] = 1;
         }
       }
       signalGo = light === 'green' || sc.commit[k] === 2;
     }
+    const running = light === 'red' && signalGo;
 
     // Stopped by what lies ahead (the ego, a scripted actor, the agent in front) and able to move
     // no further: no claim, so a held-up agent never blocks the junction.
@@ -534,22 +893,135 @@ function computePhase(st, input, egoObs, scriptedObs, sc) {
     }
     sc.inZone[k] = 1;
     if (!signalGo) continue;
-    // A long vehicle may still cover a zone of the junction behind it; claim one at a time.
-    if (st.claim[k] >= 0 || blockedAhead) continue;
+    // A long vehicle may still cover a zone of the junction behind it: claim one at a time, but a
+    // vehicle standing on the exit lane of its claim asks for the next one (its tail stays where it
+    // is, so holding on would lock both junctions).
+    if ((st.claim[k] >= 0 && st.edge[k] !== edges[st.claim[k]].toEdge) || across) continue;
+    if (blockedAhead) {
+      sc.held[k] = 1;
+      continue;
+    }
     if (e.control === 'stop-sign' && !st.haltedAtLine[k]) continue;
+    // A rider turning from the wrong side of its lane waits to get across first (it would cut
+    // across the riders beside it).
+    if (!inTurnBand(st, k, next)) continue;
     const egoNear = Math.abs(edx) + Math.abs(edz) < 200 ? egoMid : null;
-    if (exitRoom(st, next, k, sc.reserved, egoNear) < st.lengthM[k] + st.minGap[k]) continue;
-    checkConflicts(st, k, next, input.lights, check);
+    if (exitRoom(st, next, k, sc.reserved, egoNear, input.lights) < st.lengthM[k] + st.minGap[k]) {
+      sc.held[k] = 1;
+      continue;
+    }
+    if (running) {
+      // A red runner looks only at the box itself.
+      checkConflicts(st, k, next, input.lights, party, check);
+      if (zonesOccupied(st, next, k)) continue;
+      sc.noYield[k] = check.claimed || check.noYield ? 1 : 0;
+      sc.forcing[k] = 1;
+      sc.runner[k] = 1;
+      sc.requests[nReq++] = k;
+      continue;
+    }
+    if (defersToWaiter(st, k, next, dHold, input.lights)) continue;
+    checkConflicts(st, k, next, input.lights, party, check);
     if (check.claimed) continue;
     if (check.yields && !breaksDeadlock(st, k, check)) continue;
+    sc.noYield[k] = check.noYield ? 1 : 0;
+    // A driver going by the deadlock breaker creeps in watching; one taking a short gap forces it.
+    sc.forcing[k] = check.noYield && !check.yields ? 1 : 0;
     sc.requests[nReq++] = k;
   }
   return nReq;
 }
 
 /**
+ * Footprints of every active agent before this step's motion, by slot.
+ * @param {TrafficState} st State.
+ * @param {Scratch} sc Scratch.
+ * @returns {Vec2[][]} Footprints by slot.
+ */
+function bodiesOf(st, sc) {
+  const feet = sc.feet;
+  for (let i = 0; i < st.activeCount; i += 1) {
+    const k = st.active[i];
+    feet[k] = footprint({ x: st.x[k], z: st.z[k] }, st.heading[k], st.lengthM[k], st.widthM[k]);
+  }
+  return feet;
+}
+
+/**
+ * Whether the driver of `slot` acts on what it sees: not distracted, not past a stop line on red,
+ * not forcing its way into a junction inside another party's critical gap, not cutting in. Each
+ * of those carries an incident cause from the moment the guard is off.
+ * @param {TrafficState} st State.
+ * @param {number} slot Slot.
+ * @param {number} t Time.
+ * @returns {boolean} Guarded.
+ */
+function guarded(st, slot, t) {
+  return !distracted(st, slot, t) && !st.heedless[slot];
+}
+
+/** Largest half diagonal of any agent body, metres. */
+const MAX_BODY_RADIUS_M = 6;
+
+/**
+ * Whether moving `slot` by `ds` along its route, at its new lateral offset, would make its body
+ * touch another agent's body that it does not touch now (others as they stand after the moves
+ * made before it this step).
+ * @param {TrafficState} st State.
+ * @param {number} slot Slot.
+ * @param {number} ds Advance along its edge (its lateral offset is already moved).
+ * @param {Vec2[][]} feet Footprints before the motion, by slot.
+ * @returns {boolean} A new touch.
+ */
+function touchesNew(st, slot, ds, feet) {
+  posePreview(st, slot, st.edge[slot], st.s[slot] + ds, st.lateral[slot], st.latRate[slot], st.v[slot], PREVIEW);
+  const { x, z } = PREVIEW;
+  const moved = footprint(PREVIEW, PREVIEW.heading, st.lengthM[slot], st.widthM[slot]);
+  const now = feet[slot];
+  const r = Math.hypot(st.lengthM[slot], st.widthM[slot]) / 2 + MAX_BODY_RADIUS_M;
+  return queryGrid(st.grid, x, z, r, (k) => {
+    if (k === slot) return false;
+    const dx = st.x[k] - x;
+    const dz = st.z[k] - z;
+    const rr = (Math.hypot(st.lengthM[k], st.widthM[k]) + Math.hypot(st.lengthM[slot], st.widthM[slot])) / 2;
+    if (dx * dx + dz * dz > rr * rr) return false;
+    if (!polygonsIntersect(moved, feet[k]) || polygonsIntersect(now, feet[k])) return false;
+    TOUCHED.slot = k;
+    return true;
+  });
+}
+
+/** @type {{x: number, z: number, heading: number}} */
+const PREVIEW = { x: 0, z: 0, heading: 0 };
+/** The body the last `touchesNew` found in the way. */
+const TOUCHED = { slot: -1 };
+/** A rider held by the body in its way this long starts to edge away from it, seconds (design). */
+export const NUDGE_AFTER_S = 1;
+/** How far a held rider edges sideways at a time, metres (design). */
+const NUDGE_M = 0.4;
+
+/**
+ * Moves a held rider's lateral target away from the body in its way, within its lane.
+ * @param {TrafficState} st State.
+ * @param {number} slot Rider.
+ * @param {number} other Body in its way.
+ * @returns {void}
+ */
+function nudgeAway(st, slot, other) {
+  if (other < 0) return;
+  // Left of heading θ is (−sin θ, −cos θ); the other on the left means edging right.
+  const h = st.heading[slot];
+  const left = -(st.x[other] - st.x[slot]) * Math.sin(h) - (st.z[other] - st.z[slot]) * Math.cos(h);
+  const hw = st.halfWidth[st.edge[slot]] - st.widthM[slot] / 2;
+  const target = st.lateral[slot] + (left > 0 ? -NUDGE_M : NUDGE_M);
+  st.lateralBase[slot] = Math.max(-hw, Math.min(hw, target));
+}
+
+/**
  * Grants claim requests nearest the hold point first, each re-checked against claims granted
- * before it; then integrates every agent and moves it along its route.
+ * before it (a red runner only against zones physically taken); then integrates every agent,
+ * moves it along its route and raises the `red-light`, `no-yield` and `unsafe-lane-change`
+ * conditions from what it did.
  * @param {TrafficState} st State.
  * @param {TrafficStepInput} input Input.
  * @param {Scratch} sc Scratch.
@@ -574,27 +1046,54 @@ function applyPhase(st, input, sc, nReq) {
     const k = req[i];
     const conn = st.nextEdge[k];
     let ok = true;
-    for (const cf of edges[conn].conflicts) {
-      if (zoneClaimed(st, cf, k)) {
-        ok = false;
-        break;
+    if (sc.runner[k]) ok = !zonesOccupied(st, conn, k);
+    else {
+      for (const cf of edges[conn].conflicts) {
+        if (zoneClaimed(st, cf, k)) {
+          ok = false;
+          break;
+        }
       }
     }
-    if (ok && exitRoom(st, conn, k, sc.reserved, egoMid) < st.lengthM[k] + st.minGap[k]) ok = false;
+    if (ok && exitRoom(st, conn, k, sc.reserved, egoMid, input.lights) < st.lengthM[k] + st.minGap[k]) ok = false;
     if (!ok) continue;
     claimDrop(st, k);
     claimAdd(st, conn, k);
     sc.reserved[edges[conn].toEdge] += st.lengthM[k] + st.minGap[k];
     sc.holds[k] = 0;
     st.waitS[k] = 0;
+    // The flag is raised as the claim is taken, so a contact in this very step already has its
+    // cause; a red runner stops heeding what it sees only once past the stop line.
+    if (sc.noYield[k]) {
+      st.noYieldConn[k] = conn;
+      raise(st, k, FLAG['no-yield']);
+    }
+    if (sc.forcing[k] && !sc.runner[k]) st.heedless[k] = 1;
   }
 
   const dt = DT;
   const pair = sc.pair;
+  const feet = bodiesOf(st, sc);
+  rebuildGrid(st.grid, st.active, st.activeCount, st.x, st.z);
   for (let i = 0; i < st.activeCount; i += 1) {
     const k = st.active[i];
     st.signalCommit[k] = sc.commit[k];
-    if (st.wreck[k]) continue;
+    st.held[k] = sc.held[k];
+    if (st.wreck[k]) {
+      // A car wreck slides on and stops at anything ahead; a fallen rider stays.
+      if (st.v[k] > 0) {
+        integrate(st.v[k], sc.accGo[k], dt, pair);
+        const adv = Math.max(0, sc.advGo[k] - CLAMP_MARGIN_M);
+        let ds = Math.min(pair[0], adv);
+        st.v[k] = pair[0] > adv ? 0 : pair[1];
+        if (ds > 0 && touchesNew(st, k, ds, feet)) {
+          ds = 0;
+          st.v[k] = 0;
+        }
+        st.s[k] += ds;
+      }
+      continue;
+    }
     if (sc.drops[k]) claimDrop(st, k);
     const hold = sc.holds[k] === 1;
     const acc = hold ? sc.accHold[k] : sc.accGo[k];
@@ -608,10 +1107,55 @@ function applyPhase(st, input, sc, nReq) {
     }
     st.acc[k] = acc;
     st.v[k] = vNext;
+    // A rider stops moving across when someone has come alongside in the way.
+    if (st.isMoto[k] && !st.crossing[k] && st.lateral[k] !== st.lateralBase[k]) {
+      const next = st.lateral[k] + Math.sign(st.lateralBase[k] - st.lateral[k]) * Math.min(Math.abs(st.lateralBase[k] - st.lateral[k]), 0.1);
+      if (pathBlocked(st, k, next) || moveTouches(st, k, next)) st.lateralBase[k] = st.lateral[k];
+    }
+    const latBefore = st.lateral[k];
+    const rateBefore = st.latRate[k];
+    moveAcross(st, k, dt);
+    // A driver who sees what is around it never drives into it; one distracted or breaking a rule
+    // may (that is how an accident happens).
+    const dLat = st.lateral[k] - latBefore;
+    // A change of lateral speed turns the body (lane-change yaw), which can swing it into another.
+    if (ds > 0 || dLat !== 0 || st.latRate[k] !== rateBefore) {
+      if (guarded(st, k, input.t) && touchesNew(st, k, ds, feet)) {
+        ds = 0;
+        st.v[k] = 0;
+        const blocker = TOUCHED.slot;
+        // Held where it is; it may still move sideways if that alone touches nothing, else its body
+        // stays turned as it was.
+        if (dLat === 0 || touchesNew(st, k, 0, feet)) {
+          st.lateral[k] = latBefore;
+          st.latRate[k] = rateBefore;
+        }
+        TOUCHED.slot = blocker;
+        st.frozenS[k] += dt;
+        // A rider held this way for a while edges sideways, away from the body in its way, so two
+        // riders cannot hold each other for ever.
+        if (st.isMoto[k] && !st.crossing[k] && st.frozenS[k] > NUDGE_AFTER_S) nudgeAway(st, k, TOUCHED.slot);
+      } else {
+        st.frozenS[k] = 0;
+        // Later agents of this step check against where this one has moved.
+        posePreview(st, k, st.edge[k], st.s[k] + ds, st.lateral[k], st.latRate[k], st.v[k], PREVIEW);
+        feet[k] = footprint(PREVIEW, PREVIEW.heading, st.lengthM[k], st.widthM[k]);
+      }
+    }
     // Waiting and the stop-sign halt.
     if (sc.inZone[k] && hold && vNext < STOPPED_MPS) {
       st.waitS[k] += dt;
       if (sc.holdDist[k] < st.minGap[k] + 1.5) st.haltedAtLine[k] = 1;
+    }
+    // The front crossing the stop line on red.
+    const e = edges[st.edge[k]];
+    if (e.kind === 'lane' && e.signalIndex >= 0 && st.nextEdge[k] >= 0 && edges[st.nextEdge[k]].kind === 'connector') {
+      const front = st.s[k] + st.lengthM[k] / 2;
+      if (front <= e.holdS && front + ds > e.holdS && laneLight(st, e, input.lights) === 'red') {
+        st.redConn[k] = st.nextEdge[k];
+        st.heedless[k] = 1;
+        raise(st, k, FLAG['red-light']);
+      }
     }
     st.s[k] += ds;
   }
@@ -626,7 +1170,7 @@ function applyPhase(st, input, sc, nReq) {
         i -= 1;
         break;
       }
-      if (next < 0 || (e.kind === 'lane' && st.claim[k] !== next)) {
+      if (next < 0 || (e.kind === 'lane' && edges[next].kind === 'connector' && st.claim[k] !== next)) {
         // Only rounding can get here: the advance is clamped at the hold point.
         st.s[k] = e.length;
         break;
@@ -640,6 +1184,7 @@ function applyPhase(st, input, sc, nReq) {
         st.signalCommit[k] = 0;
         st.haltedAtLine[k] = 0;
         st.waitS[k] = 0;
+        st.approachDraws[k] = 0;
       }
       refreshBaseSpeed(st, k);
       chooseNext(st, k);
@@ -652,7 +1197,38 @@ function applyPhase(st, input, sc, nReq) {
     else if (c >= 0 && !claimBlocking(st, k, c)) claimDrop(st, k);
   }
   sortEdgeLists(st);
-  for (let i = 0; i < st.activeCount; i += 1) updatePose(st, st.active[i]);
+  for (let i = 0; i < st.activeCount; i += 1) {
+    const k = st.active[i];
+    updatePose(st, k);
+    // Conditions that last while the agent is still in what it did wrong.
+    const rc = st.redConn[k];
+    if (rc >= 0) {
+      if (st.edge[k] === rc || st.edge[k] === edges[rc].fromEdge) raise(st, k, FLAG['red-light']);
+      else st.redConn[k] = -1;
+    }
+    const ny = st.noYieldConn[k];
+    if (ny >= 0) {
+      if (st.claim[k] === ny || (st.wreck[k] && st.edge[k] === ny)) raise(st, k, FLAG['no-yield']);
+      else st.noYieldConn[k] = -1;
+    }
+    if (st.unsafeChange[k] && st.crossing[k]) raise(st, k, FLAG['unsafe-lane-change']);
+    st.heedless[k] = (st.heedless[k] && (st.redConn[k] >= 0 || st.noYieldConn[k] >= 0)) || (st.unsafeChange[k] && st.crossing[k]) ? 1 : 0;
+  }
+  // A rider moving its slot into the ego's path inside the ego's stopping distance.
+  const corridor = egoCorridorOf(input.ego);
+  if (corridor) {
+    const ex = input.ego.pos.x;
+    const ez = input.ego.pos.z;
+    for (let i = 0; i < st.activeCount; i += 1) {
+      const k = st.active[i];
+      const lr = st.latRate[k];
+      if (!st.isMoto[k] || lr === 0 || st.wreck[k]) continue;
+      const toward = (-(ex - st.x[k]) * Math.sin(st.heading[k]) - (ez - st.z[k]) * Math.cos(st.heading[k])) * lr > 0;
+      if (toward && polygonsIntersect(corridor, footprint({ x: st.x[k], z: st.z[k] }, st.heading[k], st.lengthM[k], st.widthM[k]))) {
+        raise(st, k, FLAG['unsafe-lane-change']);
+      }
+    }
+  }
 }
 
 /**
@@ -698,7 +1274,56 @@ export function stepTraffic(state, input) {
   const poses = new Array(st.activeCount);
   for (let i = 0; i < st.activeCount; i += 1) poses[i] = poseOf(st, st.active[i]);
 
+  const perceived = sc.perceived;
+  perceived.length = 0;
+  perceived.push({
+    footprint: fp,
+    x: e.pos.x,
+    z: e.pos.z,
+    radius: Math.hypot(e.lengthM, e.widthM) / 2,
+    vx: e.speed * Math.cos(e.heading),
+    vz: -e.speed * Math.sin(e.heading),
+  });
+  for (const o of scriptedObs) perceived.push(o);
+  for (const o of st.graph.staticObstacles) perceived.push(o);
+  const parked = sc.parked;
+  parked.length = 0;
+  input.scripted.forEach((pose, i) => {
+    if (pose.active) return;
+    // A parked actor stays put, so the lanes under it are found once per place.
+    const key = `${pose.id} ${pose.pos.x} ${pose.pos.z} ${pose.heading}`;
+    let spans = sc.parkedSpans.get(key);
+    if (!spans) {
+      spans = lanesUnder(st.map, st.graph.edgeIndex, scriptedObs[i].footprint);
+      sc.parkedSpans.set(key, spans);
+    }
+    for (const sp of spans) parked.push(sp);
+  });
+  // The ego's signalling episodes, for agents that make way for it.
+  const ind = e.indicators ?? 'off';
+  if ((ind === 'left' || ind === 'right') && ind !== st.egoIndicator) st.egoSignalEpisode += 1;
+  st.egoIndicator = ind;
+  egoPartyOf(st, e, sc);
+
+  // Lateral decisions.
+  for (let i = 0; i < st.activeCount; i += 1) {
+    const k = st.active[i];
+    if (tryMandatoryLaneChange(st, k, perceived, parked, input.t)) continue;
+    // A distracted driver makes no lane or slot choice.
+    if (!st.isMoto[k] && !distracted(st, k, input.t)) stepMobil(st, k, perceived, input.t, Math.hypot(st.x[k] - e.pos.x, st.z[k] - e.pos.z));
+  }
   refreshListPositions(st, sc.listPos);
+  const slotPeriod = Math.max(1, Math.round(TICK_HZ / st.params.motorbike.slotHz));
+  const corridor = egoCorridorOf(e);
+  for (let i = 0; i < st.activeCount; i += 1) {
+    const k = st.active[i];
+    if (!st.isMoto[k] || st.wreck[k] || st.crossing[k] || distracted(st, k, input.t) || (st.tick + st.spawnIndex[k]) % slotPeriod !== 0) continue;
+    const edge = st.graph.edges[st.edge[k]];
+    if (edge.kind !== 'lane') continue;
+    edgePoint(edge, Math.min(st.s[k], edge.length), LANE_POINT);
+    chooseSlot(st, k, sc.listPos[k], LANE_POINT.heading, corridor, Math.hypot(st.x[k] - e.pos.x, st.z[k] - e.pos.z));
+  }
+
   /** @type {Obstacle[]} */
   const egoObs = [
     {
@@ -712,8 +1337,15 @@ export function stepTraffic(state, input) {
   ];
   const nReq = computePhase(st, input, egoObs, scriptedObs, sc);
   applyPhase(st, input, sc, nReq);
+  const incidents = detectContacts(
+    st,
+    input.scripted,
+    scriptedObs.map((o) => o.footprint),
+    input.t,
+  );
+  for (let i = 0; i < st.activeCount; i += 1) latch(st, st.active[i], input.t);
   st.tick += 1;
-  return { state: st, poses, incidents: [] };
+  return { state: st, poses, incidents };
 }
 
 /**

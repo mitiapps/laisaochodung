@@ -36,4 +36,15 @@ describe('stub GameApi', () => {
     expect(last?.report?.endedBy).toBe('quit');
     expect(game.calls).toEqual(['start:m:v', 'quit']);
   });
+
+  it('records start options and control calls', async () => {
+    vi.useFakeTimers();
+    const game = createStubGame(states, { stepMs: 100 });
+    await game.start('m', 'v', { controlPreset: 'real' });
+    game.controls.hold('throttle', true);
+    game.controls.press('signalLeft');
+    game.controls.steer(-0.5);
+    game.controls.steer(null);
+    expect(game.calls).toEqual(['start:m:v:{"controlPreset":"real"}', 'hold:throttle:true', 'press:signalLeft', 'steer:-0.5', 'steer:null']);
+  });
 });

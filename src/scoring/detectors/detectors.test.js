@@ -828,8 +828,9 @@ describe('detectors in motorbike traffic', () => {
         const [x, z] = behindEgo(gap + EGO_HALF + BIKE_HALF, 0.9);
         return (/** @type {number} */ t) => (t >= 2.3 ? [pose('npc-1', 'motorbike', x, z, { speed: 3 })] : []);
       };
+      // At 3 m/s the time gap alone asks for 1.5 m, so 1.8 m fires only through the 2 m floor.
       expect(await merge(bikeAt(3))).toEqual([]);
-      expect(await merge(bikeAt(1))).toEqual(['lane-change:1:D6.2.a']);
+      expect(await merge(bikeAt(1.8))).toEqual(['lane-change:1:D6.2.a']);
     });
   });
 

@@ -163,7 +163,7 @@ describe('assertMap with a lane graph and traffic', () => {
   it('accepts building fields on a building', () => {
     const m = clone(MAP);
     const b = m.obstacles.find((/** @type {UntrustedJson} */ o) => o.kind === 'building');
-    if (b) Object.assign(b, { use: 'shophouse', floors: 4, frontEdge: 0 });
+    if (b) Object.assign(b, { use: 'landmark', floors: 4, frontEdge: 0, colour: '#b5543c' });
     expect(checkMap(m)).toEqual([]);
   });
 
@@ -195,6 +195,11 @@ describe('assertMap with a lane graph and traffic', () => {
         m.laneJoins = [{ fromLaneId: free[0].id, toLaneId: free[2].id }, { fromLaneId: free[1].id, toLaneId: free[2].id }];
       },
       /already starts at a join/,
+    ],
+    [
+      'building colour that is not #rrggbb',
+      (m) => Object.assign(m.obstacles.find((/** @type {UntrustedJson} */ o) => o.kind === 'building'), { colour: 'red' }),
+      /obstacles\[\d+\]\.colour: expected #rrggbb/,
     ],
     ['lane joins that is not a list', (m) => (m.laneJoins = {}), /laneJoins: expected an array/],
   ];

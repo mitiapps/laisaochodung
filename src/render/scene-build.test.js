@@ -1,16 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Box3, BoxGeometry, Group, Mesh, Vector3 } from 'three';
+import { Box3, BoxGeometry, Group, Matrix4, Mesh, MeshStandardMaterial, Object3D, Scene, Vector3 } from 'three';
 import map from '../../tests/fixtures/map-minimal.json' with { type: 'json' };
 import frames from '../../tests/fixtures/frames-straight.json' with { type: 'json' };
 import vehicles from '../../data/vehicles/vehicles.json' with { type: 'json' };
-import { buildRoadMeshes } from './road-mesh.js';
-import { buildSigns, plateOutline } from './signs.js';
-import { buildTrafficLights, lampLit } from './traffic-lights.js';
+import { KERB_HEIGHT_M } from '../contracts/units.js';
+import { LAYER_Y, buildRoadMeshes } from './road-mesh.js';
+import { buildScenery } from './scenery/index.js';
+import { SIGN_BOTTOM_M, buildSigns, plateOutline } from './signs.js';
+import { LENS_M, LOWEST_LAMP_Y_M, buildTrafficLights, countdown, digitCells, headCentreY, lampLit } from './traffic-lights.js';
 import { buildRouteMarkers, markedCheckpoint } from './route-markers.js';
 import { buildActors } from './actors.js';
 import { createVehicleView, fitToFootprint, lampState } from './vehicle-view.js';
 import { createShake, shakeAmplitude, skidSegments } from './effects.js';
-import { environmentLook, chaseTarget } from './scene.js';
+import { FAR_M, applyNight, environmentLook, chaseTarget, nightTargets } from './scene.js';
 import { SIGN_ART } from './sign-art.js';
 import { vehicleModel, actorModel } from './vehicles/index.js';
 import { wheelOffsets } from './math.js';
@@ -42,7 +44,7 @@ describe('static map meshes', () => {
     const road = buildRoadMeshes(fixture);
     const names = meshes(road.group).map((m) => m.name);
     expect(new Set(names).size).toBe(names.length);
-    for (const key of ['ground', 'asphalt', 'white', 'yellow', 'pavement', 'kerb', 'building']) {
+    for (const key of ['ground', 'asphalt', 'white', 'yellow', 'pavement', 'kerb']) {
       expect(names).toContain(`static-${key}`);
       expect(road.triangles[key]).toBeGreaterThan(0);
     }
@@ -54,18 +56,34 @@ describe('static map meshes', () => {
     road.dispose();
   });
 
-  it('points building walls outwards', () => {
+  it('leaves buildings to the scenery and keeps other obstacles', () => {
     const road = buildRoadMeshes(fixture);
-    const building = meshes(road.group).find((m) => m.name === 'static-building');
-    if (!building) throw new Error('no building');
-    const pos = building.geometry.getAttribute('position');
-    const nrm = building.geometry.getAttribute('normal');
-    const centre = new Vector3(35, 6, 14); // fixture building footprint 10..60 × 8..20
-    for (let i = 0; i < pos.count; i += 3) {
-      const p = new Vector3(pos.getX(i), pos.getY(i), pos.getZ(i));
-      const n = new Vector3(nrm.getX(i), nrm.getY(i), nrm.getZ(i));
-      if (Math.abs(n.y) > 0.5) continue;
-      expect(p.clone().sub(centre).dot(n)).toBeGreaterThan(0);
+    expect(meshes(road.group).map((m) => m.name)).not.toContain('static-building');
+    expect(road.triangles.building).toBeUndefined();
+    road.dispose();
+    const scenery = buildScenery(fixture);
+    expect(meshes(scenery.group).some((m) => m.name.startsWith('scenery-facade@'))).toBe(true);
+    scenery.dispose();
+    const barrier = { id: 'ob-barrier', kind: /** @type {const} */ ('barrier'), footprint: /** @type {[number, number][]} */ ([[0, 5], [2, 5], [2, 6], [0, 6]]), height: 1 };
+    const withBarrier = buildRoadMeshes({ ...fixture, obstacles: [...fixture.obstacles, barrier] });
+    expect(meshes(withBarrier.group).map((m) => m.name)).toContain('static-barrier');
+    withBarrier.dispose();
+  });
+
+  it('draws the kerb at the collider height and tiles the pavement', () => {
+    expect(LAYER_Y.pavement).toBe(KERB_HEIGHT_M);
+    const road = buildRoadMeshes(fixture);
+    const pavement = meshes(road.group).find((m) => m.name === 'static-pavement');
+    expect(pavement?.geometry.getAttribute('uv')).toBeDefined();
+    const kerb = meshes(road.group).find((m) => m.name === 'static-kerb');
+    const pos = kerb?.geometry.getAttribute('position');
+    if (!pos) throw new Error('no kerb');
+    let top = -Infinity;
+    for (let i = 0; i < pos.count; i += 1) top = Math.max(top, pos.getY(i));
+    expect(top).toBeCloseTo(KERB_HEIGHT_M + 0.002, 6);
+    for (const m of meshes(road.group)) {
+      expect(m.castShadow).toBe(false);
+      expect(m.receiveShadow).toBe(true);
     }
     road.dispose();
   });
@@ -89,6 +107,52 @@ describe('signs, lights and markers', () => {
         expect(Math.abs(y)).toBeLessThanOrEqual(art.heightM / 2 + 1e-9 + 0.04);
       }
     }
+  });
+
+  it('stands signal heads at QCVN 41 heights with 300 mm lenses', () => {
+    expect(LENS_M).toBe(0.3);
+    expect(LOWEST_LAMP_Y_M.side).toBeGreaterThanOrEqual(1.7);
+    expect(LOWEST_LAMP_Y_M.side).toBeLessThanOrEqual(5.8);
+    expect(LOWEST_LAMP_Y_M.cantilever).toBeGreaterThanOrEqual(5.2);
+    expect(LOWEST_LAMP_Y_M.cantilever).toBeLessThanOrEqual(7.8);
+    const lights = buildTrafficLights(fixture);
+    const green = meshes(lights.group).find((m) => m.name.endsWith('-green'));
+    expect(green?.position.y).toBeCloseTo(LOWEST_LAMP_Y_M.side, 9);
+    const id = fixture.signals[0].id;
+    const arm = buildTrafficLights(fixture, { cantilever: new Set([id]) });
+    const hung = meshes(arm.group).find((m) => m.name === `lamp-${id}-green`);
+    expect(hung?.position.y).toBeCloseTo(LOWEST_LAMP_Y_M.cantilever, 9);
+    expect(headCentreY('cantilever')).toBeGreaterThan(headCentreY('side'));
+    lights.dispose();
+    arm.dispose();
+    expect(SIGN_BOTTOM_M).toBe(2);
+  });
+
+  it('counts down the seconds left in the phase in the phase colour', () => {
+    const signal = { ...fixture.signals[0], cycle: { green: 27, yellow: 3, red: 30, offset: 0 } };
+    expect(countdown(signal, 0)).toEqual({ state: 'green', seconds: 27 });
+    expect(countdown(signal, 26.2)).toEqual({ state: 'green', seconds: 1 });
+    expect(countdown(signal, 28)).toEqual({ state: 'yellow', seconds: 2 });
+    expect(countdown(signal, 30)).toEqual({ state: 'red', seconds: 30 });
+    expect(digitCells(7)).toEqual([10, 7]);
+    expect(digitCells(30)).toEqual([3, 0]);
+
+    const lights = buildTrafficLights(fixture);
+    const display = meshes(lights.group).find((m) => m.name === 'signal-countdowns');
+    if (!display) throw new Error('no countdown mesh');
+    const colors = display.geometry.getAttribute('color');
+    const frame = all[0];
+    lights.update(frame.trafficLights, frame.t);
+    // Two digit quads of six vertices per signal, in map order.
+    fixture.signals.forEach((sig, i) => {
+      const state = frame.trafficLights[sig.id];
+      const units = (i * 2 + 1) * 6;
+      if (state === 'red') expect(colors.getX(units)).toBeGreaterThan(colors.getY(units));
+      if (state === 'green') expect(colors.getY(units)).toBeGreaterThan(colors.getX(units));
+    });
+    lights.update(frame.trafficLights);
+    for (let i = 0; i < colors.count; i += 1) expect(colors.getX(i) + colors.getY(i) + colors.getZ(i)).toBe(0);
+    lights.dispose();
   });
 
   it('lights exactly the lamp of each signal state', () => {
@@ -165,8 +229,12 @@ describe('vehicles and actors', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const actors = buildActors(fixture);
     actors.update(all[0], all[1], 1, true);
-    const npc = actors.group.children[1];
-    expect(npc.position.x).toBeCloseTo(all[1].actors[1].pos.x, 9);
+    // Vehicles are instanced per model; slot 0 of the taxi mesh holds the fixture's car.
+    const mesh = /** @type {import('three').InstancedMesh | undefined} */ (actors.group.getObjectByName('kenney:taxi'));
+    expect(mesh).toBeDefined();
+    const p = new Vector3().setFromMatrixPosition(new Matrix4().fromArray(/** @type {import('three').InstancedMesh} */ (mesh).instanceMatrix.array, 0));
+    // Instance matrices are 32-bit floats.
+    expect(p.x).toBeCloseTo(all[1].actors[1].pos.x, 4);
     actors.dispose();
   });
 
@@ -217,6 +285,26 @@ describe('lamps and effects', () => {
     expect(environmentLook({ clockMin: 720, weather: 'rain' }).fogDensity).toBeGreaterThan(
       environmentLook({ clockMin: 720, weather: 'clear' }).fogDensity,
     );
+  });
+
+  it('fogs out the 300 m far plane and drives night emissives', () => {
+    const fog = environmentLook({ clockMin: 720, weather: 'clear' }).fogDensity;
+    expect(FAR_M).toBe(300);
+    expect(Math.exp(-((fog * FAR_M) ** 2))).toBeLessThan(0.02);
+    const scene = new Scene();
+    const material = new MeshStandardMaterial();
+    material.userData.nightEmissive = 0.5;
+    const mesh = new Mesh(new BoxGeometry(), material);
+    const glow = new Object3D();
+    glow.userData.nightOnly = 0.3;
+    scene.add(mesh, glow);
+    const targets = nightTargets(scene);
+    applyNight(targets, 1);
+    expect(material.emissiveIntensity).toBe(0.5);
+    expect(glow.visible).toBe(true);
+    applyNight(targets, 0);
+    expect(material.emissiveIntensity).toBe(0);
+    expect(glow.visible).toBe(false);
   });
 
   it('places the chase camera behind and above the vehicle', () => {

@@ -150,8 +150,8 @@ export function inViewCone(ego, x, z, cone) {
 }
 
 /**
- * Tries to spawn a model at `s` on a lane edge; checks room along the lane, footprints of agents,
- * the ego and scripted actors, and starts at a speed the agent can brake from comfortably.
+ * Tries to spawn a model at `s` on a lane edge; checks room along the lane, static obstacles on it,
+ * footprints of agents, the ego and scripted actors, and starts at a speed the agent can brake from comfortably.
  * @param {TrafficState} st State.
  * @param {number} edge Lane edge.
  * @param {number} s Centre distance; raised so the rear is on the lane; the body must end before the hold point.
@@ -169,6 +169,12 @@ export function trySpawn(st, edge, s, modelIndex, ego, scripted, firstNew) {
   const sc = Math.max(half, s);
   if (sc + half > e.holdS) return -1;
   const clearM = st.params.spawnClearM;
+  // Never on a stretch a static obstacle closes; stop before the next one.
+  let blockAhead = Infinity;
+  for (const b of e.blocks) {
+    if (b.toS > sc - half - clearM && b.fromS < sc + half + cls.minGapM + clearM) return -1;
+    if (b.fromS >= sc + half) blockAhead = Math.min(blockAhead, b.fromS - (sc + half));
+  }
   // Neighbours along the lane.
   const list = st.edgeAgents[edge];
   const n = st.edgeCount[edge];
@@ -201,7 +207,7 @@ export function trySpawn(st, edge, s, modelIndex, ego, scripted, firstNew) {
   if (queryGrid(st.grid, pos.x, pos.z, reach + 6, (k) => st.alive[k] === 1 && hit(k))) return -1;
   for (let i = firstNew; i < st.activeCount; i += 1) if (hit(st.active[i])) return -1;
   // A speed it can stop from before the agent ahead and the hold point (the light may be red).
-  const stopGap = e.sink ? gapAhead : Math.min(gapAhead, e.holdS - (sc + half));
+  const stopGap = Math.min(blockAhead, e.sink ? gapAhead : Math.min(gapAhead, e.holdS - (sc + half)));
   const v0 = edgeBaseSpeed(e, cls);
   const speed = Math.min(v0 * 0.9, Math.sqrt(Math.max(0, 2 * cls.comfortDecelMps2 * (stopGap - cls.minGapM))));
   return spawnAgent(st, edge, sc, speed, modelIndex);

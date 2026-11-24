@@ -79,6 +79,16 @@ buildings:
   - { way: uu-tien, side: left, fromS: 20, toS: 230 }
   - { way: mot-chieu, side: right, fromS: 20, toS: 230 }
 
+# Street props at fixed places (see tutorial-01 for the format); the build adds the seeded fill.
+props:
+  - { id: pr-bus-giua, kind: bus-stop, way: giua, side: left, s: 120 }
+  - { id: pr-xe-giua, kind: parked-motorbikes, way: giua, side: left, s: 150 }
+  - { id: pr-cay-tay-1, kind: tree, way: tay, side: right, s: 40 }
+  - { id: pr-cay-tay-2, kind: tree, way: tay, side: right, s: 56 }
+  - { id: pr-tu-cuoi, kind: cabinet, way: cuoi, side: right, s: 50 }
+  - { id: pr-hang-uu-tien, kind: stall, way: uu-tien, side: right, s: 100 }
+  - { id: pr-thung-mot-chieu, kind: bin, way: mot-chieu, side: left, s: 60 }
+
 route:
   start: { way: tay, s: 15, lane: 0 }
   checkpoints:

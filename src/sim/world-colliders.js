@@ -20,7 +20,7 @@
  * kinematic body's position delta.
  */
 
-import { DT } from '../contracts/units.js';
+import { DT, KERB_HEIGHT_M } from '../contracts/units.js';
 import { NO_VIOLATIONS } from '../contracts/telemetry.js';
 import { headingVector, pointInPolygon } from '../geometry/index.js';
 import { mapIndex } from '../map-query/index.js';
@@ -37,8 +37,7 @@ import { headingQuat } from '../physics/vehicle.js';
 /** @typedef {import('../contracts/telemetry.js').ActorPose} ActorPose */
 /** @typedef {import('../contracts/map.js').Prop} Prop */
 
-/** Kerb height and thickness in metres. */
-export const KERB_HEIGHT_M = 0.12;
+/** Kerb thickness in metres; its height is the shared `KERB_HEIGHT_M`. */
 const KERB_THICKNESS_M = 0.15;
 
 /** Obstacle wall thickness in metres. */
@@ -64,7 +63,7 @@ export const PROP_COLLIDERS = Object.freeze({
   lamp: { shape: 'cylinder', radius: 0.15, height: 6 },
   'power-pole': { shape: 'cylinder', radius: 0.15, height: 8 },
   cabinet: { shape: 'box', length: 0.8, width: 0.5, height: 1.4 },
-  'bus-stop': { shape: 'box', length: 4, width: 1.5, height: 2.5 },
+  'bus-stop': { shape: 'box', length: 4, width: 1.2, height: 2.5 },
   'parked-motorbikes': { shape: 'box', length: 4, width: 2, height: 1.1 },
   bin: { shape: 'box', length: 0.6, width: 0.6, height: 1 },
   stall: { shape: 'box', length: 2, width: 1.5, height: 1.8 },

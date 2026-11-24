@@ -1,7 +1,9 @@
 <script>
   import PageShell from '../layout/page-shell.svelte';
   import { KEY_BINDINGS } from '../../contracts/controls.js';
+  import { readControlPreset, writeControlPreset } from '../lib/control-preset-store.js';
   import { formatDistance, keyLabel } from '../lib/format.js';
+  import { PRESET_NAMES } from '../lib/hud-view.js';
   import { pageHref, playHref } from '../lib/route.js';
 
   /**
@@ -14,6 +16,19 @@
 
   let vehicleId = $state(/** @type {string | null} */ (null));
   let mapId = $state(/** @type {string | null} */ (null));
+  let preset = $state(readControlPreset());
+
+  /** Preset choices with what each one does. */
+  const PRESETS = /** @type {const} */ ([
+    { id: 'simple', hint: 'số tự động, một phanh, xi nhan tự tắt sau khi rẽ' },
+    { id: 'real', hint: 'số tay, hai phanh riêng, xi nhan tắt bằng tay' },
+  ]);
+
+  /** @param {import('../../contracts/controls.js').ControlPreset} id Chosen preset. */
+  function choosePreset(id) {
+    preset = id;
+    if (!writeControlPreset(id)) console.warn('The control preset could not be saved; it applies to this visit only');
+  }
 
   const chosenVehicle = $derived(vehicleId ?? vehicles[0]?.id ?? null);
   const chosenMap = $derived(mapId ?? (maps.status === 'ready' ? (maps.entries[0]?.id ?? null) : null));
@@ -53,6 +68,31 @@
               data-testid="vehicle-{vehicle.id}"
             />
             <span>{vehicle.name.vi}</span>
+          </label>
+        {/each}
+      </div>
+
+      <h2 class="mb-3 mt-6 text-xl font-semibold">Điều khiển</h2>
+      <div class="grid gap-2" role="radiogroup" aria-label="Kiểu điều khiển">
+        {#each PRESETS as option (option.id)}
+          <label
+            class="flex cursor-pointer items-center gap-3 rounded-lg border p-3 {preset === option.id
+              ? 'border-police-500 bg-police-50'
+              : 'border-stone-300 bg-white hover:border-police-300'}"
+          >
+            <input
+              class="accent-police-600"
+              type="radio"
+              name="control-preset"
+              value={option.id}
+              checked={preset === option.id}
+              onchange={() => choosePreset(option.id)}
+              data-testid="preset-{option.id}"
+            />
+            <span>
+              <span class="font-medium">{PRESET_NAMES[option.id]}</span>
+              <span class="block text-sm text-stone-600">{option.hint}</span>
+            </span>
           </label>
         {/each}
       </div>

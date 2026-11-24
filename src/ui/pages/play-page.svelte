@@ -2,6 +2,8 @@
   import { untrack } from 'svelte';
   import Hud from '../hud/hud.svelte';
   import ResultScreen from '../result/result-screen.svelte';
+  import { readControlPreset } from '../lib/control-preset-store.js';
+  import { PRESET_NAMES } from '../lib/hud-view.js';
   import { dismissToast, emptyToastStack, ingestBreaches, pruneToasts } from '../lib/toast-stack.js';
   import { pageHref } from '../lib/route.js';
 
@@ -49,7 +51,7 @@
         hud = state;
         stack = ingestBreaches(stack, state.toasts, performance.now());
       });
-      g.start(map, v.id).catch((/** @type {unknown} */ err) => {
+      g.start(map, v.id, { controlPreset: readControlPreset() }).catch((/** @type {unknown} */ err) => {
         console.error('Failed to start the run', err);
         if (active) error = 'Không khởi động được lượt chơi. Hãy thử lại hoặc chọn bản đồ khác.';
       });
@@ -114,6 +116,7 @@
         state={hud}
         {vehicle}
         toasts={stack.items}
+        controls={/** @type {import('../../contracts/hud.js').GameApi} */ (game).controls}
         onpause={togglePause}
         ondismiss={(id) => (stack = dismissToast(stack, id))}
       />
@@ -123,6 +126,10 @@
       <div class="absolute inset-0 flex items-center justify-center bg-stone-900/40" data-testid="pause-overlay">
         <div class="flex flex-col gap-3 rounded-xl border-t-4 border-police-500 bg-white p-6 shadow-xl text-center">
           <h2 class="text-2xl font-bold">Tạm dừng</h2>
+          <p class="text-sm text-stone-700" data-testid="pause-preset">
+            Điều khiển: {PRESET_NAMES[hud.controlPreset]}
+            <span class="block text-xs text-stone-500">đổi ở trang chủ, áp dụng ở lượt sau</span>
+          </p>
           <button type="button" class="rounded-lg bg-police-500 text-stone-900 hover:bg-police-400 px-4 py-2 font-semibold" data-testid="pause-resume" onclick={() => game?.resume()}>
             Tiếp tục
           </button>
@@ -153,8 +160,11 @@
   {/if}
 
   {#if mapEntry?.kind === 'osm'}
-    <p class="absolute bottom-1 left-1/2 -translate-x-1/2 rounded bg-white/90 px-2 py-0.5 text-xs text-stone-700 shadow-sm" data-testid="osm-attribution">
-      <a class="underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
+    <p
+      class="pointer-events-none absolute bottom-[max(0.25rem,env(safe-area-inset-bottom))] left-1/2 w-max max-w-80 -translate-x-1/2 rounded bg-white/90 px-2 py-0.5 text-center text-[11px] leading-tight text-stone-700 shadow-sm"
+      data-testid="osm-attribution"
+    >
+      <a class="pointer-events-auto underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
         {mapEntry.attribution ?? '© OpenStreetMap contributors, ODbL'}
       </a>
       · bản đồ mô phỏng, biển báo có thể khác ngoài thực tế

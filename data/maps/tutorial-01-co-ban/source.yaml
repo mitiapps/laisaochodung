@@ -52,6 +52,21 @@ buildings:
   - { way: rong, side: right, fromS: 10, toS: 290 }
   - { way: rong, side: left, fromS: 10, toS: 290, heightM: 20 }
 
+# Street props at fixed places: `{way, side, s}` as for building rows, with an optional `offsetM`
+# from the kerb to the prop centre. The build adds a seeded fill of trees, lamps, power poles and
+# parked motorbikes along every pavement, and shophouse rows along every pavement edge with no
+# building.
+props:
+  - { id: pr-bus-hep, kind: bus-stop, way: hep, side: right, s: 150 }
+  - { id: pr-xe-hep, kind: parked-motorbikes, way: hep, side: right, s: 180 }
+  - { id: pr-cay-hep-1, kind: tree, way: hep, side: left, s: 30 }
+  - { id: pr-cay-hep-2, kind: tree, way: hep, side: left, s: 46 }
+  - { id: pr-thung-hep, kind: bin, way: hep, side: left, s: 60 }
+  - { id: pr-den-rong, kind: lamp, way: rong, side: right, s: 50 }
+  - { id: pr-cot-rong, kind: power-pole, way: rong, side: left, s: 70 }
+  - { id: pr-tu-rong, kind: cabinet, way: rong, side: left, s: 120 }
+  - { id: pr-hang-cuoi, kind: stall, way: cuoi, side: right, s: 60 }
+
 actors:
   - id: ped-hep
     kind: pedestrian

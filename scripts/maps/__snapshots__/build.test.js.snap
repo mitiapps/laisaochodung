@@ -1030,6 +1030,888 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
       ]
     }
   ],
+  "props": [
+    {
+      "heading": 0,
+      "id": "pr-lamp-w1-1-r-1",
+      "kind": "lamp",
+      "pos": {
+        "x": -190.305,
+        "z": 42.918
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-w1-1-r-2",
+      "kind": "lamp",
+      "pos": {
+        "x": -160.305,
+        "z": 42.918
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-w1-1-r-3",
+      "kind": "lamp",
+      "pos": {
+        "x": -130.305,
+        "z": 42.918
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-w1-1-r-4",
+      "kind": "lamp",
+      "pos": {
+        "x": -100.305,
+        "z": 42.918
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-w1-1-r-5",
+      "kind": "lamp",
+      "pos": {
+        "x": -70.305,
+        "z": 42.918
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-w1-2-r-1",
+      "kind": "lamp",
+      "pos": {
+        "x": -16.972,
+        "z": 42.918
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-w1-2-r-2",
+      "kind": "lamp",
+      "pos": {
+        "x": 12.028,
+        "z": 42.918
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-w1-2-r-3",
+      "kind": "lamp",
+      "pos": {
+        "x": 42.028,
+        "z": 42.918
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-w1-2-r-4",
+      "kind": "lamp",
+      "pos": {
+        "x": 72.028,
+        "z": 42.918
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-w1-2-r-5",
+      "kind": "lamp",
+      "pos": {
+        "x": 102.028,
+        "z": 42.918
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-lamp-w2-r-1",
+      "kind": "lamp",
+      "pos": {
+        "x": 129.932,
+        "z": 20.162
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-lamp-w2-r-2",
+      "kind": "lamp",
+      "pos": {
+        "x": 129.932,
+        "z": -9.838
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-lamp-w2-r-3",
+      "kind": "lamp",
+      "pos": {
+        "x": 129.932,
+        "z": -39.838
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-lamp-w2-r-4",
+      "kind": "lamp",
+      "pos": {
+        "x": 129.932,
+        "z": -69.838
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-lamp-w2-r-5",
+      "kind": "lamp",
+      "pos": {
+        "x": 129.932,
+        "z": -99.838
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-lamp-w3-2-in-r-1",
+      "kind": "lamp",
+      "pos": {
+        "x": -34.327,
+        "z": 58.378
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-lamp-w3-2-out-r-1",
+      "kind": "lamp",
+      "pos": {
+        "x": -34.327,
+        "z": 22.856
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-w4-3-out-r-1",
+      "kind": "lamp",
+      "pos": {
+        "x": 146.355,
+        "z": 42.918
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-1-l-1",
+      "kind": "tree",
+      "pos": {
+        "x": -198.508,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-1-l-10",
+      "kind": "tree",
+      "pos": {
+        "x": -51.584,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-1-l-2",
+      "kind": "tree",
+      "pos": {
+        "x": -183.34,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-1-l-3",
+      "kind": "tree",
+      "pos": {
+        "x": -167.849,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-1-l-4",
+      "kind": "tree",
+      "pos": {
+        "x": -148.823,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-1-l-5",
+      "kind": "tree",
+      "pos": {
+        "x": -129.448,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-1-l-6",
+      "kind": "tree",
+      "pos": {
+        "x": -115.819,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-1-l-7",
+      "kind": "tree",
+      "pos": {
+        "x": -96.134,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-1-l-8",
+      "kind": "tree",
+      "pos": {
+        "x": -84.086,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-1-l-9",
+      "kind": "tree",
+      "pos": {
+        "x": -71.468,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-1-r-1",
+      "kind": "tree",
+      "pos": {
+        "x": -194.05,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-1-r-10",
+      "kind": "tree",
+      "pos": {
+        "x": -50.219,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-1-r-2",
+      "kind": "tree",
+      "pos": {
+        "x": -175.617,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-1-r-3",
+      "kind": "tree",
+      "pos": {
+        "x": -163.314,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-1-r-4",
+      "kind": "tree",
+      "pos": {
+        "x": -147.604,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-1-r-5",
+      "kind": "tree",
+      "pos": {
+        "x": -135.498,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-1-r-6",
+      "kind": "tree",
+      "pos": {
+        "x": -120.85,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-1-r-7",
+      "kind": "tree",
+      "pos": {
+        "x": -101.783,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-1-r-8",
+      "kind": "tree",
+      "pos": {
+        "x": -85.022,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-1-r-9",
+      "kind": "tree",
+      "pos": {
+        "x": -68.553,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-2-l-1",
+      "kind": "tree",
+      "pos": {
+        "x": -30.017,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-2-l-10",
+      "kind": "tree",
+      "pos": {
+        "x": 115.462,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-2-l-2",
+      "kind": "tree",
+      "pos": {
+        "x": -17.019,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-2-l-3",
+      "kind": "tree",
+      "pos": {
+        "x": -3.393,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-2-l-4",
+      "kind": "tree",
+      "pos": {
+        "x": 13.132,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-2-l-5",
+      "kind": "tree",
+      "pos": {
+        "x": 28.799,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-2-l-6",
+      "kind": "tree",
+      "pos": {
+        "x": 41.928,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-2-l-7",
+      "kind": "tree",
+      "pos": {
+        "x": 61.481,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-2-l-8",
+      "kind": "tree",
+      "pos": {
+        "x": 78.915,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w1-2-l-9",
+      "kind": "tree",
+      "pos": {
+        "x": 96.868,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-2-r-1",
+      "kind": "tree",
+      "pos": {
+        "x": -30.054,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-2-r-10",
+      "kind": "tree",
+      "pos": {
+        "x": 115.159,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-2-r-2",
+      "kind": "tree",
+      "pos": {
+        "x": -13.384,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-2-r-3",
+      "kind": "tree",
+      "pos": {
+        "x": 6.333,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-2-r-4",
+      "kind": "tree",
+      "pos": {
+        "x": 21.017,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-2-r-5",
+      "kind": "tree",
+      "pos": {
+        "x": 39.983,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-2-r-6",
+      "kind": "tree",
+      "pos": {
+        "x": 52.504,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-2-r-7",
+      "kind": "tree",
+      "pos": {
+        "x": 69.095,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-2-r-8",
+      "kind": "tree",
+      "pos": {
+        "x": 84.187,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w1-2-r-9",
+      "kind": "tree",
+      "pos": {
+        "x": 96.284,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 4.712,
+      "id": "pr-tree-w2-l-1",
+      "kind": "tree",
+      "pos": {
+        "x": 121.582,
+        "z": 26.877
+      },
+      "solid": true
+    },
+    {
+      "heading": 4.712,
+      "id": "pr-tree-w2-l-10",
+      "kind": "tree",
+      "pos": {
+        "x": 121.582,
+        "z": -105.285
+      },
+      "solid": true
+    },
+    {
+      "heading": 4.712,
+      "id": "pr-tree-w2-l-11",
+      "kind": "tree",
+      "pos": {
+        "x": 121.582,
+        "z": -119.764
+      },
+      "solid": true
+    },
+    {
+      "heading": 4.712,
+      "id": "pr-tree-w2-l-2",
+      "kind": "tree",
+      "pos": {
+        "x": 121.582,
+        "z": 14.437
+      },
+      "solid": true
+    },
+    {
+      "heading": 4.712,
+      "id": "pr-tree-w2-l-3",
+      "kind": "tree",
+      "pos": {
+        "x": 121.582,
+        "z": -0.132
+      },
+      "solid": true
+    },
+    {
+      "heading": 4.712,
+      "id": "pr-tree-w2-l-4",
+      "kind": "tree",
+      "pos": {
+        "x": 121.582,
+        "z": -18.384
+      },
+      "solid": true
+    },
+    {
+      "heading": 4.712,
+      "id": "pr-tree-w2-l-5",
+      "kind": "tree",
+      "pos": {
+        "x": 121.582,
+        "z": -35.322
+      },
+      "solid": true
+    },
+    {
+      "heading": 4.712,
+      "id": "pr-tree-w2-l-6",
+      "kind": "tree",
+      "pos": {
+        "x": 121.582,
+        "z": -51.109
+      },
+      "solid": true
+    },
+    {
+      "heading": 4.712,
+      "id": "pr-tree-w2-l-7",
+      "kind": "tree",
+      "pos": {
+        "x": 121.582,
+        "z": -64.216
+      },
+      "solid": true
+    },
+    {
+      "heading": 4.712,
+      "id": "pr-tree-w2-l-8",
+      "kind": "tree",
+      "pos": {
+        "x": 121.582,
+        "z": -78.481
+      },
+      "solid": true
+    },
+    {
+      "heading": 4.712,
+      "id": "pr-tree-w2-l-9",
+      "kind": "tree",
+      "pos": {
+        "x": 121.582,
+        "z": -90.533
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-w2-r-1",
+      "kind": "tree",
+      "pos": {
+        "x": 130.282,
+        "z": 26.72
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-w2-r-10",
+      "kind": "tree",
+      "pos": {
+        "x": 130.282,
+        "z": -111.656
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-w2-r-2",
+      "kind": "tree",
+      "pos": {
+        "x": 130.282,
+        "z": 11.896
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-w2-r-3",
+      "kind": "tree",
+      "pos": {
+        "x": 130.282,
+        "z": -3.534
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-w2-r-4",
+      "kind": "tree",
+      "pos": {
+        "x": 130.282,
+        "z": -16.122
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-w2-r-5",
+      "kind": "tree",
+      "pos": {
+        "x": 130.282,
+        "z": -33.616
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-w2-r-6",
+      "kind": "tree",
+      "pos": {
+        "x": 130.282,
+        "z": -45.86
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-w2-r-7",
+      "kind": "tree",
+      "pos": {
+        "x": 130.282,
+        "z": -65.173
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-w2-r-8",
+      "kind": "tree",
+      "pos": {
+        "x": 130.282,
+        "z": -84.178
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-w2-r-9",
+      "kind": "tree",
+      "pos": {
+        "x": 130.282,
+        "z": -97.057
+      },
+      "solid": true
+    },
+    {
+      "heading": 4.712,
+      "id": "pr-tree-w3-2-in-l-1",
+      "kind": "tree",
+      "pos": {
+        "x": -42.677,
+        "z": 65.356
+      },
+      "solid": true
+    },
+    {
+      "heading": 4.712,
+      "id": "pr-tree-w3-2-in-l-2",
+      "kind": "tree",
+      "pos": {
+        "x": -42.677,
+        "z": 48.905
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-w3-2-in-r-1",
+      "kind": "tree",
+      "pos": {
+        "x": -33.977,
+        "z": 64.628
+      },
+      "solid": true
+    },
+    {
+      "heading": 4.712,
+      "id": "pr-tree-w3-2-out-l-1",
+      "kind": "tree",
+      "pos": {
+        "x": -42.677,
+        "z": 26.804
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-w3-2-out-r-1",
+      "kind": "tree",
+      "pos": {
+        "x": -33.977,
+        "z": 14.529
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w4-3-out-l-1",
+      "kind": "tree",
+      "pos": {
+        "x": 138.387,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-w4-3-out-l-2",
+      "kind": "tree",
+      "pos": {
+        "x": 154.071,
+        "z": 34.568
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w4-3-out-r-1",
+      "kind": "tree",
+      "pos": {
+        "x": 136.563,
+        "z": 43.268
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-w4-3-out-r-2",
+      "kind": "tree",
+      "pos": {
+        "x": 150.267,
+        "z": 43.268
+      },
+      "solid": true
+    }
+  ],
   "restrictions": [],
   "roads": [
     {
@@ -2569,6 +3451,7 @@ exports[`fixture builds > matches the snapshot for tutorial 01 1`] = `
   },
   "obstacles": [
     {
+      "floors": 3,
       "footprint": [
         [
           10,
@@ -2587,11 +3470,14 @@ exports[`fixture builds > matches the snapshot for tutorial 01 1`] = `
           7
         ]
       ],
+      "frontEdge": 2,
       "height": 12,
       "id": "bd-1",
-      "kind": "building"
+      "kind": "building",
+      "use": "shophouse"
     },
     {
+      "floors": 5,
       "footprint": [
         [
           10,
@@ -2610,11 +3496,14 @@ exports[`fixture builds > matches the snapshot for tutorial 01 1`] = `
           -19
         ]
       ],
+      "frontEdge": 0,
       "height": 18,
       "id": "bd-2",
-      "kind": "building"
+      "kind": "building",
+      "use": "shophouse"
     },
     {
+      "floors": 3,
       "footprint": [
         [
           230,
@@ -2633,11 +3522,14 @@ exports[`fixture builds > matches the snapshot for tutorial 01 1`] = `
           10.5
         ]
       ],
+      "frontEdge": 1,
       "height": 12,
       "id": "bd-3",
-      "kind": "building"
+      "kind": "building",
+      "use": "shophouse"
     },
     {
+      "floors": 6,
       "footprint": [
         [
           230,
@@ -2656,9 +3548,739 @@ exports[`fixture builds > matches the snapshot for tutorial 01 1`] = `
           -22.5
         ]
       ],
+      "frontEdge": 0,
       "height": 20,
       "id": "bd-4",
-      "kind": "building"
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 4,
+      "footprint": [
+        [
+          528,
+          -10.5
+        ],
+        [
+          563.5,
+          -10.5
+        ],
+        [
+          563.5,
+          -21.267
+        ],
+        [
+          528,
+          -21.267
+        ]
+      ],
+      "frontEdge": 0,
+      "height": 13.8,
+      "id": "bd-row-cuoi-l-1",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 5,
+      "footprint": [
+        [
+          563.5,
+          -10.5
+        ],
+        [
+          594.643,
+          -10.5
+        ],
+        [
+          594.643,
+          -21.267
+        ],
+        [
+          563.5,
+          -21.267
+        ]
+      ],
+      "frontEdge": 0,
+      "height": 17.1,
+      "id": "bd-row-cuoi-l-2",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 3,
+      "footprint": [
+        [
+          594.643,
+          -12.5
+        ],
+        [
+          613.511,
+          -12.5
+        ],
+        [
+          613.511,
+          -23.267
+        ],
+        [
+          594.643,
+          -23.267
+        ]
+      ],
+      "frontEdge": 0,
+      "height": 10.5,
+      "id": "bd-row-cuoi-l-3",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 3,
+      "footprint": [
+        [
+          613.511,
+          -10.5
+        ],
+        [
+          635.034,
+          -10.5
+        ],
+        [
+          635.034,
+          -21.267
+        ],
+        [
+          613.511,
+          -21.267
+        ]
+      ],
+      "frontEdge": 0,
+      "height": 10.5,
+      "id": "bd-row-cuoi-l-4",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 3,
+      "footprint": [
+        [
+          635.034,
+          -10.5
+        ],
+        [
+          660,
+          -10.5
+        ],
+        [
+          660,
+          -21.267
+        ],
+        [
+          635.034,
+          -21.267
+        ]
+      ],
+      "frontEdge": 0,
+      "height": 10.5,
+      "id": "bd-row-cuoi-l-5",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 5,
+      "footprint": [
+        [
+          528,
+          21.975
+        ],
+        [
+          563.191,
+          21.975
+        ],
+        [
+          563.191,
+          10.5
+        ],
+        [
+          528,
+          10.5
+        ]
+      ],
+      "frontEdge": 2,
+      "height": 17.1,
+      "id": "bd-row-cuoi-r-1",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 3,
+      "footprint": [
+        [
+          563.191,
+          21.975
+        ],
+        [
+          588.932,
+          21.975
+        ],
+        [
+          588.932,
+          10.5
+        ],
+        [
+          563.191,
+          10.5
+        ]
+      ],
+      "frontEdge": 2,
+      "height": 10.5,
+      "id": "bd-row-cuoi-r-2",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 3,
+      "footprint": [
+        [
+          588.932,
+          21.975
+        ],
+        [
+          619.629,
+          21.975
+        ],
+        [
+          619.629,
+          10.5
+        ],
+        [
+          588.932,
+          10.5
+        ]
+      ],
+      "frontEdge": 2,
+      "height": 10.5,
+      "id": "bd-row-cuoi-r-3",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 5,
+      "footprint": [
+        [
+          619.629,
+          21.975
+        ],
+        [
+          645.773,
+          21.975
+        ],
+        [
+          645.773,
+          10.5
+        ],
+        [
+          619.629,
+          10.5
+        ]
+      ],
+      "frontEdge": 2,
+      "height": 17.1,
+      "id": "bd-row-cuoi-r-4",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 5,
+      "footprint": [
+        [
+          645.773,
+          21.975
+        ],
+        [
+          660,
+          21.975
+        ],
+        [
+          660,
+          10.5
+        ],
+        [
+          645.773,
+          10.5
+        ]
+      ],
+      "frontEdge": 2,
+      "height": 17.1,
+      "id": "bd-row-cuoi-r-5",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 5,
+      "footprint": [
+        [
+          0,
+          -7
+        ],
+        [
+          9,
+          -7
+        ],
+        [
+          9,
+          -20.273
+        ],
+        [
+          0,
+          -20.273
+        ]
+      ],
+      "frontEdge": 0,
+      "height": 17.1,
+      "id": "bd-row-hep-l-1",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 5,
+      "footprint": [
+        [
+          211,
+          -7
+        ],
+        [
+          219,
+          -7
+        ],
+        [
+          219,
+          -20.273
+        ],
+        [
+          211,
+          -20.273
+        ]
+      ],
+      "frontEdge": 0,
+      "height": 17.1,
+      "id": "bd-row-hep-l-2",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 4,
+      "footprint": [
+        [
+          0,
+          19.925
+        ],
+        [
+          9,
+          19.925
+        ],
+        [
+          9,
+          7
+        ],
+        [
+          0,
+          7
+        ]
+      ],
+      "frontEdge": 2,
+      "height": 13.8,
+      "id": "bd-row-hep-r-1",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 3,
+      "footprint": [
+        [
+          106,
+          21.925
+        ],
+        [
+          141.628,
+          21.925
+        ],
+        [
+          141.628,
+          9
+        ],
+        [
+          106,
+          9
+        ]
+      ],
+      "frontEdge": 2,
+      "height": 10.5,
+      "id": "bd-row-hep-r-2",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 3,
+      "footprint": [
+        [
+          141.628,
+          21.925
+        ],
+        [
+          170.023,
+          21.925
+        ],
+        [
+          170.023,
+          9
+        ],
+        [
+          141.628,
+          9
+        ]
+      ],
+      "frontEdge": 2,
+      "height": 10.5,
+      "id": "bd-row-hep-r-3",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 4,
+      "footprint": [
+        [
+          170.023,
+          21.925
+        ],
+        [
+          202.31,
+          21.925
+        ],
+        [
+          202.31,
+          9
+        ],
+        [
+          170.023,
+          9
+        ]
+      ],
+      "frontEdge": 2,
+      "height": 13.8,
+      "id": "bd-row-hep-r-4",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 5,
+      "footprint": [
+        [
+          202.31,
+          19.925
+        ],
+        [
+          219,
+          19.925
+        ],
+        [
+          219,
+          7
+        ],
+        [
+          202.31,
+          7
+        ]
+      ],
+      "frontEdge": 2,
+      "height": 17.1,
+      "id": "bd-row-hep-r-5",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 4,
+      "footprint": [
+        [
+          527,
+          22
+        ],
+        [
+          527,
+          54.07
+        ],
+        [
+          537.546,
+          54.07
+        ],
+        [
+          537.546,
+          22
+        ]
+      ],
+      "frontEdge": 0,
+      "height": 13.8,
+      "id": "bd-row-nhanh-l-1",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 5,
+      "footprint": [
+        [
+          529,
+          54.07
+        ],
+        [
+          529,
+          79.523
+        ],
+        [
+          539.546,
+          79.523
+        ],
+        [
+          539.546,
+          54.07
+        ]
+      ],
+      "frontEdge": 0,
+      "height": 17.1,
+      "id": "bd-row-nhanh-l-2",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 4,
+      "footprint": [
+        [
+          529,
+          79.523
+        ],
+        [
+          529,
+          115.94
+        ],
+        [
+          539.546,
+          115.94
+        ],
+        [
+          539.546,
+          79.523
+        ]
+      ],
+      "frontEdge": 0,
+      "height": 13.8,
+      "id": "bd-row-nhanh-l-3",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 3,
+      "footprint": [
+        [
+          527,
+          115.94
+        ],
+        [
+          527,
+          140
+        ],
+        [
+          537.546,
+          140
+        ],
+        [
+          537.546,
+          115.94
+        ]
+      ],
+      "frontEdge": 0,
+      "height": 10.5,
+      "id": "bd-row-nhanh-l-4",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 3,
+      "footprint": [
+        [
+          500.765,
+          23
+        ],
+        [
+          500.765,
+          42.01
+        ],
+        [
+          511,
+          42.01
+        ],
+        [
+          511,
+          23
+        ]
+      ],
+      "frontEdge": 2,
+      "height": 10.5,
+      "id": "bd-row-nhanh-r-1",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 3,
+      "footprint": [
+        [
+          500.765,
+          42.01
+        ],
+        [
+          500.765,
+          65.968
+        ],
+        [
+          511,
+          65.968
+        ],
+        [
+          511,
+          42.01
+        ]
+      ],
+      "frontEdge": 2,
+      "height": 10.5,
+      "id": "bd-row-nhanh-r-2",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 3,
+      "footprint": [
+        [
+          500.765,
+          65.968
+        ],
+        [
+          500.765,
+          101.182
+        ],
+        [
+          511,
+          101.182
+        ],
+        [
+          511,
+          65.968
+        ]
+      ],
+      "frontEdge": 2,
+      "height": 10.5,
+      "id": "bd-row-nhanh-r-3",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 4,
+      "footprint": [
+        [
+          502.765,
+          101.182
+        ],
+        [
+          502.765,
+          122.978
+        ],
+        [
+          513,
+          122.978
+        ],
+        [
+          513,
+          101.182
+        ]
+      ],
+      "frontEdge": 2,
+      "height": 13.8,
+      "id": "bd-row-nhanh-r-4",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 5,
+      "footprint": [
+        [
+          500.765,
+          122.978
+        ],
+        [
+          500.765,
+          140
+        ],
+        [
+          511,
+          140
+        ],
+        [
+          511,
+          122.978
+        ]
+      ],
+      "frontEdge": 2,
+      "height": 17.1,
+      "id": "bd-row-nhanh-r-5",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 3,
+      "footprint": [
+        [
+          220,
+          -10.5
+        ],
+        [
+          229,
+          -10.5
+        ],
+        [
+          229,
+          -23.007
+        ],
+        [
+          220,
+          -23.007
+        ]
+      ],
+      "frontEdge": 0,
+      "height": 10.5,
+      "id": "bd-row-rong-l-1",
+      "kind": "building",
+      "use": "shophouse"
+    },
+    {
+      "floors": 4,
+      "footprint": [
+        [
+          220,
+          27.947
+        ],
+        [
+          229,
+          27.947
+        ],
+        [
+          229,
+          12.5
+        ],
+        [
+          220,
+          12.5
+        ]
+      ],
+      "frontEdge": 2,
+      "height": 13.8,
+      "id": "bd-row-rong-r-1",
+      "kind": "building",
+      "use": "shophouse"
     },
     {
       "footprint": [
@@ -2852,6 +4474,1878 @@ exports[`fixture builds > matches the snapshot for tutorial 01 1`] = `
           7
         ]
       ]
+    }
+  ],
+  "props": [
+    {
+      "heading": 0,
+      "id": "pr-bus-hep",
+      "kind": "bus-stop",
+      "pos": {
+        "x": 150,
+        "z": 4.25
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-cay-hep-1",
+      "kind": "tree",
+      "pos": {
+        "x": 30,
+        "z": -4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-cay-hep-2",
+      "kind": "tree",
+      "pos": {
+        "x": 46,
+        "z": -4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-cot-rong",
+      "kind": "power-pole",
+      "pos": {
+        "x": 290,
+        "z": -7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-den-rong",
+      "kind": "lamp",
+      "pos": {
+        "x": 270,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-hang-cuoi",
+      "kind": "stall",
+      "pos": {
+        "x": 580,
+        "z": 7.75
+      },
+      "solid": false
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-lamp-cuoi-l-1",
+      "kind": "lamp",
+      "pos": {
+        "x": 542.394,
+        "z": -7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-lamp-cuoi-l-2",
+      "kind": "lamp",
+      "pos": {
+        "x": 572.394,
+        "z": -7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-lamp-cuoi-l-3",
+      "kind": "lamp",
+      "pos": {
+        "x": 602.394,
+        "z": -7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-lamp-cuoi-l-4",
+      "kind": "lamp",
+      "pos": {
+        "x": 633.394,
+        "z": -7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-cuoi-r-1",
+      "kind": "lamp",
+      "pos": {
+        "x": 543.146,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-cuoi-r-2",
+      "kind": "lamp",
+      "pos": {
+        "x": 573.146,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-cuoi-r-3",
+      "kind": "lamp",
+      "pos": {
+        "x": 603.146,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-cuoi-r-4",
+      "kind": "lamp",
+      "pos": {
+        "x": 633.146,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-hep-r-1",
+      "kind": "lamp",
+      "pos": {
+        "x": 11.953,
+        "z": 4
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-hep-r-2",
+      "kind": "lamp",
+      "pos": {
+        "x": 41.953,
+        "z": 4
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-hep-r-3",
+      "kind": "lamp",
+      "pos": {
+        "x": 71.953,
+        "z": 4
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-hep-r-4",
+      "kind": "lamp",
+      "pos": {
+        "x": 101.953,
+        "z": 4
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-hep-r-5",
+      "kind": "lamp",
+      "pos": {
+        "x": 131.953,
+        "z": 4
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-hep-r-6",
+      "kind": "lamp",
+      "pos": {
+        "x": 161.953,
+        "z": 4
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-hep-r-7",
+      "kind": "lamp",
+      "pos": {
+        "x": 191.953,
+        "z": 4
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-lamp-nhanh-r-1",
+      "kind": "lamp",
+      "pos": {
+        "x": 516,
+        "z": 18.342
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-lamp-nhanh-r-2",
+      "kind": "lamp",
+      "pos": {
+        "x": 516,
+        "z": 48.342
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-lamp-nhanh-r-3",
+      "kind": "lamp",
+      "pos": {
+        "x": 516,
+        "z": 79.342
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-lamp-nhanh-r-4",
+      "kind": "lamp",
+      "pos": {
+        "x": 516,
+        "z": 108.342
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-lamp-nhanh-r-5",
+      "kind": "lamp",
+      "pos": {
+        "x": 516,
+        "z": 138.342
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-lamp-rong-l-1",
+      "kind": "lamp",
+      "pos": {
+        "x": 230.94,
+        "z": -7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-lamp-rong-l-10",
+      "kind": "lamp",
+      "pos": {
+        "x": 500.94,
+        "z": -7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-lamp-rong-l-2",
+      "kind": "lamp",
+      "pos": {
+        "x": 262.94,
+        "z": -7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-lamp-rong-l-3",
+      "kind": "lamp",
+      "pos": {
+        "x": 290.94,
+        "z": -7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-lamp-rong-l-4",
+      "kind": "lamp",
+      "pos": {
+        "x": 320.94,
+        "z": -7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-lamp-rong-l-5",
+      "kind": "lamp",
+      "pos": {
+        "x": 350.94,
+        "z": -7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-lamp-rong-l-6",
+      "kind": "lamp",
+      "pos": {
+        "x": 380.94,
+        "z": -7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-lamp-rong-l-7",
+      "kind": "lamp",
+      "pos": {
+        "x": 410.94,
+        "z": -7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-lamp-rong-l-8",
+      "kind": "lamp",
+      "pos": {
+        "x": 440.94,
+        "z": -7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-lamp-rong-l-9",
+      "kind": "lamp",
+      "pos": {
+        "x": 470.94,
+        "z": -7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-rong-r-1",
+      "kind": "lamp",
+      "pos": {
+        "x": 232.973,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-rong-r-2",
+      "kind": "lamp",
+      "pos": {
+        "x": 292.973,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-rong-r-3",
+      "kind": "lamp",
+      "pos": {
+        "x": 322.973,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-rong-r-4",
+      "kind": "lamp",
+      "pos": {
+        "x": 352.973,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-rong-r-5",
+      "kind": "lamp",
+      "pos": {
+        "x": 382.973,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-rong-r-6",
+      "kind": "lamp",
+      "pos": {
+        "x": 412.973,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-rong-r-7",
+      "kind": "lamp",
+      "pos": {
+        "x": 442.973,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-rong-r-8",
+      "kind": "lamp",
+      "pos": {
+        "x": 472.973,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-lamp-rong-r-9",
+      "kind": "lamp",
+      "pos": {
+        "x": 502.973,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-motorbikes-bd-row-cuoi-l-3-1",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 603.143,
+        "z": -11.25
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-motorbikes-bd-row-cuoi-l-3-2",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 609.143,
+        "z": -11.25
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-motorbikes-bd-row-hep-r-2-1",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 108.5,
+        "z": 7.75
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-motorbikes-bd-row-hep-r-2-2",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 126.5,
+        "z": 7.75
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-motorbikes-bd-row-hep-r-2-3",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 138.5,
+        "z": 7.75
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-motorbikes-bd-row-hep-r-3-1",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 156.128,
+        "z": 7.75
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-motorbikes-bd-row-hep-r-3-2",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 162.128,
+        "z": 7.75
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-motorbikes-bd-row-hep-r-4-1",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 184.523,
+        "z": 7.75
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-motorbikes-bd-row-hep-r-4-2",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 190.523,
+        "z": 7.75
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-motorbikes-bd-row-hep-r-4-3",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 196.523,
+        "z": 7.75
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-motorbikes-bd-row-nhanh-l-2-1",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 527.75,
+        "z": 56.57
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-motorbikes-bd-row-nhanh-l-2-2",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 527.75,
+        "z": 62.57
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-motorbikes-bd-row-nhanh-l-2-3",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 527.75,
+        "z": 68.57
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-motorbikes-bd-row-nhanh-l-2-4",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 527.75,
+        "z": 74.57
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-motorbikes-bd-row-nhanh-l-3-1",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 527.75,
+        "z": 88.023
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-motorbikes-bd-row-nhanh-l-3-2",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 527.75,
+        "z": 94.023
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-motorbikes-bd-row-nhanh-l-3-3",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 527.75,
+        "z": 100.023
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-motorbikes-bd-row-nhanh-l-3-4",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 527.75,
+        "z": 106.023
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-motorbikes-bd-row-nhanh-l-3-5",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 527.75,
+        "z": 112.023
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-motorbikes-bd-row-nhanh-r-1-1",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 512.25,
+        "z": 25.5
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-motorbikes-bd-row-nhanh-r-1-2",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 512.25,
+        "z": 37.5
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-motorbikes-bd-row-nhanh-r-2-1",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 512.25,
+        "z": 44.51
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-motorbikes-bd-row-nhanh-r-3-1",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 512.25,
+        "z": 68.468
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-motorbikes-bd-row-nhanh-r-3-2",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 512.25,
+        "z": 80.468
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-motorbikes-bd-row-nhanh-r-3-3",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 512.25,
+        "z": 98.468
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-motorbikes-bd-row-nhanh-r-5-1",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 512.25,
+        "z": 131.478
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-motorbikes-bd-row-rong-r-1-1",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 222.5,
+        "z": 11.25
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-power-pole-cuoi-l-1",
+      "kind": "power-pole",
+      "pos": {
+        "x": 658.454,
+        "z": -7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-power-pole-cuoi-r-1",
+      "kind": "power-pole",
+      "pos": {
+        "x": 555.243,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-power-pole-cuoi-r-2",
+      "kind": "power-pole",
+      "pos": {
+        "x": 590.243,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-power-pole-cuoi-r-3",
+      "kind": "power-pole",
+      "pos": {
+        "x": 625.243,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-power-pole-hep-r-1",
+      "kind": "power-pole",
+      "pos": {
+        "x": 26.442,
+        "z": 4
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-power-pole-hep-r-2",
+      "kind": "power-pole",
+      "pos": {
+        "x": 61.442,
+        "z": 4
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-power-pole-hep-r-3",
+      "kind": "power-pole",
+      "pos": {
+        "x": 96.442,
+        "z": 4
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-power-pole-hep-r-4",
+      "kind": "power-pole",
+      "pos": {
+        "x": 131.442,
+        "z": 4
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-power-pole-hep-r-5",
+      "kind": "power-pole",
+      "pos": {
+        "x": 166.442,
+        "z": 4
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-power-pole-hep-r-6",
+      "kind": "power-pole",
+      "pos": {
+        "x": 201.442,
+        "z": 4
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-power-pole-nhanh-r-1",
+      "kind": "power-pole",
+      "pos": {
+        "x": 516,
+        "z": 36.768
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-power-pole-nhanh-r-2",
+      "kind": "power-pole",
+      "pos": {
+        "x": 516,
+        "z": 71.768
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-power-pole-nhanh-r-3",
+      "kind": "power-pole",
+      "pos": {
+        "x": 516,
+        "z": 108.768
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-power-pole-rong-r-1",
+      "kind": "power-pole",
+      "pos": {
+        "x": 246.69,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-power-pole-rong-r-2",
+      "kind": "power-pole",
+      "pos": {
+        "x": 281.69,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-power-pole-rong-r-3",
+      "kind": "power-pole",
+      "pos": {
+        "x": 316.69,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-power-pole-rong-r-4",
+      "kind": "power-pole",
+      "pos": {
+        "x": 351.69,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-power-pole-rong-r-5",
+      "kind": "power-pole",
+      "pos": {
+        "x": 386.69,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-power-pole-rong-r-6",
+      "kind": "power-pole",
+      "pos": {
+        "x": 421.69,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-power-pole-rong-r-7",
+      "kind": "power-pole",
+      "pos": {
+        "x": 456.69,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-power-pole-rong-r-8",
+      "kind": "power-pole",
+      "pos": {
+        "x": 491.69,
+        "z": 7.5
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-thung-hep",
+      "kind": "bin",
+      "pos": {
+        "x": 60,
+        "z": -4
+      },
+      "solid": false
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-cuoi-l-1",
+      "kind": "tree",
+      "pos": {
+        "x": 531.504,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-cuoi-l-2",
+      "kind": "tree",
+      "pos": {
+        "x": 545.394,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-cuoi-l-3",
+      "kind": "tree",
+      "pos": {
+        "x": 563.954,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-cuoi-l-4",
+      "kind": "tree",
+      "pos": {
+        "x": 579.553,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-cuoi-l-5",
+      "kind": "tree",
+      "pos": {
+        "x": 594.588,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-cuoi-l-6",
+      "kind": "tree",
+      "pos": {
+        "x": 612.862,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-cuoi-l-7",
+      "kind": "tree",
+      "pos": {
+        "x": 632.037,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-cuoi-l-8",
+      "kind": "tree",
+      "pos": {
+        "x": 651.186,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-cuoi-r-1",
+      "kind": "tree",
+      "pos": {
+        "x": 533.039,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-cuoi-r-2",
+      "kind": "tree",
+      "pos": {
+        "x": 546.748,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-cuoi-r-3",
+      "kind": "tree",
+      "pos": {
+        "x": 566.187,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-cuoi-r-4",
+      "kind": "tree",
+      "pos": {
+        "x": 584.636,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-cuoi-r-5",
+      "kind": "tree",
+      "pos": {
+        "x": 599.861,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-cuoi-r-6",
+      "kind": "tree",
+      "pos": {
+        "x": 612.444,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-cuoi-r-7",
+      "kind": "tree",
+      "pos": {
+        "x": 627.111,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-cuoi-r-8",
+      "kind": "tree",
+      "pos": {
+        "x": 645.588,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-hep-l-1",
+      "kind": "tree",
+      "pos": {
+        "x": 6.669,
+        "z": -4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-hep-l-10",
+      "kind": "tree",
+      "pos": {
+        "x": 193.893,
+        "z": -4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-hep-l-11",
+      "kind": "tree",
+      "pos": {
+        "x": 208.168,
+        "z": -4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-hep-l-2",
+      "kind": "tree",
+      "pos": {
+        "x": 19.855,
+        "z": -4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-hep-l-3",
+      "kind": "tree",
+      "pos": {
+        "x": 68.651,
+        "z": -4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-hep-l-4",
+      "kind": "tree",
+      "pos": {
+        "x": 85.599,
+        "z": -4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-hep-l-5",
+      "kind": "tree",
+      "pos": {
+        "x": 99.284,
+        "z": -4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-hep-l-6",
+      "kind": "tree",
+      "pos": {
+        "x": 130.494,
+        "z": -4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-hep-l-7",
+      "kind": "tree",
+      "pos": {
+        "x": 144.059,
+        "z": -4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-hep-l-8",
+      "kind": "tree",
+      "pos": {
+        "x": 158.792,
+        "z": -4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-hep-l-9",
+      "kind": "tree",
+      "pos": {
+        "x": 176.147,
+        "z": -4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-hep-r-1",
+      "kind": "tree",
+      "pos": {
+        "x": 8.971,
+        "z": 4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-hep-r-10",
+      "kind": "tree",
+      "pos": {
+        "x": 153.617,
+        "z": 4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-hep-r-11",
+      "kind": "tree",
+      "pos": {
+        "x": 172.474,
+        "z": 4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-hep-r-12",
+      "kind": "tree",
+      "pos": {
+        "x": 191.094,
+        "z": 4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-hep-r-13",
+      "kind": "tree",
+      "pos": {
+        "x": 207.002,
+        "z": 4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-hep-r-2",
+      "kind": "tree",
+      "pos": {
+        "x": 21.593,
+        "z": 4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-hep-r-3",
+      "kind": "tree",
+      "pos": {
+        "x": 33.89,
+        "z": 4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-hep-r-4",
+      "kind": "tree",
+      "pos": {
+        "x": 52.438,
+        "z": 4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-hep-r-5",
+      "kind": "tree",
+      "pos": {
+        "x": 70.375,
+        "z": 4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-hep-r-6",
+      "kind": "tree",
+      "pos": {
+        "x": 88.954,
+        "z": 4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-hep-r-7",
+      "kind": "tree",
+      "pos": {
+        "x": 104.036,
+        "z": 4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-hep-r-8",
+      "kind": "tree",
+      "pos": {
+        "x": 125.992,
+        "z": 4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-hep-r-9",
+      "kind": "tree",
+      "pos": {
+        "x": 136.006,
+        "z": 4.35
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-nhanh-l-1",
+      "kind": "tree",
+      "pos": {
+        "x": 524.35,
+        "z": 11.39
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-nhanh-l-2",
+      "kind": "tree",
+      "pos": {
+        "x": 524.35,
+        "z": 26.743
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-nhanh-l-3",
+      "kind": "tree",
+      "pos": {
+        "x": 524.35,
+        "z": 42.223
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-nhanh-l-4",
+      "kind": "tree",
+      "pos": {
+        "x": 524.35,
+        "z": 57.075
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-nhanh-l-5",
+      "kind": "tree",
+      "pos": {
+        "x": 524.35,
+        "z": 74.38
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-nhanh-l-6",
+      "kind": "tree",
+      "pos": {
+        "x": 524.35,
+        "z": 90.098
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-nhanh-l-7",
+      "kind": "tree",
+      "pos": {
+        "x": 524.35,
+        "z": 104.029
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-nhanh-l-8",
+      "kind": "tree",
+      "pos": {
+        "x": 524.35,
+        "z": 117.17
+      },
+      "solid": true
+    },
+    {
+      "heading": 1.571,
+      "id": "pr-tree-nhanh-l-9",
+      "kind": "tree",
+      "pos": {
+        "x": 524.35,
+        "z": 131.929
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-tree-nhanh-r-1",
+      "kind": "tree",
+      "pos": {
+        "x": 515.65,
+        "z": 13.915
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-tree-nhanh-r-2",
+      "kind": "tree",
+      "pos": {
+        "x": 515.65,
+        "z": 26.593
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-tree-nhanh-r-3",
+      "kind": "tree",
+      "pos": {
+        "x": 515.65,
+        "z": 45.266
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-tree-nhanh-r-4",
+      "kind": "tree",
+      "pos": {
+        "x": 515.65,
+        "z": 62.785
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-tree-nhanh-r-5",
+      "kind": "tree",
+      "pos": {
+        "x": 515.65,
+        "z": 78.319
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-tree-nhanh-r-6",
+      "kind": "tree",
+      "pos": {
+        "x": 515.65,
+        "z": 93.77
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-tree-nhanh-r-7",
+      "kind": "tree",
+      "pos": {
+        "x": 515.65,
+        "z": 107.501
+      },
+      "solid": true
+    },
+    {
+      "heading": -1.571,
+      "id": "pr-tree-nhanh-r-8",
+      "kind": "tree",
+      "pos": {
+        "x": 515.65,
+        "z": 124.393
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-rong-l-1",
+      "kind": "tree",
+      "pos": {
+        "x": 227.365,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-rong-l-10",
+      "kind": "tree",
+      "pos": {
+        "x": 382.827,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-rong-l-11",
+      "kind": "tree",
+      "pos": {
+        "x": 402.446,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-rong-l-12",
+      "kind": "tree",
+      "pos": {
+        "x": 419.704,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-rong-l-13",
+      "kind": "tree",
+      "pos": {
+        "x": 437.33,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-rong-l-14",
+      "kind": "tree",
+      "pos": {
+        "x": 454.356,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-rong-l-15",
+      "kind": "tree",
+      "pos": {
+        "x": 472.671,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-rong-l-16",
+      "kind": "tree",
+      "pos": {
+        "x": 487.075,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-rong-l-17",
+      "kind": "tree",
+      "pos": {
+        "x": 503.129,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-rong-l-2",
+      "kind": "tree",
+      "pos": {
+        "x": 244.467,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-rong-l-3",
+      "kind": "tree",
+      "pos": {
+        "x": 261.544,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-rong-l-4",
+      "kind": "tree",
+      "pos": {
+        "x": 281.026,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-rong-l-5",
+      "kind": "tree",
+      "pos": {
+        "x": 298.18,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-rong-l-6",
+      "kind": "tree",
+      "pos": {
+        "x": 315.514,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-rong-l-7",
+      "kind": "tree",
+      "pos": {
+        "x": 333.483,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-rong-l-8",
+      "kind": "tree",
+      "pos": {
+        "x": 347.708,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tree-rong-l-9",
+      "kind": "tree",
+      "pos": {
+        "x": 363.555,
+        "z": -7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-rong-r-1",
+      "kind": "tree",
+      "pos": {
+        "x": 223.047,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-rong-r-10",
+      "kind": "tree",
+      "pos": {
+        "x": 373.332,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-rong-r-11",
+      "kind": "tree",
+      "pos": {
+        "x": 390.195,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-rong-r-12",
+      "kind": "tree",
+      "pos": {
+        "x": 409.628,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-rong-r-13",
+      "kind": "tree",
+      "pos": {
+        "x": 428.097,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-rong-r-14",
+      "kind": "tree",
+      "pos": {
+        "x": 446.249,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-rong-r-15",
+      "kind": "tree",
+      "pos": {
+        "x": 458.269,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-rong-r-16",
+      "kind": "tree",
+      "pos": {
+        "x": 476.244,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-rong-r-17",
+      "kind": "tree",
+      "pos": {
+        "x": 493.186,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-rong-r-2",
+      "kind": "tree",
+      "pos": {
+        "x": 241.512,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-rong-r-3",
+      "kind": "tree",
+      "pos": {
+        "x": 252.348,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-rong-r-4",
+      "kind": "tree",
+      "pos": {
+        "x": 270.83,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-rong-r-5",
+      "kind": "tree",
+      "pos": {
+        "x": 289.111,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-rong-r-6",
+      "kind": "tree",
+      "pos": {
+        "x": 304.662,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-rong-r-7",
+      "kind": "tree",
+      "pos": {
+        "x": 320.423,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-rong-r-8",
+      "kind": "tree",
+      "pos": {
+        "x": 337.416,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-tree-rong-r-9",
+      "kind": "tree",
+      "pos": {
+        "x": 354.469,
+        "z": 7.85
+      },
+      "solid": true
+    },
+    {
+      "heading": 3.142,
+      "id": "pr-tu-rong",
+      "kind": "cabinet",
+      "pos": {
+        "x": 340,
+        "z": -7.55
+      },
+      "solid": true
+    },
+    {
+      "heading": 0,
+      "id": "pr-xe-hep",
+      "kind": "parked-motorbikes",
+      "pos": {
+        "x": 180,
+        "z": 7.75
+      },
+      "solid": true
     }
   ],
   "restrictions": [],

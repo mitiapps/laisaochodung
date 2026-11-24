@@ -14,3 +14,21 @@ signs:
       Quận 1 lies inside the city's built-up area. R.421 is not in the sign set, so the game places
       one R.420 at the corridor start and the built-up zone covers the whole map (decision D11).
       No real P.127 is known on this stretch; the OSM maxspeed tags are not used.
+
+# Buildings the renderer draws as landmarks (the generic massing of their type with the landmark
+# look). Heights still follow the import rule: OSM `height`, else `building:levels`, else the
+# type default. `osm` names the OSM element: way/<id> or relation/<id>. `colour` is the facade
+# colour (#rrggbb, design: picked to match each building's well-known look).
+landmarks:
+  - osm: way/801950766
+    colour: '#b5543c'
+    reason: Nhà thờ Đức Bà Sài Gòn (Notre-Dame Cathedral), the district's best-known landmark, seen from Lê Duẩn.
+  - osm: way/39514793
+    colour: '#e6c36a'
+    reason: Bưu điện Trung tâm Sài Gòn (Central Post Office), a heritage landmark beside the cathedral square.
+  - osm: way/39598493
+    colour: '#ebe8df'
+    reason: Dinh Độc Lập (Independence Palace), the landmark at the end of Lê Duẩn.
+  - osm: way/341504305
+    colour: '#efd27c'
+    reason: Trụ sở Ủy ban nhân dân Thành phố (City Hall), the colonial landmark of the district.

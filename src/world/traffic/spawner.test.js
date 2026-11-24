@@ -5,6 +5,7 @@ import { trafficLightStates } from '../signals.js';
 import { createTraffic, stepTraffic } from './index.js';
 import { DESPAWN_REASONS } from './state.js';
 import { inViewCone } from './spawner.js';
+import { lawfulParams } from './lawful-params.js';
 
 /** @typedef {import('../../contracts/map.js').GameMap} GameMap */
 /** @typedef {import('../../contracts/telemetry.js').ActorPose} ActorPose */
@@ -14,7 +15,8 @@ import { inViewCone } from './spawner.js';
 /** @type {GameMap} */
 const MAP = JSON.parse(readFileSync(new URL('../../../tests/fixtures/map-junction.json', import.meta.url), 'utf8'));
 /** @type {import('../../contracts/traffic.js').TrafficParams} */
-const PARAMS = JSON.parse(readFileSync(new URL('../../generated/traffic-params.json', import.meta.url), 'utf8'));
+// The lawful population: these suites check what drivers who keep the rules never do.
+const PARAMS = lawfulParams(JSON.parse(readFileSync(new URL('../../generated/traffic-params.json', import.meta.url), 'utf8')));
 const TRAFFIC = /** @type {import('../../contracts/map.js').TrafficConfig} */ (MAP.traffic);
 const EGO_AWAY = Object.freeze({ pos: { x: -60, z: 20 }, heading: 0, speed: 0, lengthM: 4.5, widthM: 1.8 });
 

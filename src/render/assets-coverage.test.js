@@ -4,7 +4,9 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import { SIGN_ART, signArtPath } from './sign-art.js';
-import { ACTOR_MODELS, VEHICLE_MODELS } from './vehicles/index.js';
+import trafficParams from '../generated/traffic-params.json' with { type: 'json' };
+import { ACTOR_MODELS, DEBRIS, KENNEY_BODIES, PASSENGER, RIDERS, VEHICLE_MODELS, WALKERS, resolveLook } from './vehicles/index.js';
+import { MOTORBIKE_TYPES } from './vehicles/motorbike.js';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const PUBLIC = join(ROOT, 'public');
@@ -85,3 +87,51 @@ describe('credits', () => {
     expect(total).toBeLessThan(5 * 1024 * 1024);
   });
 });
+
+/**
+ * Model keys of the `traffic.mix` of every map source.
+ * @returns {string[]} Keys.
+ */
+function mapMixModels() {
+  const maps = join(ROOT, 'data/maps');
+  /** @type {string[]} */
+  const out = [];
+  for (const dir of readdirSync(maps)) {
+    const file = join(maps, dir, 'source.yaml');
+    if (!statSync(join(maps, dir)).isDirectory()) continue;
+    const source = /** @type {{traffic?: {mix?: {model: string}[]}}} */ (parse(readFileSync(file, 'utf8')));
+    for (const entry of source.traffic?.mix ?? []) out.push(entry.model);
+  }
+  return out;
+}
+
+describe('traffic models', () => {
+  const models = /** @type {Record<string, {kind: 'car' | 'motorbike'}>} */ (trafficParams.models);
+
+  it('resolves every traffic model key and map mix entry to a shipped GLB or a procedural builder', () => {
+    const keys = new Set([...Object.keys(models), ...mapMixModels()]);
+    expect(keys.size).toBeGreaterThan(0);
+    for (const model of keys) {
+      const spec = models[model];
+      expect(spec, `model ${model} is in the traffic parameters`).toBeDefined();
+      for (let variant = 0; variant < 6; variant += 1) {
+        const look = resolveLook({ id: `npc-${variant}`, kind: spec.kind, model, variant });
+        if (look.family === 'kenney') {
+          const body = KENNEY_BODIES[look.body];
+          expect(body, `${model} body ${look.body}`).toBeDefined();
+          expect(credits.some((c) => c.file === body.glb)).toBe(true);
+        } else if (look.family === 'bike') {
+          expect(MOTORBIKE_TYPES).toContain(look.body);
+        } else {
+          expect(look.family).toBe('bus');
+        }
+      }
+    }
+  });
+
+  it('ships and credits every Car Kit body, character and debris piece the views load', () => {
+    const files = [...Object.values(KENNEY_BODIES).map((b) => b.glb), ...RIDERS, PASSENGER, ...WALKERS, ...DEBRIS];
+    for (const file of files) expect(credits.some((c) => c.file === file), file).toBe(true);
+  });
+});
+

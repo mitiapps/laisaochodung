@@ -10,8 +10,12 @@
 
 import { PERSONALITIES } from '../../contracts/traffic.js';
 import { createStream, hash32, nextUint32, pick, range, streamFor, uniform } from '../random.js';
+import { normalizeAngle, projectOntoPolyline } from '../../geometry/index.js';
 import { buildLaneGraph, edgePoint } from './lane-graph.js';
 import { createGrid } from './grid.js';
+import { RING_STEPS, drawHumanFactors } from './human-factors.js';
+import { FLAG_COUNT, clearFlags } from './violations.js';
+import { DT } from '../../contracts/units.js';
 
 /** @typedef {import('../../contracts/map.js').GameMap} GameMap */
 /** @typedef {import('../../contracts/traffic.js').TrafficParams} TrafficParams */
@@ -60,6 +64,10 @@ export const DESPAWN_REASONS = Object.freeze(['sink', 'ring', 'behind', 'dead-en
  * @property {Float64Array} z Pose z.
  * @property {Float64Array} heading Pose heading.
  * @property {Float64Array} lateral Offset left of the centreline (negative: right).
+ * @property {Float64Array} lateralBase Offset the agent keeps in its lane: keep right for
+ *   motorbikes, 0 for cars.
+ * @property {Float64Array} latRate Lateral speed of the last step, m/s (left positive), while the
+ *   agent moves across after a lane change.
  * @property {Int32Array} nextEdge Next edge on the route, −1 at a sink or dead end.
  * @property {Uint32Array} routeSeed Route seed by slot.
  * @property {Int32Array} turnsTaken Route choices made so far.
@@ -82,6 +90,53 @@ export const DESPAWN_REASONS = Object.freeze(['sink', 'ring', 'behind', 'dead-en
  * @property {Uint8Array} haltedAtLine Stopped at a stop sign this approach.
  * @property {Int8Array} signalCommit 0 undecided, 1 stop, 2 go, for the current approach.
  * @property {Uint32Array} rngState Agent stream state after its setup draws.
+ * @property {Float64Array} classCriticalGap Class critical gap before the personality factor.
+ * @property {Uint8Array} held Stood at its hold point last step unable to claim (exit full or
+ *   blocked ahead); others do not wait for it.
+ * @property {Uint8Array} flagNow Violation conditions raised this step (bits of `FLAG`).
+ * @property {Float64Array} flagUntil Time until which each flag stays latched, `FLAG_COUNT` per slot.
+ * @property {Int32Array} redConn Connector entered on red, while the agent is on it, or −1.
+ * @property {Int32Array} noYieldConn Connector entered inside another party's critical gap, while
+ *   the agent still covers its conflict zones, or −1.
+ * @property {Float64Array} frozenS Time the agent has been held by a body in its way.
+ * @property {Uint8Array} heedless The driver is forcing its way (a red run, a short gap taken by
+ *   choice, a cut-in) and does not stop for what it sees until that is over.
+ * @property {Uint8Array} unsafeChange Moving across after a lane change that skipped its safety check.
+ * @property {Uint32Array} decisionSeed Seed of the agent's rule-breaking draws.
+ * @property {Int32Array} decisions Rule-breaking draws made so far.
+ * @property {Uint8Array} speeding The agent drew a desired speed above the limit.
+ * @property {Uint8Array} noSignal The agent gives no signal for its next turn.
+ * @property {Uint8Array} crossing Moving across to another lane (not a motorbike slot move).
+ * @property {Int8Array} intent Lane change the agent signals: −1 right, 1 left, 0 none.
+ * @property {Int32Array} intentLane Target lane of that change, or −1.
+ * @property {Float64Array} intentT Time the agent began to signal it.
+ * @property {Uint8Array} intentQuiet The agent gives no signal for that change.
+ * @property {Uint8Array} intentCutIn A car's discretionary change that skips the safety check.
+ * @property {Int8Array} intentKind What the signalled change is for (`lane-change.js` intent kinds), 0 none.
+ * @property {Uint8Array} approachDraws Rule-breaking draws already made on this approach (bits).
+ * @property {Float64Array} tailgateGap Class time gap below which the agent tailgates.
+ * @property {Int32Array} reactionSteps Reaction delay, steps.
+ * @property {Float64Array} ring Perceived-input ring buffer, `RING_STEPS` pairs per slot.
+ * @property {Int32Array} ringPos Next ring position per slot.
+ * @property {Uint8Array} ringFresh The ring refills with the truth at the next step.
+ * @property {Float64Array} ouGap Gap error process.
+ * @property {Float64Array} ouRate Approach-rate error process.
+ * @property {number} ouDecay `e^(−DT/τ)` of the error processes.
+ * @property {Uint32Array} noiseState Per-step noise stream state.
+ * @property {Uint8Array} distractProne The agent has distraction episodes.
+ * @property {Float64Array} distractUntil End of the current distraction episode.
+ * @property {Float64Array} nextDistract Start of the next one.
+ * @property {Float64Array} seenGap Perceived gap of the last step.
+ * @property {Float64Array} seenV Perceived leader speed of the last step.
+ * @property {Float64Array} heldGap Perceived gap held through a distraction episode.
+ * @property {Float64Array} heldV Perceived leader speed held through it.
+ * @property {Uint8Array} isMoto The agent is a motorbike.
+ * @property {number} egoSignalEpisode Count of times the ego has switched an indicator on.
+ * @property {string} egoIndicator The ego's indicator state last step.
+ * @property {Float64Array} halfWidth Half width of each lane edge (connectors: of the approach lane).
+ * @property {Int32Array} laneIndexOf Map lane index of each lane edge (0 at the right kerb), −1 for connectors.
+ * @property {Uint8Array} openSides Sides of each lane edge with a lane of the same direction
+ *   beyond its line (`SIDE_LEFT`, `SIDE_RIGHT` bits); a rider may ride on that line.
  * @property {Int32Array} active Active slots in ascending spawn index.
  * @property {number} activeCount Active slots.
  * @property {Int32Array} free Free slots (a stack).
@@ -139,6 +194,74 @@ export function sweepOptions(map, params) {
   };
 }
 
+/** Lane half width assumed where a lane polygon gives none, metres (design: a 3.5 m lane). */
+export const DEFAULT_HALF_WIDTH_M = 1.75;
+
+/**
+ * Half width of every edge: a lane's from its polygon (the mean distance of its vertices from the
+ * centreline), a connector's from its approach lane.
+ * @param {GameMap} map Map.
+ * @param {LaneGraph} graph Lane graph.
+ * @returns {Float64Array} Half widths by edge index.
+ */
+export function laneHalfWidths(map, graph) {
+  const out = new Float64Array(graph.edges.length).fill(DEFAULT_HALF_WIDTH_M);
+  for (const road of map.roads) {
+    for (const lane of road.lanes) {
+      const i = graph.edgeIndex.get(lane.id);
+      if (i === undefined || lane.polygon.length < 3) continue;
+      let sum = 0;
+      for (const p of lane.polygon) sum += projectOntoPolyline(p, lane.centerline).distance;
+      const h = sum / lane.polygon.length;
+      if (h > 0.5) out[i] = h;
+    }
+  }
+  for (const e of graph.edges) if (e.kind === 'connector') out[e.index] = out[e.fromEdge];
+  return out;
+}
+
+/** `openSides` bits. */
+export const SIDE_LEFT = 1;
+export const SIDE_RIGHT = 2;
+
+/**
+ * Sides of every lane edge that border a lane of the same road and direction (lane index 0 lies
+ * at the right kerb). Connectors take none.
+ * @param {GameMap} map Map.
+ * @param {LaneGraph} graph Lane graph.
+ * @returns {Uint8Array} Bits by edge index.
+ */
+export function laneOpenSides(map, graph) {
+  const out = new Uint8Array(graph.edges.length);
+  for (const road of map.roads) {
+    for (const lane of road.lanes) {
+      const i = graph.edgeIndex.get(lane.id);
+      if (i === undefined) continue;
+      const same = road.lanes.filter((l) => l.dir === lane.dir);
+      if (same.some((l) => l.index === lane.index + 1)) out[i] |= SIDE_LEFT;
+      if (same.some((l) => l.index === lane.index - 1)) out[i] |= SIDE_RIGHT;
+    }
+  }
+  return out;
+}
+
+/**
+ * Map lane index of every lane edge, −1 for connectors.
+ * @param {GameMap} map Map.
+ * @param {LaneGraph} graph Lane graph.
+ * @returns {Int32Array} Indices by edge index.
+ */
+export function laneIndices(map, graph) {
+  const out = new Int32Array(graph.edges.length).fill(-1);
+  for (const road of map.roads) {
+    for (const lane of road.lanes) {
+      const i = graph.edgeIndex.get(lane.id);
+      if (i !== undefined) out[i] = lane.index;
+    }
+  }
+  return out;
+}
+
 /**
  * Empty traffic state for a map with a `traffic` block.
  * @param {GameMap} map Map.
@@ -190,6 +313,8 @@ export function createTrafficState(map, params, runSeed) {
     z: f64(),
     heading: f64(),
     lateral: f64(),
+    lateralBase: f64(),
+    latRate: f64(),
     nextEdge: i32(),
     routeSeed: new Uint32Array(capacity),
     turnsTaken: i32(),
@@ -212,6 +337,49 @@ export function createTrafficState(map, params, runSeed) {
     haltedAtLine: new Uint8Array(capacity),
     signalCommit: new Int8Array(capacity),
     rngState: new Uint32Array(capacity),
+    classCriticalGap: f64(),
+    held: new Uint8Array(capacity),
+    flagNow: new Uint8Array(capacity),
+    flagUntil: new Float64Array(capacity * FLAG_COUNT).fill(-Infinity),
+    redConn: i32().fill(-1),
+    noYieldConn: i32().fill(-1),
+    unsafeChange: new Uint8Array(capacity),
+    heedless: new Uint8Array(capacity),
+    frozenS: f64(),
+    decisionSeed: new Uint32Array(capacity),
+    decisions: i32(),
+    speeding: new Uint8Array(capacity),
+    noSignal: new Uint8Array(capacity),
+    crossing: new Uint8Array(capacity),
+    intent: new Int8Array(capacity),
+    intentLane: i32().fill(-1),
+    intentT: f64(),
+    intentQuiet: new Uint8Array(capacity),
+    intentCutIn: new Uint8Array(capacity),
+    intentKind: new Int8Array(capacity),
+    approachDraws: new Uint8Array(capacity),
+    tailgateGap: f64(),
+    reactionSteps: i32(),
+    ring: new Float64Array(capacity * RING_STEPS * 2),
+    ringPos: i32(),
+    ringFresh: new Uint8Array(capacity),
+    ouGap: f64(),
+    ouRate: f64(),
+    ouDecay: Math.exp(-DT / params.humanFactors.perceptionTauS),
+    noiseState: new Uint32Array(capacity),
+    distractProne: new Uint8Array(capacity),
+    distractUntil: f64(),
+    nextDistract: f64(),
+    seenGap: f64(),
+    seenV: f64(),
+    heldGap: f64(),
+    heldV: f64(),
+    isMoto: new Uint8Array(capacity),
+    egoSignalEpisode: 0,
+    egoIndicator: 'off',
+    halfWidth: laneHalfWidths(map, graph),
+    openSides: laneOpenSides(map, graph),
+    laneIndexOf: laneIndices(map, graph),
     active: i32(),
     activeCount: 0,
     free,
@@ -326,19 +494,56 @@ export function claimDrop(st, slot) {
 /** @type {{x: number, z: number, heading: number}} */
 const POINT = { x: 0, z: 0, heading: 0 };
 
+/** Largest heading turn while moving across after a lane change, radians (design, about 14°). */
+export const MAX_LANE_CHANGE_YAW = 0.25;
 /**
- * Recomputes the pose cache of a slot from its edge position.
+ * Forward speed below which the heading turn shrinks as if the agent moved at this speed, m/s
+ * (design): an agent edging out of a lane at a crawl barely turns, so its rear does not swing.
+ */
+const YAW_SPEED_FLOOR_MPS = 5;
+
+/**
+ * Recomputes the pose cache of a slot from its edge position; while the agent moves across, its
+ * heading turns towards the side it moves to.
  * @param {TrafficState} st State.
  * @param {number} slot Slot.
  * @returns {void}
  */
 export function updatePose(st, slot) {
-  const e = st.graph.edges[st.edge[slot]];
-  edgePoint(e, st.s[slot], POINT);
+  posePreview(st, slot, st.edge[slot], st.s[slot], st.lateral[slot], st.latRate[slot], st.v[slot], POSE);
+  st.x[slot] = POSE.x;
+  st.z[slot] = POSE.z;
+  st.heading[slot] = POSE.heading;
+}
+
+/** @type {{x: number, z: number, heading: number}} */
+const POSE = { x: 0, z: 0, heading: 0 };
+
+/**
+ * The pose a slot would have at `s` along `edge` (carried onto the next edge of its route when past
+ * the end) with lateral offset `lateral` and lateral speed `latRate`, as `updatePose` sets it.
+ * @param {TrafficState} st State.
+ * @param {number} slot Slot.
+ * @param {number} edge Edge.
+ * @param {number} s Centre distance along it.
+ * @param {number} lateral Lateral offset.
+ * @param {number} latRate Lateral speed.
+ * @param {number} v Forward speed.
+ * @param {{x: number, z: number, heading: number}} out Pose, written.
+ * @returns {void}
+ */
+export function posePreview(st, slot, edge, s, lateral, latRate, v, out) {
+  let e = st.graph.edges[edge];
+  if (s > e.length && st.nextEdge[slot] >= 0 && e.index === st.edge[slot]) {
+    s -= e.length;
+    e = st.graph.edges[st.nextEdge[slot]];
+  }
+  edgePoint(e, Math.min(s, e.length), POINT);
   // Left of heading θ is (−sin θ, −cos θ), as `leftVector` in src/geometry.
-  st.x[slot] = POINT.x - Math.sin(POINT.heading) * st.lateral[slot];
-  st.z[slot] = POINT.z - Math.cos(POINT.heading) * st.lateral[slot];
-  st.heading[slot] = POINT.heading;
+  out.x = POINT.x - Math.sin(POINT.heading) * lateral;
+  out.z = POINT.z - Math.cos(POINT.heading) * lateral;
+  const yaw = latRate === 0 ? 0 : Math.max(-MAX_LANE_CHANGE_YAW, Math.min(MAX_LANE_CHANGE_YAW, Math.atan2(latRate, Math.max(v, YAW_SPEED_FLOOR_MPS))));
+  out.heading = yaw === 0 ? POINT.heading : normalizeAngle(POINT.heading + yaw);
 }
 
 /**
@@ -363,6 +568,7 @@ export function chooseNext(st, slot) {
   }
   if (n === 1) {
     st.nextEdge[slot] = e.next[0];
+    drawNoSignal(st, slot);
     return;
   }
   const tw = st.params.behaviour.turnWeights;
@@ -378,8 +584,25 @@ export function chooseNext(st, slot) {
   let weights = e.next.map((c) => weightOf(edges[c].turn));
   if (!weights.some((w) => w > 0)) weights = e.next.map(() => 1);
   const rng = createStream(hash32(st.routeSeed[slot], st.turnsTaken[slot]));
-  st.turnsTaken[slot] += 1;
   st.nextEdge[slot] = e.next[pick(rng, weights)];
+  drawNoSignal(st, slot);
+  st.turnsTaken[slot] += 1;
+}
+
+/** Salt of the no-signal draw, so it never shares a stream with a route choice. */
+const NO_SIGNAL_SALT = 0x5167;
+
+/**
+ * Whether the agent signals its next turn: its personality's `noSignal` rate, from a stream of its
+ * route seed and choice count that no route choice uses.
+ * @param {TrafficState} st State.
+ * @param {number} slot Slot.
+ * @returns {void}
+ */
+function drawNoSignal(st, slot) {
+  const rate = st.params.personalities[PERSONALITIES[st.personality[slot]]].violations.noSignal;
+  const rng = createStream(hash32(st.routeSeed[slot], st.turnsTaken[slot], NO_SIGNAL_SALT));
+  st.noSignal[slot] = uniform(rng) < rate ? 1 : 0;
 }
 
 /**
@@ -447,7 +670,10 @@ export function spawnAgent(st, edge, s, speed, modelIndex) {
   st.s[slot] = s;
   st.v[slot] = speed;
   st.acc[slot] = 0;
-  st.lateral[slot] = model.kind === 'motorbike' ? -st.params.motorbike.keepRightOffsetM : 0;
+  st.isMoto[slot] = model.kind === 'motorbike' ? 1 : 0;
+  st.lateralBase[slot] = model.kind === 'motorbike' ? -st.params.motorbike.keepRightOffsetM : 0;
+  st.lateral[slot] = st.lateralBase[slot];
+  st.latRate[slot] = 0;
   st.routeSeed[slot] = d.routeSeed;
   st.turnsTaken[slot] = 0;
   st.v0Factor[slot] = d.v0Factor;
@@ -458,6 +684,7 @@ export function spawnAgent(st, edge, s, speed, modelIndex) {
   st.delta[slot] = cls.delta;
   st.decelMax[slot] = cls.maxDecelMps2 * (rain ? st.params.behaviour.rainDecelFactor : 1);
   st.criticalGap[slot] = cls.criticalGapS * pers.criticalGapFactor;
+  st.classCriticalGap[slot] = cls.criticalGapS;
   st.yellowStop[slot] = Math.min(pers.yellowStopDecelMps2, st.decelMax[slot]);
   st.lengthM[slot] = model.lengthM;
   st.widthM[slot] = model.widthM;
@@ -467,7 +694,24 @@ export function spawnAgent(st, edge, s, speed, modelIndex) {
   st.waitS[slot] = 0;
   st.haltedAtLine[slot] = 0;
   st.signalCommit[slot] = 0;
-  st.rngState[slot] = d.rngState;
+  st.held[slot] = 0;
+  st.redConn[slot] = -1;
+  st.noYieldConn[slot] = -1;
+  st.unsafeChange[slot] = 0;
+  st.heedless[slot] = 0;
+  st.frozenS[slot] = 0;
+  st.crossing[slot] = 0;
+  st.intent[slot] = 0;
+  st.intentLane[slot] = -1;
+  st.intentQuiet[slot] = 0;
+  st.intentCutIn[slot] = 0;
+  st.intentKind[slot] = 0;
+  st.approachDraws[slot] = 0;
+  st.tailgateGap[slot] = cls.tailgatingGapS;
+  clearFlags(st, slot);
+  const rng = { state: d.rngState };
+  drawHumanFactors(st, slot, rng);
+  st.rngState[slot] = rng.state;
   refreshBaseSpeed(st, slot);
   chooseNext(st, slot);
   updatePose(st, slot);

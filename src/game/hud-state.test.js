@@ -37,37 +37,39 @@ describe('hudStateOf', () => {
     const base = /** @type {Frame} */ (frames[10]);
     const input = { ...base.ego.input, throttle: 0.7, brakeFront: 0.2, brakeRear: 0.1, steer: -0.4, handbrake: true };
     const frame = { ...base, ego: { ...base.ego, input } };
-    const state = hudStateOf({ frame, context, score: 9.5, breaches: [], runStatus: 'running' });
+    const state = hudStateOf({ frame, context, score: 9.5, breaches: [], controlPreset: 'simple', runStatus: 'running' });
     expect(state.controls).toEqual({ throttle: 0.7, brakeFront: 0.2, brakeRear: 0.1, steer: -0.4, handbrake: true });
     expect(state.speedKmh).toBeCloseTo(54);
     expect(state.speedLimitVerified).toBe(false);
     expect(state.nav).toEqual({ distanceM: frame.route.distanceM, bearingRad: frame.route.bearingRad });
     expect(state.report).toBeUndefined();
+    expect(state.controlPreset).toBe('simple');
+    expect(hudStateOf({ frame, context, score: 9.5, breaches: [], controlPreset: 'real', runStatus: 'running' }).controlPreset).toBe('real');
   });
 
   it('resends only the most recent breaches', () => {
     const frame = /** @type {Frame} */ (frames[0]);
     const breaches = Array.from({ length: HUD_TOAST_WINDOW + 3 }, (_, i) => /** @type {import('../contracts/score.js').Breach} */ (/** @type {unknown} */ ({ episodeId: `e${i}` })));
-    const state = hudStateOf({ frame, context, score: 10, breaches, runStatus: 'running' });
+    const state = hudStateOf({ frame, context, score: 10, breaches, controlPreset: 'simple', runStatus: 'running' });
     expect(state.toasts.map((b) => b.episodeId)).toEqual(breaches.slice(-HUD_TOAST_WINDOW).map((b) => b.episodeId));
   });
 
   it('shows two notices raised within one second, newest last, and a later breach does not clear them', () => {
     const notices = [notice(2), notice(2.6)];
-    const first = hudStateOf({ frame: frameAt(3), context, score: 10, breaches: [], notices, runStatus: 'running' });
+    const first = hudStateOf({ frame: frameAt(3), context, score: 10, breaches: [], notices, controlPreset: 'simple', runStatus: 'running' });
     expect(first.notices.map((n) => n.t)).toEqual([2, 2.6]);
     const breaches = Array.from({ length: HUD_TOAST_WINDOW + 2 }, (_, i) => /** @type {import('../contracts/score.js').Breach} */ (/** @type {unknown} */ ({ episodeId: `e${i}` })));
-    const later = hudStateOf({ frame: frameAt(2 + HUD_NOTICE_S - 0.1), context, score: 9, breaches, notices, runStatus: 'running' });
+    const later = hudStateOf({ frame: frameAt(2 + HUD_NOTICE_S - 0.1), context, score: 9, breaches, notices, controlPreset: 'simple', runStatus: 'running' });
     expect(later.notices.map((n) => n.t)).toEqual([2, 2.6]);
     expect(later.toasts).toHaveLength(HUD_TOAST_WINDOW);
   });
 
   it('drops a notice once its time is up and caps how many are sent', () => {
     const notices = [notice(1), notice(5), notice(5.2), notice(5.4), notice(5.6)];
-    const state = hudStateOf({ frame: frameAt(1 + HUD_NOTICE_S), context, score: 10, breaches: [], notices, runStatus: 'running' });
+    const state = hudStateOf({ frame: frameAt(1 + HUD_NOTICE_S), context, score: 10, breaches: [], notices, controlPreset: 'simple', runStatus: 'running' });
     expect(state.notices.map((n) => n.t)).toEqual([5.2, 5.4, 5.6]);
     expect(state.notices).toHaveLength(HUD_NOTICE_MAX);
-    expect(hudStateOf({ frame: frameAt(20), context, score: 10, breaches: [], notices, runStatus: 'running' }).notices).toEqual([]);
-    expect(hudStateOf({ frame: frameAt(3), context, score: 10, breaches: [], runStatus: 'running' }).notices).toEqual([]);
+    expect(hudStateOf({ frame: frameAt(20), context, score: 10, breaches: [], notices, controlPreset: 'simple', runStatus: 'running' }).notices).toEqual([]);
+    expect(hudStateOf({ frame: frameAt(3), context, score: 10, breaches: [], controlPreset: 'simple', runStatus: 'running' }).notices).toEqual([]);
   });
 });

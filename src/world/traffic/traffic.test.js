@@ -8,6 +8,7 @@ import { createActorState, stepActors } from '../actors.js';
 import { trafficLightStates } from '../signals.js';
 import { RESET_CLEAR_MARGIN_M, createTraffic, createWorld, stepTraffic, stepWorld } from './index.js';
 import { spawnAgent } from './state.js';
+import { lawfulParams } from './lawful-params.js';
 
 /** @typedef {import('../../contracts/map.js').GameMap} GameMap */
 /** @typedef {import('../../contracts/telemetry.js').ActorPose} ActorPose */
@@ -17,7 +18,8 @@ import { spawnAgent } from './state.js';
 /** @type {GameMap} */
 const MAP = JSON.parse(readFileSync(new URL('../../../tests/fixtures/map-junction.json', import.meta.url), 'utf8'));
 /** @type {import('../../contracts/traffic.js').TrafficParams} */
-const PARAMS = JSON.parse(readFileSync(new URL('../../generated/traffic-params.json', import.meta.url), 'utf8'));
+// The lawful population: these suites check what drivers who keep the rules never do.
+const PARAMS = lawfulParams(JSON.parse(readFileSync(new URL('../../generated/traffic-params.json', import.meta.url), 'utf8')));
 const LIGHTS = Object.values(ACTOR_LIGHTS);
 
 /** Ego parked off the road south of the west arm, out of every lane and corridor. */
@@ -135,7 +137,9 @@ describe('traffic over 10 minutes on the junction fixture', () => {
           if (k === undefined) continue;
           const e = st.graph.edges[b.edge];
           const light = lights[MAP.signals[e.signalIndex].id];
-          const crossed = b.front <= e.holdS && (st.edge[k] !== b.edge || st.s[k] + st.lengthM[k] / 2 > e.holdS);
+          // Onto the connector, or past the line on the same lane (a lane change is not a crossing).
+          const onto = st.edge[k] !== b.edge && st.graph.edges[st.edge[k]].kind === 'connector';
+          const crossed = b.front <= e.holdS && (onto || (st.edge[k] === b.edge && st.s[k] + st.lengthM[k] / 2 > e.holdS));
           if (crossed && light === 'red') r.redCrossings.push(`npc-${index}@${t.toFixed(2)}`);
         }
         if (i % 6 === 0) r.overlaps.push(...overlaps(poses).map((p) => `${p}@${t.toFixed(2)}`));
@@ -162,7 +166,7 @@ describe('traffic over 10 minutes on the junction fixture', () => {
 });
 
 describe('poses', () => {
-  it('fill every ActorPose field with shared lamps and no violations, in spawn order', () => {
+  it('fill every ActorPose field with shared lamps and shared flag lists, in spawn order', () => {
     const st = createTraffic(MAP, PARAMS, 42);
     const poses = run(st, MAP, 0, 5);
     expect(poses.length).toBeGreaterThan(5);
@@ -180,7 +184,11 @@ describe('poses', () => {
       expect(p.lengthM).toBe(PARAMS.models[p.model].lengthM);
       expect(p.widthM).toBe(PARAMS.models[p.model].widthM);
       expect(LIGHTS).toContain(p.lights);
-      expect(p.violations).toBe(NO_VIOLATIONS);
+      // Lawful drivers raise no flag except no-yield, which an agent going by the deadlock breaker
+      // carries as a fact; every list is a shared frozen one.
+      expect(Object.isFrozen(p.violations)).toBe(true);
+      expect(p.violations.filter((f) => f !== 'no-yield')).toEqual([]);
+      if (p.violations.length === 0) expect(p.violations).toBe(NO_VIOLATIONS);
       expect(p.active).toBe(true);
       expect(p.state).toBe(p.speed > 0 ? 'moving' : 'stopped');
       expect(Number.isFinite(p.pos.x) && Number.isFinite(p.pos.z) && Number.isFinite(p.heading)).toBe(true);
@@ -316,7 +324,7 @@ describe('ego reset and contacts', () => {
     const map = emptyMap();
     const st = createTraffic(map, noPreRoll(), 5);
     const k = place(st, 'rw-e1', 60, 10, 'car', 'c-rw-e1-re-e0');
-    place(st, 'rw-e1', 30, 10, 'motorbike', 'c-rw-e1-re-e0');
+    place(st, 'rw-e1', 30, 10, 'car', 'c-rw-e1-re-e0');
     run(st, map, 0, 1);
     const id = st.ids[k];
     const wreckPos = { x: st.x[k], z: st.z[k] };
@@ -331,8 +339,12 @@ describe('ego reset and contacts', () => {
     const w = /** @type {ActorPose} */ (later.find((p) => p.id === id));
     const f = /** @type {ActorPose} */ (later.find((p) => p.id !== id));
     expect(w.pos.x).toBeCloseTo(wreckPos.x, 9);
-    expect(f.speed).toBe(0);
-    expect(f.pos.x + f.lengthM / 2).toBeLessThan(w.pos.x - w.lengthM / 2);
+    // The follower either stands behind the wreck or has changed lane to pass it, never touching it.
+    expect(polygonsIntersect(fpOf(f), fpOf(w))).toBe(false);
+    if (Math.abs(f.pos.z - w.pos.z) < 1) {
+      expect(f.speed).toBe(0);
+      expect(f.pos.x + f.lengthM / 2).toBeLessThan(w.pos.x - w.lengthM / 2);
+    }
   });
 
   it('frees the junction claim of an agent wrecked before the stop line', () => {

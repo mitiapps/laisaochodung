@@ -3,7 +3,7 @@
  * loudly (console.error with the URL) and leaves the caller's fallback in place.
  */
 
-import { CanvasTexture, SRGBColorSpace } from 'three';
+import { CanvasTexture, SRGBColorSpace, TextureLoader } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { SIGN_TEXTURE_PX, signArt, signArtPath, signValueText } from './sign-art.js';
 
@@ -89,6 +89,33 @@ export function createSignTexture(code, value) {
 
 /** @type {Map<string, Promise<import('three/addons/loaders/GLTFLoader.js').GLTF>>} */
 const modelCache = new Map();
+/** @type {Map<string, Promise<import('three').Texture>>} */
+const textureCache = new Map();
+
+/**
+ * Loads a colour-map texture once per URL, set up like the textures of Kenney GLBs (sRGB, not
+ * flipped), so procedural models can share a GLB's colour map.
+ * @param {string} path Path relative to `public/`.
+ * @returns {Promise<import('three').Texture>} Texture.
+ */
+export function loadTexture(path) {
+  const url = assetUrl(path);
+  let pending = textureCache.get(url);
+  if (!pending) {
+    pending = new TextureLoader().loadAsync(url).then((texture) => {
+      texture.colorSpace = SRGBColorSpace;
+      texture.flipY = false;
+      texture.needsUpdate = true;
+      return texture;
+    });
+    const entry = pending;
+    entry.catch(() => {
+      if (textureCache.get(url) === entry) textureCache.delete(url);
+    });
+    textureCache.set(url, pending);
+  }
+  return pending;
+}
 
 /**
  * Loads a GLB once per URL. Rejects on a network error, a non-OK status or a file that is not a
@@ -120,13 +147,16 @@ export function loadModel(path) {
 }
 
 /**
- * Frees the GPU resources of every loaded model and empties the cache. Views clone loaded scenes
- * with shared geometry and materials, so call this only once no view uses them.
+ * Frees the GPU resources of every loaded model and texture and empties the caches. Views clone
+ * loaded scenes with shared geometry and materials, so call this only once no view uses them.
  * @returns {Promise<void>} Resolves when every settled model has been released.
  */
 export async function releaseModels() {
   const pending = [...modelCache.values()];
   modelCache.clear();
+  const textures = [...textureCache.values()];
+  textureCache.clear();
+  for (const t of await Promise.allSettled(textures)) if (t.status === 'fulfilled') t.value.dispose();
   const results = await Promise.allSettled(pending);
   for (const r of results) {
     if (r.status !== 'fulfilled') continue;

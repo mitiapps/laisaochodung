@@ -74,7 +74,10 @@ describe('determinism', () => {
         const k = st.active[i];
         const model = PARAMS.models[st.modelKeys[st.model[k]]];
         const d = drawAgent(PARAMS, st.seed, MAP.id, st.spawnIndex[k], model.variants);
-        expect([st.personality[k], st.v0Factor[k], st.variant[k], st.routeSeed[k]]).toEqual([d.personality, d.v0Factor, d.variant, d.routeSeed]);
+        expect([st.personality[k], st.variant[k], st.routeSeed[k]]).toEqual([d.personality, d.variant, d.routeSeed]);
+        // A speeding draw only raises the desired-speed factor.
+        if (st.speeding[k]) expect(st.v0Factor[k]).toBeGreaterThanOrEqual(d.v0Factor);
+        else expect(st.v0Factor[k]).toBe(d.v0Factor);
       }
     }
   });

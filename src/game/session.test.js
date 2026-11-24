@@ -11,6 +11,7 @@ import { parseDevRunQuery } from './browser.js';
 import { createInput } from './input.js';
 import { createLoop } from './loop.js';
 import { REPLAY_CHECKPOINT_S, createSession } from './session.js';
+import { lawfulParams } from '../world/traffic/lawful-params.js';
 
 /** @typedef {import('../contracts/index.js').GameMap} GameMap */
 /** @typedef {import('../contracts/index.js').VehicleInfo} VehicleInfo */
@@ -542,6 +543,8 @@ describe('session with traffic (dev build checks)', () => {
     const recorded = [];
     const h = trafficHarness({
       loadMap: async () => structuredClone(PASTEUR),
+      // The lawful driver population: no one runs a red by choice.
+      loadTrafficParams: async () => lawfulParams(PARAMS),
       createSim: recordingSim(recorded),
       createInput: approachInput(recorded, PASTEUR.actors.length, target),
     });
@@ -564,6 +567,8 @@ describe('session with traffic (dev build checks)', () => {
     const recorded = [];
     const h = trafficHarness({
       loadMap: async () => structuredClone(PASTEUR),
+      // Lawful traffic, so the agent ahead does not leave the lane or start a crash of its own.
+      loadTrafficParams: async () => lawfulParams(PARAMS),
       createSim: recordingSim(recorded),
       createInput: pursuitInput(recorded, PASTEUR.actors.length),
     });
@@ -642,5 +647,132 @@ describe('parseDevRunQuery', () => {
     expect(() => parseDevRunQuery('#/play?seed=abc')).toThrow(RangeError);
     expect(() => parseDevRunQuery('#/play?seed=4294967296')).toThrow(RangeError);
     expect(() => parseDevRunQuery('#/play?traffic=on')).toThrow(RangeError);
+  });
+});
+
+describe('session control presets', () => {
+  /**
+   * Real sim on the minimal map that records the options it was created with and its frames.
+   * @param {Array<import('../contracts/index.js').SimOptions | undefined>} options Recorded options.
+   * @param {Frame[]} out Recorded frames.
+   * @returns {import('../contracts/index.js').CreateSim} Sim factory.
+   */
+  const spySim = (options, out) => (rapier, map, vehicle, o) => {
+    options.push(o);
+    return recordingSim(out)(rapier, map, vehicle, o);
+  };
+  /** Drives off, steers a little and brakes, the same for every run. */
+  const script = scriptedInput((k) => ({ gearCmd: k === 0 ? 'up' : null, throttle: k < 120 ? 0.6 : 0, steer: k > 60 && k < 90 ? 0.2 : 0, brakeFront: k >= 120 ? 0.5 : 0 }));
+
+  /**
+   * Steps a started run for `n` animation frames.
+   * @param {ReturnType<typeof harness>} h Harness.
+   * @param {number} n Frames.
+   */
+  const stepFrames = (h, n) => {
+    h.frames.tick(0);
+    for (let i = 0; i < n; i += 1) h.frames.tick(1000 / 60);
+  };
+
+  it('starts in simple by default, with the sim assists on and thresholds from the turn-signal rule', async () => {
+    /** @type {Array<import('../contracts/index.js').SimOptions | undefined>} */
+    const options = [];
+    const h = harness({ createSim: spySim(options, []) });
+    await h.game.start('map-minimal', 'car-sedan');
+    const rule = /** @type {import('../contracts/index.js').Rule} */ (BUNDLE.rules.find((r) => r.id === 'turn-signal'));
+    expect(options[0]?.assists).toEqual({
+      autoGearbox: true,
+      signalAutoCancel: { turnMinDeg: rule.detection.params.turnMinDeg, clearM: rule.detection.params.signalFromM },
+    });
+    expect(h.states.at(-1)?.controlPreset).toBe('simple');
+    expect(h.game.debugInfo().controlPreset).toBe('simple');
+    expect(h.states.at(-1)?.gear).toBe('D');
+    h.game.quit();
+    expect(h.states.at(-1)?.report).toBeDefined();
+  });
+
+  it('real gives assists off and the frames of a sim created without assists', async () => {
+    /** @type {Array<import('../contracts/index.js').SimOptions | undefined>} */
+    const options = [];
+    /** @type {Frame[]} */
+    const real = [];
+    const h = harness({ createSim: spySim(options, real), createInput: script });
+    await h.game.start('map-minimal', 'car-sedan', { controlPreset: 'real', seed: 7 });
+    expect(options[0]?.assists).toEqual({ autoGearbox: false, signalAutoCancel: null });
+    expect(h.states.at(-1)?.controlPreset).toBe('real');
+    stepFrames(h, 180);
+    h.game.quit();
+
+    /** @type {Frame[]} */
+    const plain = [];
+    const baseline = harness({
+      createSim: (rapier, map, vehicle, o) => {
+        const { assists: _assists, ...rest } = o ?? {};
+        void _assists;
+        return recordingSim(plain)(rapier, map, vehicle, rest);
+      },
+      createInput: script,
+    });
+    await baseline.game.start('map-minimal', 'car-sedan', { controlPreset: 'real', seed: 7 });
+    stepFrames(baseline, 180);
+    baseline.game.quit();
+    expect(real.length).toBeGreaterThan(150);
+    expect(JSON.stringify(real)).toBe(JSON.stringify(plain));
+  });
+
+  it('gives the same score and report under both presets for the same frames', async () => {
+    const speeding = buildFrames({ map: MAP, vehicle: CAR, laneId: 'rw-e', startS: 5, durationS: 3, speed: 70 / 3.6 });
+    /** @type {Array<import('../contracts/index.js').ScoreReport | undefined>} */
+    const reports = [];
+    for (const controlPreset of /** @type {const} */ (['simple', 'real'])) {
+      const h = harness({ createSim: () => replaySim(speeding) });
+      await h.game.start('map-minimal', 'car-sedan', { controlPreset });
+      runUntil(h.frames, () => h.states.at(-1)?.runStatus === 'finished');
+      reports.push(h.states.at(-1)?.report);
+    }
+    expect(reports[0]).toBeDefined();
+    expect(reports[0]).toEqual(reports[1]);
+  });
+
+  it('restart keeps the preset, and an unknown preset is simple', async () => {
+    /** @type {Array<import('../contracts/index.js').SimOptions | undefined>} */
+    const options = [];
+    const h = harness({ createSim: spySim(options, []) });
+    await h.game.start('map-minimal', 'car-sedan', { controlPreset: 'real' });
+    h.game.restart();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(options).toHaveLength(2);
+    expect(options[1]?.assists?.autoGearbox).toBe(false);
+    expect(h.states.at(-1)?.controlPreset).toBe('real');
+    await h.game.start('map-minimal', 'car-sedan', { controlPreset: /** @type {never} */ ('arcade') });
+    expect(h.states.at(-1)?.controlPreset).toBe('simple');
+    h.game.quit();
+  });
+
+  it('forwards on-screen controls to the run input, and ignores them with no run', async () => {
+    const h = harness({ createSim });
+    h.game.controls.hold('throttle', true);
+    h.game.controls.press('gearUp');
+    h.game.controls.steer(0.5);
+    await h.game.start('map-minimal', 'scooter');
+    h.game.controls.hold('brake', true);
+    stepFrames(h, 10);
+    const braking = h.states.at(-1);
+    expect(braking?.controls.throttle).toBe(0);
+    expect(braking?.controls.brakeFront).toBeGreaterThan(0);
+    expect(braking?.controls.brakeRear).toBeGreaterThan(0);
+    h.game.controls.hold('brake', false);
+    h.game.controls.hold('throttle', true);
+    h.game.controls.steer(-0.4);
+    stepFrames(h, 30);
+    const driving = h.states.at(-1);
+    expect(driving?.controls.throttle).toBe(1);
+    expect(driving?.controls.steer).toBeCloseTo(-0.4, 10);
+    expect(driving?.controls.brakeFront).toBe(0);
+    h.game.controls.press('pause');
+    expect(h.states.at(-1)?.runStatus).toBe('paused');
+    h.game.quit();
+    expect(() => h.game.controls.hold('horn', true)).not.toThrow();
+    expect(h.errors).toEqual([]);
   });
 });

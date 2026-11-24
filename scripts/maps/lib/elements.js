@@ -159,15 +159,24 @@ function pos2(p) {
 }
 
 /**
+ * Road topology of a spec: its network split at junctions with the spec's junction trims.
+ * @param {MapSpec} spec Spec.
+ * @returns {Topology} Topology.
+ */
+export function topologyOf(spec) {
+  /** @type {Map<string, number>} */
+  const junctionTrims = new Map();
+  for (const [node, j] of spec.junctions) if (j.trimM !== undefined) junctionTrims.set(node, j.trimM);
+  return splitNetwork(spec.network, { laneWidth: LANE_WIDTH_M, junctionTrims });
+}
+
+/**
  * Compiles a spec into a map.
  * @param {MapSpec} spec Spec.
  * @returns {GameMap} Map (not yet rounded or validated).
  */
 export function compileMap(spec) {
-  /** @type {Map<string, number>} */
-  const junctionTrims = new Map();
-  for (const [node, j] of spec.junctions) if (j.trimM !== undefined) junctionTrims.set(node, j.trimM);
-  const topo = splitNetwork(spec.network, { laneWidth: LANE_WIDTH_M, junctionTrims });
+  const topo = topologyOf(spec);
   const { network } = topo;
   for (const node of spec.junctions.keys()) {
     if (!topo.junctionOfNode.has(node)) throw new Error(`${spec.id}: junction settings for ${node}, which is not a junction`);

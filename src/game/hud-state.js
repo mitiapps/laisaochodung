@@ -44,11 +44,13 @@ export function visibleNotices(notices, t) {
  * @param {number} args.score Running score.
  * @param {Breach[]} args.breaches Breaches of the run so far, oldest first.
  * @param {readonly Notice[]} [args.notices] Notices of the run so far, oldest first.
+ * @param {import('../contracts/controls.js').ControlPreset} args.controlPreset Control preset the
+ *   session applied to the run.
  * @param {HudState['runStatus']} args.runStatus Run status.
  * @param {ScoreReport} [args.report] Final report, once finished.
  * @returns {HudState} HUD state.
  */
-export function hudStateOf({ frame, context, score, breaches, notices = [], runStatus, report }) {
+export function hudStateOf({ frame, context, score, breaches, notices = [], controlPreset, runStatus, report }) {
   const { ego } = frame;
   /** @type {HudState} */
   const state = {
@@ -73,8 +75,7 @@ export function hudStateOf({ frame, context, score, breaches, notices = [], runS
     nav: { distanceM: frame.route.distanceM, bearingRad: frame.route.bearingRad },
     toasts: breaches.slice(-HUD_TOAST_WINDOW),
     notices: visibleNotices(notices, frame.t),
-    // Set once the session applies a preset.
-    controlPreset: 'real',
+    controlPreset,
     runStatus,
   };
   if (report) state.report = report;

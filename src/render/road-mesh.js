@@ -1,21 +1,33 @@
 /**
- * Static map meshes: ground, lanes and junctions, pavements with kerbs, painted markings and
- * obstacles. Geometry is merged per material, so the whole road network costs about ten draw
- * calls whatever the map size.
+ * Static map meshes: ground, lanes and junctions, pavements with kerbs, painted markings and the
+ * non-building obstacles (parked cars, barriers). Buildings belong to the scenery
+ * (`src/render/scenery/`). Geometry is merged per material, so the whole road network costs about
+ * ten draw calls whatever the map size.
+ *
+ * Look: weathered asphalt at an albedo of about 0.11 (aged asphalt is 0.10–0.20, LBNL Heat Island
+ * Group, https://heatisland.lbl.gov/node/21), granite pavement slabs through a tiling texture, and kerbs at the collider height with a
+ * lighter granite top.
  */
 
-import { Color, Group, Mesh, MeshStandardMaterial } from 'three';
+import { CanvasTexture, Color, Group, Mesh, MeshStandardMaterial, RepeatWrapping, SRGBColorSpace } from 'three';
+import { KERB_HEIGHT_M } from '../contracts/units.js';
 import { polygonCentroid } from '../geometry/index.js';
+import { HAS_DOM } from './assets.js';
 import { nearestLaneHeading } from './layout.js';
 import { crosswalkStripes, laneLineQuads, stopLineQuads } from './markings.js';
-import { TriangleSoup } from './triangle-soup.js';
+import { TriangleSoup, outwardNormal } from './triangle-soup.js';
 
 /** @typedef {import('../contracts/map.js').GameMap} GameMap */
 /** @typedef {import('../contracts/map.js').Lane} Lane */
 /** @typedef {[number, number]} Vec2 */
 
-/** Heights of the layers in metres, stacked to avoid z-fighting. */
-export const LAYER_Y = Object.freeze({ ground: -0.03, road: 0, paint: 0.015, pavement: 0.15 });
+/** Heights of the layers in metres, stacked to avoid z-fighting; the pavement sits on the kerb top. */
+export const LAYER_Y = Object.freeze({ ground: -0.03, road: 0, paint: 0.015, pavement: KERB_HEIGHT_M });
+
+/** Width of the lighter granite strip along every pavement edge (kerb stone top, design). */
+export const KERB_STONE_M = 0.18;
+/** Pavement texture repeat in metres: one tile holds 4 × 2 slabs of 30 × 60 cm (design). */
+export const PAVEMENT_TILE_M = 1.2;
 
 /** Margin of ground drawn around the map, in metres. */
 const GROUND_MARGIN_M = 150;
@@ -23,12 +35,12 @@ const GROUND_MARGIN_M = 150;
 /** Colours of the static materials. */
 const COLORS = Object.freeze({
   ground: 0x6f7f4f,
-  asphalt: 0x3d3f42,
-  pavement: 0xb7b2a8,
-  kerb: 0xdcdcd6,
+  // sRGB 0x5c5d5f is a linear albedo of about 0.105.
+  asphalt: 0x5c5d5f,
+  pavement: 0xb3b0aa,
+  kerb: 0xd6d4ce,
   white: 0xf2f2f0,
   yellow: 0xf2c230,
-  building: 0xd8cfc0,
   'parked-car': 0x5a6f8a,
   barrier: 0xd84a3a,
 });
@@ -103,10 +115,11 @@ export function buildRoadMeshes(map) {
   }
 
   for (const p of map.pavements) {
-    soup('pavement').addGroundPolygon(p.polygon, LAYER_Y.pavement);
+    soup('pavement').addGroundPolygon(p.polygon, LAYER_Y.pavement, PAVEMENT_TILE_M);
     soup('kerb').addWalls(p.polygon, LAYER_Y.ground, LAYER_Y.pavement);
+    addKerbStones(soup('kerb'), p.polygon);
   }
-  for (const o of map.obstacles) soup(o.kind).addPrism(o.footprint, o.height);
+  for (const o of map.obstacles) if (o.kind !== 'building') soup(o.kind).addPrism(o.footprint, o.height);
 
   const group = new Group();
   group.name = 'map-static';
@@ -116,12 +129,14 @@ export function buildRoadMeshes(map) {
   const triangles = {};
   /** @type {MeshStandardMaterial | null} */
   let asphalt = null;
+  const slabs = createPavementTexture();
   for (const [key, s] of Object.entries(soups)) {
     const geometry = s.toGeometry();
     if (!geometry) continue;
     const paint = key === 'white' || key === 'yellow';
     const material = new MeshStandardMaterial({
-      color: new Color(COLORS[/** @type {keyof typeof COLORS} */ (key)] ?? 0x888888),
+      color: new Color(slabs && key === 'pavement' ? 0xffffff : (COLORS[/** @type {keyof typeof COLORS} */ (key)] ?? 0x888888)),
+      map: key === 'pavement' ? slabs : null,
       roughness: paint ? 0.6 : 0.9,
       metalness: 0,
       polygonOffset: paint,
@@ -133,6 +148,7 @@ export function buildRoadMeshes(map) {
     const mesh = new Mesh(geometry, material);
     mesh.name = `static-${key}`;
     mesh.matrixAutoUpdate = false;
+    mesh.receiveShadow = true;
     group.add(mesh);
     triangles[key] = s.triangleCount;
   }
@@ -146,6 +162,61 @@ export function buildRoadMeshes(map) {
         if (o instanceof Mesh) o.geometry.dispose();
       });
       for (const m of materials) m.dispose();
+      slabs?.dispose();
     },
   };
+}
+
+/**
+ * Lighter kerb-stone strip just inside every pavement edge, a hair above the pavement surface.
+ * @param {TriangleSoup} soup Kerb soup.
+ * @param {Vec2[]} polygon Pavement ring.
+ */
+export function addKerbStones(soup, polygon) {
+  const y = LAYER_Y.pavement + 0.002;
+  for (let i = 0; i < polygon.length; i += 1) {
+    const n = outwardNormal(polygon, i);
+    if (!n) continue;
+    const a = polygon[i];
+    const b = polygon[(i + 1) % polygon.length];
+    const w = KERB_STONE_M;
+    soup.addQuad(
+      [a[0], y, a[1]],
+      [b[0], y, b[1]],
+      [b[0] - n[0] * w, y, b[1] - n[1] * w],
+      [a[0] - n[0] * w, y, a[1] - n[1] * w],
+      [0, 1, 0],
+    );
+  }
+}
+
+/**
+ * Grey granite slabs, 4 × 2 per tile with darker joints and a little tone variation per slab.
+ * @returns {CanvasTexture | null} Repeating texture, or null without a DOM.
+ */
+function createPavementTexture() {
+  if (!HAS_DOM) return null;
+  const px = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = px;
+  canvas.height = px;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('2D canvas context unavailable');
+  ctx.fillStyle = '#77736c';
+  ctx.fillRect(0, 0, px, px);
+  const tones = ['#b6b2ab', '#aeaaa2', '#bbb7b0', '#a9a59e', '#b2aea6', '#b8b4ad', '#aca8a0', '#b4b0a9'];
+  const cw = px / 4;
+  const ch = px / 2;
+  for (let r = 0; r < 2; r += 1) {
+    for (let c = 0; c < 4; c += 1) {
+      ctx.fillStyle = tones[r * 4 + c];
+      ctx.fillRect(c * cw + 2, r * ch + 2, cw - 4, ch - 4);
+    }
+  }
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
+  texture.wrapS = RepeatWrapping;
+  texture.wrapT = RepeatWrapping;
+  texture.anisotropy = 4;
+  return texture;
 }

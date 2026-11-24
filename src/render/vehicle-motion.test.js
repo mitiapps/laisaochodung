@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Group, Mesh, BoxGeometry, Vector3 } from 'three';
 import frames from '../../tests/fixtures/frames-straight.json' with { type: 'json' };
 import { createVehicleView } from './vehicle-view.js';
@@ -94,3 +94,26 @@ describe('fall ghost', () => {
     view.dispose();
   });
 });
+
+describe('player scooter', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('draws the procedural traffic scooter with two spinning wheels, casting shadows', () => {
+    // The palette texture and rider load in the browser; under Node they fail and are logged.
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const view = createVehicleView({ config: vehicleModel('scooter', 'motorbike'), lengthM: 1.85, widthM: 0.7, lamps: true });
+    const pivots = wheelPivots(view.root);
+    expect(pivots).toHaveLength(2);
+    view.update({ x: 0, y: 0, z: 0, heading: 0 }, frame.ego, [0.4, 0.4], null);
+    expect(pivots[0].rotation.x).toBeCloseTo(0.4, 9);
+    /** @type {Mesh[]} */
+    const meshes = [];
+    view.root.traverse((o) => {
+      if (o instanceof Mesh) meshes.push(o);
+    });
+    const body = meshes.find((m) => m.geometry.getAttribute('paint') && m.geometry.getAttribute('position').count > 1000);
+    expect(body?.castShadow).toBe(true);
+    view.dispose();
+  });
+});
+

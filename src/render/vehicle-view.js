@@ -8,6 +8,7 @@
  */
 
 import {
+  AnimationMixer,
   Box3,
   BoxGeometry,
   ConeGeometry,
@@ -22,15 +23,23 @@ import {
   Vector3,
   AdditiveBlending,
 } from 'three';
-import { loadModel } from './assets.js';
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
+import { loadModel, loadTexture } from './assets.js';
 import { blinkOn, headingToYaw, leanAngle, leanToRoll, wheelOffsets } from './math.js';
+import { SKINNED_PROPORTIONS, applyProportions, bakeRider, characterFit } from './rider-bake.js';
+import { RIDERS } from './vehicles/index.js';
+import { createLookMaterial, setSingleLook } from './vehicles/look-material.js';
+import { buildMotorbike, MOTORBIKE_LENGTH_M } from './vehicles/motorbike.js';
+import { PALETTE_TEXTURE, unitWheel } from './vehicles/procedural.js';
 
 /** @typedef {import('./vehicles/model-config.js').ModelConfig} ModelConfig */
 /** @typedef {import('../contracts/telemetry.js').EgoState} EgoState */
 /** @typedef {import('./interpolate.js').DrawPose} DrawPose */
 
 /** Kenney frame to +X forward: rotating +Z by π/2 about +Y gives +X. */
-const MODEL_YAW = Math.PI / 2;
+export const MODEL_YAW = Math.PI / 2;
+/** Helmet colour of the player's rider (a drawing choice). */
+const EGO_HELMET = 0xf2f2f0;
 
 /**
  * @typedef {object} VehicleOptions
@@ -188,6 +197,53 @@ function primitiveScooter(kit, config, L, W) {
 }
 
 /**
+ * Builds the procedural motorbike of a config with its rider, scaled to the footprint length.
+ * The palette texture and the rider load asynchronously; until then the bike draws untextured
+ * and riderless, and a failed load leaves it so (with a console error).
+ * @param {PartKit} kit Part kit.
+ * @param {ModelConfig} config Config with `procedural` set.
+ * @param {number} L Length.
+ * @param {() => boolean} isDisposed Whether the view was disposed meanwhile.
+ * @returns {{content: Group, wheels: Object3D[]}} Content and wheel pivots.
+ */
+function proceduralBike(kit, config, L, isDisposed) {
+  const type = /** @type {import('./vehicles/motorbike.js').MotorbikeType} */ (config.procedural);
+  const bike = buildMotorbike(type);
+  kit.own(bike.body);
+  const material = kit.own(createLookMaterial());
+  setSingleLook(material, config.color, EGO_HELMET, 1);
+  const content = new Group();
+  content.scale.setScalar(L / MOTORBIKE_LENGTH_M);
+  content.add(new Mesh(bike.body, material));
+  const wheelGeometry = kit.own(unitWheel());
+  const wheels = bike.wheels.map((w) => {
+    const pivot = new Group();
+    pivot.rotation.order = 'YXZ';
+    pivot.position.set(0, w.radius, w.z);
+    const tyre = new Mesh(wheelGeometry, material);
+    tyre.scale.set(w.width, w.radius, w.radius);
+    pivot.add(tyre);
+    content.add(pivot);
+    return pivot;
+  });
+  loadTexture(PALETTE_TEXTURE)
+    .then((texture) => {
+      material.map = texture;
+      material.needsUpdate = true;
+    })
+    .catch((err) => console.error(`Texture ${PALETTE_TEXTURE}: ${err instanceof Error ? err.message : String(err)}`));
+  loadModel(RIDERS[0])
+    .then((gltf) => {
+      if (isDisposed()) return;
+      const rider = new Mesh(kit.own(bakeRider(gltf, 'drive', bike.seat, bike.legPitch)), material);
+      rider.castShadow = true;
+      content.add(rider);
+    })
+    .catch((err) => console.error(`Rider ${RIDERS[0]}: ${err instanceof Error ? err.message : String(err)}; drawing the bike without a rider.`));
+  return { content, wheels };
+}
+
+/**
  * Builds a low-poly pedestrian standing on the origin, facing +Z.
  * @param {PartKit} kit Part kit.
  * @param {ModelConfig} config Config.
@@ -240,6 +296,16 @@ export function fitToFootprint(scene, L, W) {
 }
 
 /**
+ * Lets every mesh under a node cast shadows (lamp glows and beams excluded: basic materials).
+ * @param {Object3D} node Node.
+ */
+function castShadows(node) {
+  node.traverse((o) => {
+    if (o instanceof Mesh && !(o.material instanceof MeshBasicMaterial)) o.castShadow = true;
+  });
+}
+
+/**
  * @typedef {object} VehicleView
  * @property {Group} root Root to add to the scene.
  * @property {(pose: DrawPose, ego: {speed: number, yawRate: number, wheels: {steer: number}[]}, wheelAngles: number[], lamps: LampState | null) => void} update
@@ -265,14 +331,20 @@ export function createVehicleView(options) {
   lean.add(model);
 
   const kind = config.kind === 'car' ? 'car' : 'motorbike';
-  const built = kind === 'car' ? boxCar(kit, config, L, W) : primitiveScooter(kit, config, L, W);
+  let disposed = false;
+  const built =
+    kind === 'car'
+      ? boxCar(kit, config, L, W)
+      : config.procedural
+        ? proceduralBike(kit, config, L, () => disposed)
+        : primitiveScooter(kit, config, L, W);
   let content = built.content;
   /** @type {Object3D[]} */
   let wheels = built.wheels;
   model.add(content);
 
   const lampKit = options.lamps ? buildLamps(kit, model, kind, L, W, config.heightM) : null;
-  let disposed = false;
+  castShadows(root);
 
   if (config.glb) {
     loadModel(config.glb)
@@ -294,6 +366,7 @@ export function createVehicleView(options) {
         model.remove(content);
         content = holder;
         model.add(content);
+        castShadows(content);
         if (found.length === built.wheels.length) {
           wheels = found;
         } else {
@@ -425,18 +498,50 @@ export function lampState(ego, t, night) {
 /**
  * @typedef {object} PedestrianView
  * @property {Group} root Root.
- * @property {(pose: DrawPose, walkPhase: number) => void} update Pose; `walkPhase` swings legs.
+ * @property {(pose: DrawPose, walkPhase: number, t: number) => void} update Pose; `walkPhase`
+ *   (radians, one cycle per two steps) drives the walk, `t` (frame time) the idle animation.
  * @property {() => void} dispose Free resources.
  */
 
+/** Scratch vector for foot positions. */
+const foot = new Vector3();
+
 /**
- * Creates a pedestrian view.
+ * Moves a skinned figure so its lower foot touches the ground. The legs have no knee, so a
+ * stride lifts the hips; the clip's root motion was made for the short original legs.
+ * @param {{figure: Object3D, holder: Group, legs: Object3D[], legLength: number}} skinned Figure.
+ */
+function standOnGround(skinned) {
+  skinned.holder.position.y = 0;
+  skinned.holder.updateMatrixWorld(true);
+  const parent = /** @type {Object3D} */ (skinned.holder.parent);
+  let lowest = Infinity;
+  for (const leg of skinned.legs) {
+    leg.localToWorld(foot.set(0, -skinned.legLength, 0));
+    parent.worldToLocal(foot);
+    lowest = Math.min(lowest, foot.y);
+  }
+  skinned.holder.position.y = -lowest;
+}
+
+/**
+ * @typedef {object} PedestrianOptions
+ * @property {string | null} [character] Mini Characters GLB to draw as a skinned, animated
+ *   figure once loaded; null keeps the primitive figure.
+ * @property {(path: string) => Promise<import('three/addons/loaders/GLTFLoader.js').GLTF>} [load]
+ *   Model loader (defaults to `loadModel`).
+ */
+
+/**
+ * Creates a pedestrian view: a primitive figure, upgraded to a skinned Mini Character with walk
+ * and idle clips when `character` loads.
  * @param {ModelConfig} config Config.
  * @param {number} lengthM Depth along the path.
  * @param {number} widthM Width.
+ * @param {PedestrianOptions} [options] Options.
  * @returns {PedestrianView} View.
  */
-export function createPedestrianView(config, lengthM, widthM) {
+export function createPedestrianView(config, lengthM, widthM, options = {}) {
   const kit = new PartKit();
   const root = new Group();
   root.name = `pedestrian-${config.id}`;
@@ -445,16 +550,70 @@ export function createPedestrianView(config, lengthM, widthM) {
   root.add(model);
   const { content, legs } = primitivePedestrian(kit, config, lengthM, widthM);
   model.add(content);
+  castShadows(content);
+  /**
+   * @type {{mixer: AnimationMixer, walk: import('three').AnimationAction, idle: import('three').AnimationAction,
+   *   figure: Object3D, holder: Group, legs: Object3D[], legLength: number} | null}
+   */
+  let skinned = null;
+  let disposed = false;
+  if (options.character) {
+    const path = options.character;
+    (options.load ?? loadModel)(path)
+      .then((gltf) => {
+        if (disposed) return;
+        const walkClip = gltf.animations.find((a) => a.name === 'walk');
+        const idleClip = gltf.animations.find((a) => a.name === 'idle');
+        if (!walkClip || !idleClip) throw new Error('character lacks the walk or idle clip');
+        const fit = characterFit(gltf, SKINNED_PROPORTIONS);
+        const figure = cloneSkinned(gltf.scene);
+        applyProportions(figure);
+        const legs = ['leg-left', 'leg-right'].map((name) => figure.getObjectByName(name));
+        if (legs.some((l) => !l)) throw new Error('character lacks the leg joints');
+        const legLength = /** @type {Object3D} */ (legs[0]).position.y;
+        const holder = new Group();
+        holder.scale.setScalar(fit.scale);
+        holder.add(figure);
+        const mixer = new AnimationMixer(figure);
+        const walk = mixer.clipAction(walkClip);
+        const idle = mixer.clipAction(idleClip);
+        walk.play();
+        idle.play();
+        model.remove(content);
+        model.add(holder);
+        castShadows(holder);
+        skinned = { mixer, walk, idle, figure, holder, legs: /** @type {Object3D[]} */ (legs), legLength };
+      })
+      .catch((err) => console.error(`Pedestrian ${path}: ${err instanceof Error ? err.message : String(err)}; drawing the primitive figure.`));
+  }
   return {
     root,
-    update(pose, walkPhase) {
+    update(pose, walkPhase, t) {
       root.position.set(pose.x, 0, pose.z);
       root.rotation.y = headingToYaw(pose.heading);
+      if (skinned) {
+        const moving = walkPhase !== 0;
+        const turn = walkPhase / (2 * Math.PI);
+        skinned.walk.setEffectiveWeight(moving ? 1 : 0);
+        skinned.idle.setEffectiveWeight(moving ? 0 : 1);
+        skinned.walk.time = (turn - Math.floor(turn)) * skinned.walk.getClip().duration;
+        const idleLen = skinned.idle.getClip().duration;
+        skinned.idle.time = idleLen > 0 ? t % idleLen : 0;
+        skinned.mixer.update(0);
+        applyProportions(skinned.figure);
+        standOnGround(skinned);
+        return;
+      }
       const swing = Math.sin(walkPhase) * 0.5;
       legs[0].rotation.x = swing;
       legs[1].rotation.x = -swing;
     },
     dispose() {
+      disposed = true;
+      if (skinned) {
+        skinned.mixer.stopAllAction();
+        skinned.mixer.uncacheRoot(skinned.figure);
+      }
       kit.dispose();
     },
   };

@@ -12,7 +12,12 @@ import { TriangleSoup } from './triangle-soup.js';
 /** @typedef {import('../contracts/map.js').GameMap} GameMap */
 /** @typedef {import('./sign-art.js').SignArt} SignArt */
 
-/** Height of the plate's lower edge above the ground (a drawing choice). */
+/**
+ * Height of the plate's lower edge above the road surface: 2.0 m on roads in built-up areas
+ * (QCVN 41:2024 Điều 18.2: "2,0 m đối với đường trong khu đông dân cư"). Every map is urban. The
+ * post rises from the road level to the plate top, so it also reaches through a kerb-height
+ * pavement.
+ */
 export const SIGN_BOTTOM_M = 2;
 /** Post side length. */
 const POST_M = 0.07;

@@ -5,6 +5,10 @@
  *
  * Edge indices are lanes first, in map order (road by road, lane by lane), then connectors in map
  * order, so every loop over edges has a fixed order.
+ *
+ * Plain joins (`map.laneJoins`) make a lane the successor of another lane with no junction between
+ * them. Static map obstacles other than buildings that touch a lane become blocked stretches of
+ * that lane and obstacles that traffic perceives exactly.
  */
 
 import { angleDiff, footprint, headingOf, polygonsIntersect, projectOntoPolyline, segmentIntersection } from '../../geometry/index.js';
@@ -12,6 +16,8 @@ import { angleDiff, footprint, headingOf, polygonsIntersect, projectOntoPolyline
 /** @typedef {import('../../contracts/map.js').GameMap} GameMap */
 /** @typedef {import('../../contracts/map.js').Connector} Connector */
 /** @typedef {import('../../contracts/telemetry.js').Vec2} Vec2 */
+/** @typedef {import('./perception.js').Obstacle} Obstacle */
+/** @typedef {{edge: number, fromS: number, toS: number}} LaneSpan A stretch of one lane edge. */
 
 /** Turn manoeuvres by rank: a lower rank has priority over a higher one at a conflict. */
 export const TURN_RANK = Object.freeze({ straight: 0, right: 1, left: 2, uturn: 3 });
@@ -61,7 +67,14 @@ const SWING_SAMPLE_M = 0.5;
  * @property {number} roadIndex Road index of a lane, or of a connector's approach lane.
  * @property {number} startHeading Heading at the start.
  * @property {number} endHeading Heading at the end.
- * @property {number[]} next Successors: a lane's connectors, a connector's exit lane.
+ * @property {number[]} next Successors: a lane's connectors or the lane it joins, a connector's
+ *   exit lane.
+ * @property {number[]} prev Predecessors: connectors and joining lanes into a lane, a connector's
+ *   approach lane.
+ * @property {number[]} neighbours Lanes: the adjacent lanes of the same road and direction, inner
+ *   one first; connectors: none.
+ * @property {{fromS: number, toS: number}[]} blocks Lanes: stretches a static obstacle covers,
+ *   ascending; connectors: none.
  * @property {boolean} sink A lane whose end leaves the map.
  * @property {boolean} deadEnd A lane end with no connector that is not a sink.
  * @property {number} holdS Lanes: where an agent waits before its connector (the stop line, else
@@ -86,6 +99,7 @@ const SWING_SAMPLE_M = 0.5;
  * @property {Edge[]} edges Lanes, then connectors.
  * @property {number} laneCount Number of lane edges (they come first).
  * @property {Map<string, number>} edgeIndex Edge index by lane or connector id.
+ * @property {Obstacle[]} staticObstacles Map obstacles that touch a lane, standing still.
  * @property {string[]} roadIds Road ids in map order.
  * @property {{minX: number, minZ: number, maxX: number, maxZ: number}} bounds Box around every
  *   edge vertex.
@@ -267,6 +281,84 @@ function holdBackFromSweeps(edges, laneCount, sweep, maxHoldBackM) {
 }
 
 /**
+ * Links each lane to the adjacent lanes of its road that run the same way.
+ * @param {GameMap} map Map.
+ * @param {Edge[]} edges Edges.
+ * @param {Map<string, number>} edgeIndex Edge index by id.
+ * @returns {void}
+ */
+function addNeighbours(map, edges, edgeIndex) {
+  for (const road of map.roads) {
+    for (const lane of road.lanes) {
+      const e = edges[/** @type {number} */ (edgeIndex.get(lane.id))];
+      for (const d of [1, -1]) {
+        const other = road.lanes.find((l) => l.dir === lane.dir && l.index === lane.index + d);
+        if (other) e.neighbours.push(/** @type {number} */ (edgeIndex.get(other.id)));
+      }
+    }
+  }
+}
+
+/**
+ * Stretches of lanes a footprint covers: every lane whose surface it touches, with the span of
+ * its corners projected onto the lane centreline.
+ * @param {GameMap} map Map.
+ * @param {Map<string, number>} edgeIndex Edge index by id.
+ * @param {Vec2[]} fp Footprint.
+ * @returns {LaneSpan[]} Spans, in map lane order.
+ */
+export function lanesUnder(map, edgeIndex, fp) {
+  /** @type {LaneSpan[]} */
+  const out = [];
+  for (const road of map.roads) {
+    for (const lane of road.lanes) {
+      if (!polygonsIntersect(fp, lane.polygon)) continue;
+      let fromS = Infinity;
+      let toS = -Infinity;
+      for (const v of fp) {
+        const s = projectOntoPolyline(v, lane.centerline).s;
+        fromS = Math.min(fromS, s);
+        toS = Math.max(toS, s);
+      }
+      out.push({ edge: /** @type {number} */ (edgeIndex.get(lane.id)), fromS, toS });
+    }
+  }
+  return out;
+}
+
+/**
+ * Turns every map obstacle that is not a building and touches a lane into a blocked stretch of
+ * that lane and a perceived obstacle.
+ * @param {GameMap} map Map.
+ * @param {Edge[]} edges Edges.
+ * @param {Map<string, number>} edgeIndex Edge index by id.
+ * @returns {Obstacle[]} Obstacles on the road.
+ */
+function addBlocks(map, edges, edgeIndex) {
+  /** @type {Obstacle[]} */
+  const out = [];
+  for (const o of map.obstacles) {
+    if (o.kind === 'building') continue;
+    const spans = lanesUnder(map, edgeIndex, o.footprint);
+    if (spans.length === 0) continue;
+    for (const sp of spans) {
+      const e = edges[sp.edge];
+      e.blocks.push({ fromS: sp.fromS, toS: sp.toS });
+      e.blocks.sort((a, b) => a.fromS - b.fromS);
+    }
+    let x = 0;
+    let z = 0;
+    for (const v of o.footprint) {
+      x += v[0] / o.footprint.length;
+      z += v[1] / o.footprint.length;
+    }
+    const radius = o.footprint.reduce((r, v) => Math.max(r, Math.hypot(v[0] - x, v[1] - z)), 0);
+    out.push({ footprint: o.footprint, x, z, radius, vx: 0, vz: 0 });
+  }
+  return out;
+}
+
+/**
  * Builds the lane graph of a map. Throws when a connector, conflict, source or sink names an
  * unknown lane or connector (`assertMap` checks references, so this only fires on unchecked maps).
  * @param {GameMap} map Map.
@@ -313,6 +405,9 @@ export function buildLaneGraph(map, params, sweep) {
         startHeading: endHeading(arr.xs, arr.zs, false),
         endHeading: endHeading(arr.xs, arr.zs, true),
         next: [],
+        prev: [],
+        neighbours: [],
+        blocks: [],
         sink: sinks.has(lane.id),
         deadEnd: false,
         holdS: stop ? Math.min(arr.length, Math.max(0, stopS)) : arr.length,
@@ -357,6 +452,9 @@ export function buildLaneGraph(map, params, sweep) {
       startHeading: start,
       endHeading: end,
       next: [toEdge],
+      prev: [fromEdge],
+      neighbours: [],
+      blocks: [],
       sink: false,
       deadEnd: false,
       holdS: 0,
@@ -373,7 +471,20 @@ export function buildLaneGraph(map, params, sweep) {
       clearS: 0,
     });
     edges[fromEdge].next.push(index);
+    edges[toEdge].prev.push(index);
   }
+
+  for (const j of map.laneJoins ?? []) {
+    const from = edgeIndex.get(j.fromLaneId);
+    const to = edgeIndex.get(j.toLaneId);
+    if (from === undefined || to === undefined || from >= laneCount || to >= laneCount) {
+      throw new Error(`Lane join ${j.fromLaneId} → ${j.toLaneId} names an unknown lane`);
+    }
+    edges[from].next.push(to);
+    edges[to].prev.push(from);
+  }
+  addNeighbours(map, edges, edgeIndex);
+  const staticObstacles = addBlocks(map, edges, edgeIndex);
 
   for (const e of edges) {
     if (e.kind === 'lane') e.deadEnd = !e.sink && e.next.length === 0;
@@ -407,7 +518,7 @@ export function buildLaneGraph(map, params, sweep) {
     maxX = 0;
     maxZ = 0;
   }
-  return { edges, laneCount, edgeIndex, roadIds, bounds: { minX, minZ, maxX, maxZ } };
+  return { edges, laneCount, edgeIndex, roadIds, staticObstacles, bounds: { minX, minZ, maxX, maxZ } };
 }
 
 /**

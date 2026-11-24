@@ -182,6 +182,8 @@
  * @property {number} [floors] Buildings only: storeys above ground, an integer from 1.
  * @property {number} [frontEdge] Buildings only: index of the footprint edge facing the street
  *   (edge `i` runs from point `i` to point `i + 1`, the last one back to point 0).
+ * @property {string} [colour] Buildings only: facade colour as `#rrggbb`, set by a map override
+ *   (landmarks); the renderer picks its own colour when absent.
  */
 
 /**

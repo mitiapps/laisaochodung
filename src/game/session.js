@@ -10,6 +10,11 @@
  * `timeout` event, on `runEnded: 'crash'` from the scorer, or on `quit()`; the report then comes
  * from `scorer.report(state, {quit})`. A `fall` needs nothing here: the sim resets itself.
  *
+ * Controls: each run applies a control preset (`simple` unless the start options say `real`): the
+ * sim assists and the input's brake mapping come from `resolveControlPreset`. The preset is fixed
+ * for the run, `restart()` repeats it, and it never reaches the scorer or the report. On-screen
+ * controls reach the run's input through `controls`.
+ *
  * Traffic: the session runs the map's traffic block (`traffic: 'map'`) with a fresh 32-bit run seed
  * per run, unless a start option or, in dev builds, the `?traffic=off` / `?seed=<n>` hash query says
  * otherwise. Notices the scorer raises reach the HUD beside the breach toasts.
@@ -24,6 +29,8 @@
 
 import { neutralInput } from '../contracts/controls.js';
 import { DT } from '../contracts/units.js';
+import { vehicleTuning as physicsVehicleTuning } from '../physics/vehicles/index.js';
+import { resolveControlPreset } from './control-presets.js';
 import { hudStateOf } from './hud-state.js';
 
 /** @typedef {import('../contracts/hud.js').GameApi} GameApi */
@@ -44,6 +51,7 @@ import { hudStateOf } from './hud-state.js';
 /** @typedef {import('./loop.js').LoopDeps} LoopDeps */
 /** @typedef {import('./input.js').Input} Input */
 /** @typedef {import('./input.js').InputOptions} InputOptions */
+/** @typedef {import('../contracts/controls.js').ControlPreset} ControlPreset */
 
 /** HUD publishing rate between breaches. */
 export const HUD_HZ = 15;
@@ -128,6 +136,9 @@ function meanAndP95(samples) {
  * @property {() => RunOptions} [devRunOptions] Dev builds only: run options from the dev hash query
  *   (`?traffic=off`, `?seed=<n>`); start options win over them.
  * @property {import('../contracts/modules.js').CreateSim} createSim Sim factory.
+ * @property {(vehicleId: string) => import('../physics/tuning.js').VehicleTuning} [vehicleTuning]
+ *   Physics tuning of a catalog vehicle, for the preset's brake mapping; the sim's own lookup by
+ *   default.
  * @property {import('../contracts/modules.js').CreateScorer} createScorer Scorer factory.
  * @property {(map: GameMap, vehicle: VehicleInfo) => View} createView View factory.
  * @property {(options: InputOptions) => Input} createInput Input factory.
@@ -162,6 +173,7 @@ function meanAndP95(samples) {
  * @property {'map' | 'off' | null} traffic Whether traffic runs in the current run: `off` also on a
  *   map without a traffic block.
  * @property {number | null} runSeed Run seed of the current run.
+ * @property {ControlPreset | null} controlPreset Control preset of the current run.
  * @property {number} agents Traffic agents in the latest frame.
  * @property {number} mirrored Traffic agents in the latest frame within `mirrorRadiusM` of the ego,
  *   capped at `maxMirrored`: the candidates the sim's mirror pool takes. Derived from the frame,
@@ -193,6 +205,7 @@ function meanAndP95(samples) {
  * @property {Notice[]} notices Notices so far, oldest first.
  * @property {'map' | 'off'} traffic Traffic actually running (`off` on a map without traffic).
  * @property {number} runSeed Run seed.
+ * @property {ControlPreset} controlPreset Control preset applied.
  * @property {TrafficParams | null} trafficParams Traffic parameters while traffic runs.
  * @property {Frame[]} frames Kept frames (dev): every frame after the state `replayBase`.
  * @property {unknown} replayBase Scorer state the kept frames fold from (dev).
@@ -211,6 +224,7 @@ function meanAndP95(samples) {
 export function createSession(deps) {
   const dev = deps.dev === true;
   const logError = deps.logError ?? ((message, err) => console.error(message, err));
+  const tuningOf = deps.vehicleTuning ?? physicsVehicleTuning;
   /** @type {Set<(state: HudState) => void>} */
   const listeners = new Set();
   /** @type {HudState | null} */
@@ -249,7 +263,9 @@ export function createSession(deps) {
     const score = report ? report.score : r.scorer.report(r.scorerState, { quit: false }).score;
     r.lastHudMs = deps.now();
     r.publishNow = false;
-    emit(hudStateOf({ frame: r.curr, context: r.context, score, breaches: r.breaches, notices: r.notices, runStatus, report }));
+    emit(
+      hudStateOf({ frame: r.curr, context: r.context, score, breaches: r.breaches, notices: r.notices, controlPreset: r.controlPreset, runStatus, report }),
+    );
   };
 
   /**
@@ -419,9 +435,8 @@ export function createSession(deps) {
 
   const api = {
     /**
-     * Starts a run. The `GameApi` start options (`controlPreset`) are accepted and not applied yet:
-     * every run uses the controls without assists. The session-level `traffic` and `seed` options
-     * win over the dev hash query.
+     * Starts a run in the start options' control preset (`simple` by default; an unknown value
+     * is `simple` too). The session-level `traffic` and `seed` options win over the dev hash query.
      * @param {string} mapId Map id.
      * @param {string} vehicleId Vehicle id.
      * @param {SessionStartOptions} [options] Start options.
@@ -440,6 +455,7 @@ export function createSession(deps) {
       const trafficOption = options.traffic ?? query.traffic ?? 'map';
       if ((options.traffic ?? query.traffic) === 'map' && !deps.loadTrafficParams) throw new Error('Traffic was asked for, but the session has no loadTrafficParams');
       const runSeed = options.seed ?? query.seed ?? randomSeed();
+      const tuning = tuningOf(vehicle.id);
       lastStart = { mapId, vehicleId, options };
       /** @type {Run} */
       const r = {
@@ -461,6 +477,7 @@ export function createSession(deps) {
         notices: [],
         traffic: 'off',
         runSeed,
+        controlPreset: 'simple',
         trafficParams: null,
         frames: [],
         replayBase: null,
@@ -495,7 +512,10 @@ export function createSession(deps) {
           r.traffic = 'map';
           r.trafficParams = params;
         }
-        r.sim = deps.createSim(rapier, map, vehicle, params ? { traffic: 'map', runSeed, params } : { traffic: 'off', runSeed });
+        const controls = resolveControlPreset(options.controlPreset, bundle, tuning);
+        r.controlPreset = controls.preset;
+        const traffic = params ? { traffic: /** @type {const} */ ('map'), runSeed, params } : { traffic: /** @type {const} */ ('off'), runSeed };
+        r.sim = deps.createSim(rapier, map, vehicle, { ...traffic, assists: controls.simAssists });
         r.scorer = deps.createScorer(bundle, map, vehicle);
         r.scorerState = r.scorer.initial;
         r.replayBase = r.scorer.initial;
@@ -504,6 +524,8 @@ export function createSession(deps) {
           legalClass: vehicle.legalClass,
           surfaceGrip: map.environment.surfaceGrip,
           target: deps.keyTarget,
+          ...(deps.visibility ? { visibility: deps.visibility } : {}),
+          combinedRearPerGrip: controls.inputOptions.combinedRearPerGrip,
           onPause: () => {
             if (run !== r) return;
             if (r.status === 'running') api.pause();
@@ -583,13 +605,19 @@ export function createSession(deps) {
     },
 
     /**
-     * On-screen controls. Not wired to the input yet; every call is ignored.
+     * On-screen controls, forwarded to the current run's input; ignored with no run.
      * @type {import('../contracts/hud.js').GameControls}
      */
     controls: {
-      hold() {},
-      press() {},
-      steer() {},
+      hold(action, on) {
+        run?.input?.hold?.(action, on);
+      },
+      press(action) {
+        run?.input?.press?.(action);
+      },
+      steer(value) {
+        run?.input?.steer?.(value);
+      },
     },
 
     /**
@@ -620,6 +648,7 @@ export function createSession(deps) {
         actors: curr ? curr.actors.map((a) => ({ id: a.id, kind: a.kind, x: a.pos.x, z: a.pos.z, speed: a.speed, active: a.active })) : [],
         traffic: run && run.status !== 'loading' ? run.traffic : null,
         runSeed: run ? run.runSeed : null,
+        controlPreset: run ? run.controlPreset : null,
         agents: agents.length,
         mirrored: params ? Math.min(params.maxMirrored, near) : 0,
         simStepMs: meanAndP95(simStepMs),

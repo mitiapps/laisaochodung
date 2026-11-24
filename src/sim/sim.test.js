@@ -20,6 +20,13 @@ const VEHICLES = JSON.parse(readFileSync(new URL('../../data/vehicles/vehicles.j
 const CAR = /** @type {VehicleInfo} */ (VEHICLES.find((v) => v.id === 'car-sedan'));
 const SCOOTER = /** @type {VehicleInfo} */ (VEHICLES.find((v) => v.id === 'scooter'));
 
+/**
+ * Timeout of the cases that run every shipped map, ms. Each takes about 2 s alone; the shipped
+ * maps' building and prop colliders make them slower than the default 5 s allows when the whole
+ * suite runs in parallel.
+ */
+const SHIPPED_MAP_TIMEOUT_MS = 20_000;
+
 beforeAll(async () => {
   await RAPIER.init();
 });
@@ -355,7 +362,7 @@ describe('createSim assists option', () => {
         }
       }
     }
-  });
+  }, SHIPPED_MAP_TIMEOUT_MS);
 
   it('starts the car in D with autoGearbox and keeps the scooter unchanged', () => {
     const car = createSim(RAPIER, MAP, CAR, { assists: { autoGearbox: true, signalAutoCancel: null } });
@@ -452,7 +459,7 @@ describe('createSim traffic option', () => {
         }
       }
     }
-  });
+  }, SHIPPED_MAP_TIMEOUT_MS);
 
   it('validates the traffic options', () => {
     expect(() => createSim(RAPIER, JUNCTION, CAR, { traffic: /** @type {never} */ ('on') })).toThrow(RangeError);
@@ -487,7 +494,7 @@ describe('createSim traffic option', () => {
     const fc = run(c, 60, drive);
     c.dispose();
     expect(JSON.stringify(fc[59].actors)).not.toBe(JSON.stringify(fa[59].actors));
-  });
+  }, SHIPPED_MAP_TIMEOUT_MS);
 
   it('wrecks the agent the reversing ego backs into, with the ego as striker', () => {
     const sim = createSim(RAPIER, MID_LANE, CAR, { ...TRAFFIC, assists: { autoGearbox: true, signalAutoCancel: null } });

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import map from '../../tests/fixtures/map-minimal.json' with { type: 'json' };
 import {
   CENTRE_DASH,
+  LANE_DASH,
   LINE_WIDTH_M,
   crosswalkStripes,
   dashIntervals,
@@ -111,7 +112,7 @@ describe('marking geometry', () => {
     const heading = nearestLaneHeading(fixture, [92, 0]);
     expect(heading).not.toBeNull();
     const stripes = crosswalkStripes(cw.polygon, /** @type {number} */ (heading));
-    // 7 m across the road at 0.5 m stripe + 0.5 m gap: 7 stripes.
+    // 7 m across the road at 0.4 m stripe + 0.6 m gap: 7 stripes.
     expect(stripes).toHaveLength(7);
     for (const q of stripes) {
       const xs = q.map((p) => p[0]);
@@ -119,6 +120,59 @@ describe('marking geometry', () => {
       expect(Math.max(...xs)).toBeCloseTo(94, 9);
       for (const p of q) expect(Math.abs(p[1])).toBeLessThanOrEqual(3.5 + 1e-9);
     }
+  });
+});
+
+/**
+ * Length of a quad side.
+ * @param {[number, number][]} q Quad.
+ * @param {number} i Side from corner `i` to corner `i + 1`.
+ * @returns {number} Length.
+ */
+function side(q, i) {
+  const a = q[i];
+  const b = q[(i + 1) % q.length];
+  return Math.hypot(b[0] - a[0], b[1] - a[1]);
+}
+
+describe('QCVN 41:2024 Phụ lục G sizes, read from the built quads', () => {
+  const lanes = lanesOf('rw');
+
+  it('paints lane and centre lines 15 cm wide with 1–3 m dashes', () => {
+    for (const type of /** @type {const} */ (['dashed', 'solid', 'double-solid'])) {
+      for (const q of laneLineQuads(line({ type }), lanes).quads) expect(side(q, 1)).toBeCloseTo(0.15, 9);
+    }
+    const centre = laneLineQuads(line({}), lanes).quads;
+    expect(side(centre[0], 0)).toBeGreaterThanOrEqual(1);
+    expect(side(centre[0], 0)).toBeLessThanOrEqual(3);
+    // Gap between the first two dashes: 2–6 m at 1:2 for vạch 1.1.
+    const gap = centre[1][0][0] - centre[0][1][0];
+    expect(gap).toBeGreaterThanOrEqual(2);
+    expect(gap).toBeLessThanOrEqual(6);
+    expect(side(centre[0], 0) / gap).toBeCloseTo(1 / 2, 9);
+    // Vạch 2.1: 3–9 m gaps at 1:3.
+    expect(LANE_DASH.gap).toBeGreaterThanOrEqual(3);
+    expect(LANE_DASH.gap).toBeLessThanOrEqual(9);
+    expect(LANE_DASH.dash / LANE_DASH.gap).toBeCloseTo(1 / 3, 9);
+  });
+
+  it('separates the two yellow strands of vạch 1.3 by a 15–50 cm inner gap', () => {
+    const { color, quads } = laneLineQuads(line({ type: 'double-solid' }), lanes);
+    expect(color).toBe('yellow');
+    const zs = quads.map((q) => (q[0][1] + q[3][1]) / 2).sort((a, b) => a - b);
+    const inner = zs[1] - zs[0] - 0.15;
+    expect(inner).toBeGreaterThanOrEqual(0.15 - 1e-9);
+    expect(inner).toBeLessThanOrEqual(0.5);
+  });
+
+  it('draws the stop line 30 cm wide and zebra stripes 40 cm wide with 60 cm gaps', () => {
+    const [stop] = stopLineQuads(fixture.stopLines[0]);
+    expect(Math.min(side(stop, 0), side(stop, 1))).toBeCloseTo(0.3, 9);
+    const heading = /** @type {number} */ (nearestLaneHeading(fixture, [92, 0]));
+    const stripes = crosswalkStripes(fixture.crosswalks[0].polygon, heading);
+    for (const q of stripes) expect(Math.min(side(q, 0), side(q, 1))).toBeCloseTo(0.4, 9);
+    const across = stripes.map((q) => Math.min(...q.map((p) => p[1]))).sort((a, b) => a - b);
+    expect(across[1] - across[0] - 0.4).toBeCloseTo(0.6, 9);
   });
 });
 

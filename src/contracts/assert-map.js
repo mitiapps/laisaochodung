@@ -418,6 +418,9 @@ export function checkMap(map, options = {}) {
   return c.problems;
 }
 
+/** A `#rrggbb` colour. */
+const HEX_COLOUR = /^#[0-9a-fA-F]{6}$/;
+
 /** Tolerance on the sum of `traffic.mix` shares. */
 const MIX_SUM_TOLERANCE = 1e-6;
 
@@ -429,7 +432,7 @@ const MIX_SUM_TOLERANCE = 1e-6;
  * @returns {void}
  */
 function checkBuildingFields(c, o, p) {
-  const present = ['use', 'floors', 'frontEdge'].filter((k) => o[k] !== undefined);
+  const present = ['use', 'floors', 'frontEdge', 'colour'].filter((k) => o[k] !== undefined);
   if (present.length === 0) return;
   if (o.kind !== 'building') {
     c.fail(p, `only buildings carry ${present.join(', ')}`);
@@ -441,6 +444,7 @@ function checkBuildingFields(c, o, p) {
     const edges = Array.isArray(o.footprint) ? o.footprint.length - 1 : 0;
     c.number(o.frontEdge, `${p}.frontEdge`, { integer: true, min: 0, max: Math.max(0, edges) });
   }
+  if (o.colour !== undefined && (typeof o.colour !== 'string' || !HEX_COLOUR.test(o.colour))) c.fail(`${p}.colour`, 'expected #rrggbb');
 }
 
 /**

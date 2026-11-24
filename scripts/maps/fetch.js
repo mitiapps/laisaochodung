@@ -15,14 +15,20 @@ import { parse } from 'yaml';
 import { bboxCentre } from './lib/project.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const ENDPOINT = 'https://overpass-api.de/api/interpreter';
+/**
+ * Public Overpass instances, tried in turn: the main one answers 502 "at capacity" at busy times,
+ * and the second mirrors the same database.
+ */
+const ENDPOINTS = Object.freeze(['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter']);
 // A generic client name; the public instance asks for a User-Agent but needs no project details.
 const USER_AGENT = 'osm-extract-script/1.0';
 const RETRY_STATUSES = new Set([429, 502, 503, 504]);
 const MAX_ATTEMPTS = 6;
 
 /**
- * Overpass QL for a bbox: drivable ways plus the control and sign nodes the converter reads.
+ * Overpass QL for a bbox: drivable ways plus the control and sign nodes the converter reads, and
+ * the scenery the build imports: building footprints and parts, trees, street lamps, bus stops,
+ * motorbike parking, benches, street cabinets, and fences, walls and gates.
  * @param {import('./lib/project.js').Bbox} bbox Bounding box.
  * @returns {string} Query.
  */
@@ -34,6 +40,17 @@ export function overpassQuery(bbox) {
     `  way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service)(_link)?$"](${b});`,
     `  node["highway"~"^(traffic_signals|crossing|stop|give_way)$"](${b});`,
     `  node["traffic_sign"](${b});`,
+    `  way["building"](${b});`,
+    `  way["building:part"](${b});`,
+    `  relation["building"](${b});`,
+    `  relation["building:part"](${b});`,
+    `  node["natural"="tree"](${b});`,
+    `  node["highway"~"^(street_lamp|bus_stop)$"](${b});`,
+    `  node["amenity"~"^(motorcycle_parking|bench)$"](${b});`,
+    `  node["man_made"="street_cabinet"](${b});`,
+    `  way["amenity"="motorcycle_parking"](${b});`,
+    `  node["barrier"~"^(fence|wall|gate)$"](${b});`,
+    `  way["barrier"~"^(fence|wall|gate)$"](${b});`,
     ');',
     'out body geom;',
   ].join('\n');
@@ -95,7 +112,8 @@ function sleep(ms) {
 }
 
 /**
- * POSTs the query with exponential backoff on overload responses.
+ * POSTs the query with exponential backoff on overload responses, moving to the next public
+ * instance on each retry.
  * @param {string} query Overpass QL.
  * @returns {Promise<unknown>} Parsed JSON.
  */
@@ -105,20 +123,21 @@ async function postQuery(query) {
     /** @type {Response | null} */
     let res = null;
     let failure = '';
+    const endpoint = ENDPOINTS[(attempt - 1) % ENDPOINTS.length];
     try {
-      res = await fetch(ENDPOINT, {
+      res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': USER_AGENT },
         body: new URLSearchParams({ data: query }),
         signal: AbortSignal.timeout(120_000),
       });
     } catch (err) {
-      failure = `network error: ${err instanceof Error ? err.message : String(err)}`;
+      failure = `${endpoint}: network error: ${err instanceof Error ? err.message : String(err)}`;
     }
     if (res) {
       const body = await res.text();
       if (res.ok && body.trimStart().startsWith('{')) return JSON.parse(body);
-      failure = `HTTP ${res.status}: ${body.slice(0, 120).replace(/\s+/g, ' ')}`;
+      failure = `${endpoint}: HTTP ${res.status}: ${body.slice(0, 120).replace(/\s+/g, ' ')}`;
       if (!RETRY_STATUSES.has(res.status) && res.ok === false) throw new Error(`Overpass refused the query (${failure})`);
     }
     if (attempt === MAX_ATTEMPTS) throw new Error(`Overpass failed after ${attempt} attempts (${failure})`);

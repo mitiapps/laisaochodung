@@ -2,9 +2,15 @@
  * Pure road-marking geometry (QCVN 41:2024 Phụ lục G codes) as ground quads. A quad is four
  * `[x, z]` corners in ring order; `road-mesh.js` turns quads into triangles.
  *
- * The 15 cm width of vạch 1.1 and 2.1 and their 1:2 and 1:3 dash ratios follow the research notes
- * on Phụ lục G. Using 15 cm for the other centre and lane lines, the absolute dash lengths, stripe
- * widths and the stop-line width are drawing choices until compared with the official annex.
+ * Values from QCVN 41:2024 Phụ lục G (official annex of TT 51/2024/TT-BGTVT,
+ * https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/51-bgtvt-kem.pdf):
+ * - vạch 1.1, 1.2, 1.3, 2.1 and 2.2 are 15 cm wide; only centre lines (1.x) are yellow;
+ * - vạch 1.1 dashes 1–3 m with 2–6 m gaps at 1:2 (3 m and 6 m here);
+ * - vạch 2.1 dashes 1–3 m with 3–9 m gaps at 1:3 (2 m and 6 m here);
+ * - vạch 1.3 is two 15 cm lines with a 15–50 cm inner gap (15 cm here);
+ * - vạch 7.1 is 20, 30 or 40 cm wide (30 cm here, for urban streets);
+ * - vạch 7.3 Mẫu 1 stripes are 40 cm wide with 60 cm gaps.
+ * The give-way line (vạch 7.2) size is a drawing choice.
  */
 
 import { headingVector, leftVector, offsetPolyline, polylineLength, slicePolyline } from '../geometry/index.js';
@@ -15,20 +21,20 @@ import { headingVector, leftVector, offsetPolyline, polylineLength, slicePolylin
 /** @typedef {import('../contracts/map.js').Lane} Lane */
 /** @typedef {import('../contracts/map.js').StopLine} StopLine */
 
-/** Width of centre and lane lines in metres (15 cm is given for vạch 1.1 and 2.1; reused for the rest). */
+/** Width of centre and lane lines in metres (15 cm for vạch 1.1–1.3, 2.1 and 2.2). */
 export const LINE_WIDTH_M = 0.15;
-/** Centre-to-centre spacing of the two strands of a double or mixed line. */
+/** Centre-to-centre spacing of the two strands of a double or mixed line: a 15 cm inner gap. */
 export const DOUBLE_SPACING_M = 0.3;
 /** Dash pattern of a dashed centre line (vạch 1.1, ratio 1:2). */
 export const CENTRE_DASH = Object.freeze({ dash: 3, gap: 6 });
 /** Dash pattern of a dashed lane line (vạch 2.1, ratio 1:3). */
 export const LANE_DASH = Object.freeze({ dash: 2, gap: 6 });
-/** Stop line width (vạch 7.1). */
-export const STOP_LINE_WIDTH_M = 0.4;
+/** Stop line width (vạch 7.1: 20, 30 or 40 cm). */
+export const STOP_LINE_WIDTH_M = 0.3;
 /** Give-way line (vạch 7.2) width and dash pattern. */
 export const GIVE_WAY = Object.freeze({ width: 0.3, dash: 0.6, gap: 0.6 });
-/** Zebra stripe width and gap (vạch 7.3). */
-export const ZEBRA = Object.freeze({ stripe: 0.5, gap: 0.5 });
+/** Zebra stripe width and gap (vạch 7.3 Mẫu 1). */
+export const ZEBRA = Object.freeze({ stripe: 0.4, gap: 0.6 });
 
 /**
  * @typedef {object} Strand

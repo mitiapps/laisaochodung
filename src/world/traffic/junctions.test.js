@@ -7,6 +7,7 @@ import { createTraffic, stepTraffic } from './index.js';
 import { priorityOf } from './junctions.js';
 import { reachesBeforeRed, signalDecision, yellowRemaining } from './signals.js';
 import { spawnAgent } from './state.js';
+import { lawfulParams } from './lawful-params.js';
 
 /** @typedef {import('../../contracts/map.js').GameMap} GameMap */
 /** @typedef {import('../../contracts/telemetry.js').ActorPose} ActorPose */
@@ -15,7 +16,8 @@ import { spawnAgent } from './state.js';
 /** @type {GameMap} */
 const MAP = JSON.parse(readFileSync(new URL('../../../tests/fixtures/map-junction.json', import.meta.url), 'utf8'));
 /** @type {import('../../contracts/traffic.js').TrafficParams} */
-const PARAMS = { ...JSON.parse(readFileSync(new URL('../../generated/traffic-params.json', import.meta.url), 'utf8')), preRollS: 0 };
+// The lawful population: these suites check what drivers who keep the rules never do.
+const PARAMS = { ...lawfulParams(JSON.parse(readFileSync(new URL('../../generated/traffic-params.json', import.meta.url), 'utf8'))), preRollS: 0 };
 const EGO = Object.freeze({ pos: { x: -60, z: 20 }, heading: 0, speed: 0, lengthM: 4.5, widthM: 1.8 });
 const BOX = MAP.junctions[0].polygon;
 /** Yellow go margin of the shipped params, seconds. */

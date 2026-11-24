@@ -36,6 +36,276 @@
     "ownWork": false
   },
   {
+    "file": "models/car-kit/suv.glb",
+    "title": "Car Kit 3.1: SUV",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/car-kit",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/car-kit/van.glb",
+    "title": "Car Kit 3.1: Van",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/car-kit",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/car-kit/truck.glb",
+    "title": "Car Kit 3.1: Truck",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/car-kit",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/car-kit/delivery.glb",
+    "title": "Car Kit 3.1: Delivery van",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/car-kit",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/car-kit/truck-flat.glb",
+    "title": "Car Kit 3.1: Flatbed truck",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/car-kit",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/car-kit/debris-bumper.glb",
+    "title": "Car Kit 3.1: Debris: bumper",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/car-kit",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/car-kit/debris-door.glb",
+    "title": "Car Kit 3.1: Debris: door",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/car-kit",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/car-kit/debris-tire.glb",
+    "title": "Car Kit 3.1: Debris: tyre",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/car-kit",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/mini-characters/character-male-a.glb",
+    "title": "Mini Characters 2.0: Character Male A",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/mini-characters",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/mini-characters/character-male-b.glb",
+    "title": "Mini Characters 2.0: Character Male B",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/mini-characters",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/mini-characters/character-male-e.glb",
+    "title": "Mini Characters 2.0: Character Male E",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/mini-characters",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/mini-characters/character-female-b.glb",
+    "title": "Mini Characters 2.0: Character Female B",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/mini-characters",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/mini-characters/character-female-c.glb",
+    "title": "Mini Characters 2.0: Character Female C",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/mini-characters",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/mini-characters/character-female-e.glb",
+    "title": "Mini Characters 2.0: Character Female E",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/mini-characters",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/mini-characters/Textures/colormap.png",
+    "title": "Mini Characters 2.0: colour map texture",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/mini-characters",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/city-kit/roads/light-curved.glb",
+    "title": "City Kit Roads 2.2: Street light (curved)",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/city-kit-roads",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/city-kit/roads/light-square.glb",
+    "title": "City Kit Roads 2.2: Street light (square)",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/city-kit-roads",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/city-kit/roads/electricity-pole.glb",
+    "title": "City Kit Roads 2.2: Electricity pole",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/city-kit-roads",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/city-kit/roads/electricity-wires.glb",
+    "title": "City Kit Roads 2.2: Electricity wires",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/city-kit-roads",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/city-kit/roads/dumpster.glb",
+    "title": "City Kit Roads 2.2: Dumpster",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/city-kit-roads",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/city-kit/roads/Textures/colormap.png",
+    "title": "City Kit Roads 2.2: colour map texture",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/city-kit-roads",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/city-kit/commercial/detail-awning.glb",
+    "title": "City Kit Commercial 2.1: Awning",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/city-kit-commercial",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/city-kit/commercial/detail-awning-wide.glb",
+    "title": "City Kit Commercial 2.1: Awning (wide)",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/city-kit-commercial",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/city-kit/commercial/detail-parasol-a.glb",
+    "title": "City Kit Commercial 2.1: Parasol A",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/city-kit-commercial",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/city-kit/commercial/detail-parasol-b.glb",
+    "title": "City Kit Commercial 2.1: Parasol B",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/city-kit-commercial",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/city-kit/commercial/Textures/colormap.png",
+    "title": "City Kit Commercial 2.1: colour map texture",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/city-kit-commercial",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/city-kit/suburban/tree-large.glb",
+    "title": "City Kit Suburban 2.0: Tree (large)",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/city-kit-suburban",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/city-kit/suburban/tree-small.glb",
+    "title": "City Kit Suburban 2.0: Tree (small)",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/city-kit-suburban",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/city-kit/suburban/planter.glb",
+    "title": "City Kit Suburban 2.0: Planter",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/city-kit-suburban",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
+    "file": "models/city-kit/suburban/Textures/colormap.png",
+    "title": "City Kit Suburban 2.0: colour map texture",
+    "author": "Kenney",
+    "sourceUrl": "https://kenney.nl/assets/city-kit-suburban",
+    "licence": "CC0 1.0",
+    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "ownWork": false
+  },
+  {
     "file": "signs/P.101.svg",
     "title": "Biển P.101 Đường cấm",
     "author": "laisaochodung",

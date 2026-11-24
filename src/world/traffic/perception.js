@@ -1,5 +1,6 @@
 /**
- * Exact perception of the ego and of scripted actors. An agent tests its path corridor ahead
+ * Exact perception of the ego, of scripted actors and of static map obstacles on the road (as
+ * leaders standing still). An agent tests its path corridor ahead
  * against their footprints, as `stepActors` does for scripted actors, instead of projecting them
  * onto a lane: that works with the ego across a lane line, inside a junction or on the wrong side.
  *
@@ -40,7 +41,7 @@ const QUAD = [
 
 /**
  * Point `ds` ahead of the slot's centre along its route (its edge, the next edge, and a
- * connector's exit lane), clamped at the end of the known route. Writes into `P`.
+ * connector's exit lane or a joined lane), clamped at the end of the known route. Writes into `P`.
  * @param {TrafficState} st State.
  * @param {number} slot Slot.
  * @param {number} ds Distance ahead of the centre.
@@ -54,7 +55,9 @@ function routePoint(st, slot, ds) {
   for (let hop = 0; hop < 2 && s > e.length && next >= 0; hop += 1) {
     s -= e.length;
     e = edges[next];
-    next = e.kind === 'connector' ? e.toEdge : -1;
+    // Past the chosen next edge the route is known only where it has one way on: a connector's
+    // exit lane, or the lane a joining lane runs into.
+    next = e.kind === 'connector' || e.next.length === 1 ? (e.next[0] ?? -1) : -1;
   }
   edgePoint(e, s, P);
 }
@@ -98,29 +101,32 @@ export function corridorObstacle(st, slot, obstacles, lookM, out) {
   const reach = half + lookM;
   const ax = st.x[slot];
   const az = st.z[slot];
-  let any = false;
+  const halfW = st.widthM[slot] / 2 + st.params.behaviour.corridorMarginM;
+  const hx = Math.cos(st.heading[slot]);
+  const hz = -Math.sin(st.heading[slot]);
+  // Candidates: within reach, not behind, and not too far to the side for a route that may bend.
+  CAND.length = 0;
   for (const o of obstacles) {
     const dx = o.x - ax;
     const dz = o.z - az;
     const r = reach + o.radius;
-    if (dx * dx + dz * dz <= r * r) {
-      any = true;
-      break;
-    }
+    if (dx * dx + dz * dz > r * r) continue;
+    const along = dx * hx + dz * hz;
+    if (along < -(half + o.radius)) continue;
+    const side = Math.abs(dx * hz - dz * hx);
+    if (side > halfW + o.radius + Math.max(0, along) * BEND_SPREAD + 1) continue;
+    CAND.push(o);
+    ALONG[CAND.length - 1] = along;
   }
-  if (!any) return;
-  const halfW = st.widthM[slot] / 2 + st.params.behaviour.corridorMarginM;
-  const hx = Math.cos(st.heading[slot]);
-  const hz = -Math.sin(st.heading[slot]);
+  if (CAND.length === 0) return;
   corner(st, slot, half, halfW, 0, 1);
   for (let a = 0; a < lookM - 1e-9; a += CORRIDOR_PIECE_M) {
     const b = Math.min(lookM, a + CORRIDOR_PIECE_M);
     corner(st, slot, half + b, halfW, 3, 2);
-    for (const o of obstacles) {
-      const dx = o.x - ax;
-      const dz = o.z - az;
-      const r = reach + o.radius;
-      if (dx * dx + dz * dz > r * r) continue;
+    for (let i = 0; i < CAND.length; i += 1) {
+      const o = CAND[i];
+      // Along the route a piece is never nearer than in a straight line.
+      if (half + b < ALONG[i] - o.radius) continue;
       if (polygonsIntersect(QUAD, o.footprint)) {
         out[0] = a;
         out[1] = Math.max(0, o.vx * hx + o.vz * hz);
@@ -134,3 +140,11 @@ export function corridorObstacle(st, slot, obstacles, lookM, out) {
     QUAD[1][1] = QUAD[2][1];
   }
 }
+
+/** Sideways spread allowed per metre ahead for a bending route (design: about a 60° turn). */
+const BEND_SPREAD = 1;
+/** @type {Obstacle[]} */
+const CAND = [];
+/** Straight distance ahead of each candidate. */
+/** @type {number[]} */
+const ALONG = [];

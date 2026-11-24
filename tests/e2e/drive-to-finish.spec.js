@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { KEY_BINDINGS } from '../../src/contracts/controls.js';
+import { CONTROL_PRESET_STORAGE_KEY } from '../../src/ui/lib/control-preset-store.js';
 
 /**
  * Full runs of tutorial 01 through the shipped build, driven only through the keyboard and read
@@ -255,6 +256,11 @@ async function driveToFinish(page, { isCar, signalLaneChange, timeoutMs }) {
   await setThrottle(false);
   throw new Error(`No finish within ${timeoutMs} ms (checkpoint ${checkpoint})`);
 }
+
+// These runs drive the Thực tế preset (manual gears, separate brakes); the preset is stored before load.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [CONTROL_PRESET_STORAGE_KEY, 'real']);
+});
 
 test.describe.configure({ mode: 'serial' });
 

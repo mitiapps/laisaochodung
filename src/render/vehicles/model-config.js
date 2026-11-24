@@ -1,7 +1,7 @@
 /**
  * Per-model drawing config. Models are authored the Kenney way: front towards local +Z, left
  * towards local +X, wheels as separate nodes. The view turns that frame to +X forward, so every
- * model (GLB, box or primitive) shares one wheel and lamp code path.
+ * model (GLB, box or procedural) shares one wheel and lamp code path.
  */
 
 /**
@@ -13,7 +13,10 @@
  *   motorbike front, rear); missing nodes get generated wheels.
  * @property {number} wheelRadiusM Wheel radius of the generated wheels and of NPC wheel spin.
  * @property {number} heightM Body height of the box fallback.
- * @property {number} color Body colour of the box or primitive fallback.
+ * @property {number} color Body colour of the box or primitive fallback, and the paint of a
+ *   procedural model.
+ * @property {import('./motorbike.js').MotorbikeType} [procedural] Draw this procedural motorbike
+ *   (with a rider) instead of a GLB or the primitive scooter.
  */
 
 /** Kenney Car Kit wheel node names in car `WheelState` order. */
@@ -23,5 +26,14 @@ export const KENNEY_WHEELS = Object.freeze([
   'wheel-back-left',
   'wheel-back-right',
 ]);
+
+/**
+ * A Kenney Car Kit body (CC0). `paint` lists the cells of the kit's colour map (8 columns × 4
+ * rows, as `[column, row]` from the top left) that hold the body paint; they were measured as the
+ * largest saturated cell of each body mesh. Only those texels take a variant colour.
+ * @typedef {object} KenneyBody
+ * @property {string} glb GLB path relative to `public/`.
+ * @property {readonly (readonly number[])[]} paint Paint cells.
+ */
 
 export {};
