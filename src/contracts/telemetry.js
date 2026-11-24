@@ -33,7 +33,7 @@
  * @property {string} vehicleId Catalog id.
  * @property {import('./vehicle.js').LegalClass} legalClass Legal class.
  * @property {Pos3} pos Body centre; x and z on the ground plane. y is the body's height above its
- *   settled ride height: about 0 at rest on flat ground, which every MVP map is (D3), so the
+ *   settled ride height: about 0 at rest on flat ground, which every MVP map is, so the
  *   renderer stands the wheels on y with no per-vehicle offset.
  * @property {number} heading Heading θ in radians (see units.js).
  * @property {number} speed Signed forward speed in m/s (negative when reversing).

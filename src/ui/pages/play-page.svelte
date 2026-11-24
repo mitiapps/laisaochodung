@@ -24,6 +24,8 @@
   let hud = $state(/** @type {import('../../contracts/hud.js').HudState | null} */ (null));
   let error = $state(/** @type {string | null} */ (null));
   let stack = $state(emptyToastStack());
+  /** Counts restarts; the HUD rebuilds its on-screen controls when it changes. */
+  let runKey = $state(0);
 
   const problem = $derived(
     !game
@@ -92,6 +94,7 @@
 
   function restart() {
     stack = emptyToastStack();
+    runKey += 1;
     game?.restart();
   }
 
@@ -117,6 +120,7 @@
         {vehicle}
         toasts={stack.items}
         controls={/** @type {import('../../contracts/hud.js').GameApi} */ (game).controls}
+        {runKey}
         onpause={togglePause}
         ondismiss={(id) => (stack = dismissToast(stack, id))}
       />

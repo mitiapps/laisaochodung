@@ -385,11 +385,13 @@
       "unsafe-lane-change"
     ],
     "aftermathWindowS": 1.5,
+    "excuseMaxSpeedGainMps": 0.5,
     "paramBasis": {
       "nonContributingRules": "design",
       "rearEndContributingRules": "design",
       "excusingViolations": "design",
-      "aftermathWindowS": "design"
+      "aftermathWindowS": "design",
+      "excuseMaxSpeedGainMps": "design"
     },
     "noticeTexts": {
       "red-light": {
@@ -418,6 +420,12 @@
       },
       "aftermath": {
         "vi": "Va chạm tiếp theo sau khi bạn bị xe khác va vào. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm."
+      },
+      "ego-slow": {
+        "vi": "Bạn chạm nhẹ vào {vehicle} ở tốc độ rất thấp. Trò chơi không trừ điểm; hãy giữ khoảng cách an toàn."
+      },
+      "pedestrian-slow": {
+        "vi": "Có va chạm nhẹ với người đi bộ ở tốc độ rất thấp. Trò chơi không trừ điểm; hãy dừng hẳn và nhường đường cho người đi bộ."
       }
     }
   }

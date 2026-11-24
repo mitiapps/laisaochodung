@@ -40,7 +40,7 @@ import { trafficLightStates } from '../signals.js';
 import { idmAcceleration, integrate } from './idm.js';
 import { corridorObstacle } from './perception.js';
 import { reachesBeforeRed, redRemaining, signalDecision, yellowRemaining, yellowStopProbability } from './signals.js';
-import { breaksDeadlock, checkConflicts, claimBlocking, defersToWaiter, exitRoom, laneLight, zoneClaimed, zonesOccupied } from './junctions.js';
+import { HELD_BLOCKED, HELD_EXIT, breaksDeadlock, checkConflicts, claimBlocking, defersToWaiter, exitRoom, laneLight, mergesAhead, toExit, zoneClaimed, zonesOccupied } from './junctions.js';
 import { FLAG, draw, latch, raise, rateOf, violationsOf } from './violations.js';
 import { distracted, perceiveLeader, resetPerception } from './human-factors.js';
 import { chooseSlot, inTurnBand, moveTouches, overlapsAt, pathBlocked } from './moto-slots.js';
@@ -190,7 +190,9 @@ const VALID_INDICATORS = Object.freeze(['off', 'left', 'right', 'hazard']);
  *   than the class critical gap taken by choice).
  * @property {Uint8Array} held Next value of `TrafficState.held`.
  * @property {Float64Array} perceived2 Perceived leader pair.
- * @property {Vec2[][]} feet Footprints before the step's motion, by slot.
+ * @property {Vec2[][]} feet Footprints by slot: before the step's motion, then where each agent
+ *   has moved as the step goes on.
+ * @property {Vec2[][]} feetBefore Footprints before the step's motion, by slot.
  * @property {import('./junctions.js').EgoParty} egoParty The ego at junctions this step.
  * @property {Float64Array} laneBox Bounding box per lane edge, 4 per lane, with `egoOnLaneM` margin.
  */
@@ -234,6 +236,7 @@ function scratchOf(st) {
       held: new Uint8Array(n),
       perceived2: new Float64Array(2),
       feet: new Array(n),
+      feetBefore: new Array(n),
       egoParty: { lane: -1, toLaneEnd: 0, speed: 0 },
       laneBox: laneBoxes(st),
     };
@@ -489,7 +492,8 @@ function considerFirst(st, slot, edge, offset, out, path) {
  * The agent ahead on the slot's route that overlaps it laterally: on its edge (and, on a
  * connector, on its siblings until they diverge), else first on the next edge (and on sibling
  * connectors of a next connector, until they diverge), else first on the exit lane of a next
- * connector. Writes the true `[gap, speed]` into `out`; the gap is Infinity without one.
+ * connector. Writes the true `[gap, speed]` into `out`; the gap is Infinity without one. A merging
+ * agent going first is added by `mergeLeader`.
  * @param {TrafficState} st State.
  * @param {number} slot Slot.
  * @param {Int32Array} listPos Positions in edge lists.
@@ -530,19 +534,51 @@ function leaderAhead(st, slot, listPos, out) {
       break;
     }
   }
-  if (out[0] < Infinity) return;
   const next = st.nextEdge[slot];
-  if (next < 0) return;
-  const rem = edges[e].length - front;
-  considerFirst(st, slot, next, rem, out, -1);
-  const ne = edges[next];
-  if (ne.kind === 'connector') {
-    for (const sib of ne.siblings) considerFirst(st, slot, sib, rem, out, next);
-    if (out[0] === Infinity) considerFirst(st, slot, ne.toEdge, rem + ne.length, out, -1);
+  if (out[0] === Infinity && next >= 0) {
+    const rem = edges[e].length - front;
+    considerFirst(st, slot, next, rem, out, -1);
+    const ne = edges[next];
+    if (ne.kind === 'connector') {
+      for (const sib of ne.siblings) considerFirst(st, slot, sib, rem, out, next);
+      if (out[0] === Infinity) considerFirst(st, slot, ne.toEdge, rem + ne.length, out, -1);
+    }
+    if (out[0] > LEADER_LOOK_M) {
+      out[0] = Infinity;
+      out[1] = 0;
+    }
   }
-  if (out[0] > LEADER_LOOK_M) {
-    out[0] = Infinity;
-    out[1] = 0;
+}
+
+/**
+ * At a merge, the claimant of a merging connector that goes first into the shared exit lane is a
+ * leader from the slot's claim until both are on the exit lane. Takes it when it is nearer than
+ * the one in `out`.
+ * @param {TrafficState} st State.
+ * @param {number} slot Slot.
+ * @param {Float64Array} out `[gap, speed]`, updated.
+ * @returns {void}
+ */
+function mergeLeader(st, slot, out) {
+  const edges = st.graph.edges;
+  const e = st.edge[slot];
+  const claim = st.claim[slot];
+  const mine = edges[e].kind === 'connector' ? e : claim >= 0 && claim === st.nextEdge[slot] ? claim : -1;
+  if (mine < 0) return;
+  const dSelf = toExit(st, slot, mine);
+  for (const cf of edges[mine].conflicts) {
+    if (!cf.merge) continue;
+    const list = st.claimants[cf.other];
+    for (let i = 0; i < st.claimCount[cf.other]; i += 1) {
+      const k = list[i];
+      const dK = toExit(st, k, cf.other);
+      if (dK === -Infinity || !mergesAhead(dSelf, dK, st.spawnIndex[slot], st.spawnIndex[k])) continue;
+      const gap = dSelf - dK - st.lengthM[k];
+      if (gap < out[0] && gap <= LEADER_LOOK_M) {
+        out[0] = gap;
+        out[1] = st.v[k];
+      }
+    }
   }
 }
 
@@ -804,8 +840,12 @@ function computePhase(st, input, egoObs, scriptedObs, sc) {
     // The agent ahead, as the driver perceives it; the advance stops at the true gap unless the
     // driver is distracted.
     leaderAhead(st, k, sc.listPos, pair);
+    // A leader overlapping the body already (a rider alongside that the clearance at this speed
+    // counts as in the way) is a contact to avoid, not a gap kept too short.
+    if (pair[0] > 0 && pair[0] < Infinity && v > TAILGATE_MIN_MPS && pair[0] / v < st.tailgateGap[k]) raise(st, k, FLAG.tailgating);
+    // Joining the exit lane behind a merging agent is not following it too closely.
+    mergeLeader(st, k, pair);
     const trueGap = pair[0];
-    if (trueGap < Infinity && v > TAILGATE_MIN_MPS && trueGap / v < st.tailgateGap[k]) raise(st, k, FLAG.tailgating);
     if (e.limitKmh !== null && v > e.limitKmh / 3.6) raise(st, k, FLAG.speeding);
     perceiveLeader(st, k, trueGap, pair[1], t, seen);
     let gapGo = distracted(st, k, t) ? Infinity : trueGap - QUEUE_BUFFER_M;
@@ -956,7 +996,7 @@ function computePhase(st, input, egoObs, scriptedObs, sc) {
     // is, so holding on would lock both junctions).
     if ((st.claim[k] >= 0 && st.edge[k] !== edges[st.claim[k]].toEdge) || across) continue;
     if (blockedAhead) {
-      sc.held[k] = 1;
+      sc.held[k] = HELD_BLOCKED;
       continue;
     }
     if (e.control === 'stop-sign' && !st.haltedAtLine[k]) continue;
@@ -965,7 +1005,7 @@ function computePhase(st, input, egoObs, scriptedObs, sc) {
     if (!inTurnBand(st, k, next)) continue;
     const egoNear = Math.abs(edx) + Math.abs(edz) < 200 ? egoMid : null;
     if (exitRoom(st, next, k, sc.reserved, egoNear, input.lights) < st.lengthM[k] + st.minGap[k]) {
-      sc.held[k] = 1;
+      sc.held[k] = HELD_EXIT;
       continue;
     }
     if (running) {
@@ -1001,6 +1041,8 @@ function bodiesOf(st, sc) {
   for (let i = 0; i < st.activeCount; i += 1) {
     const k = st.active[i];
     feet[k] = footprint({ x: st.x[k], z: st.z[k] }, st.heading[k], st.lengthM[k], st.widthM[k]);
+    // Motion replaces `feet[k]` with a new polygon, so this keeps the body before the step.
+    sc.feetBefore[k] = feet[k];
   }
   return feet;
 }
@@ -1057,6 +1099,8 @@ const TOUCHED = { slot: -1 };
 export const NUDGE_AFTER_S = 1;
 /** How far a held agent edges sideways at a time, metres (design). */
 const NUDGE_M = 0.4;
+/** A rider that edged aside for a held one keeps its place this long, seconds (design). */
+const MAKE_ROOM_S = 3;
 
 /**
  * Moves a held agent's lateral target away from the body in its way, within its lane.
@@ -1107,7 +1151,7 @@ function applyPhase(st, input, sc, nReq) {
     if (sc.runner[k]) ok = !zonesOccupied(st, conn, k);
     else {
       for (const cf of edges[conn].conflicts) {
-        if (zoneClaimed(st, cf, k)) {
+        if (zoneClaimed(st, conn, cf, k)) {
           ok = false;
           break;
         }
@@ -1214,7 +1258,17 @@ function applyPhase(st, input, sc, nReq) {
         // Held this way for a while, an agent edges sideways within its lane, away from the body in
         // its way, so two agents cannot hold each other for ever. One moving across keeps its
         // target: it still watches the lane it is leaving, and others see it as moving across.
-        if (!st.crossing[k] && st.frozenS[k] > NUDGE_AFTER_S) nudgeAway(st, k, TOUCHED.slot);
+        if (!st.crossing[k] && st.frozenS[k] > NUDGE_AFTER_S) {
+          nudgeAway(st, k, TOUCHED.slot);
+          // A rider standing on its lane in the way edges aside as well, and keeps that place a
+          // while, to let the held one through (a turning rider's swinging body can be pinned
+          // between two standing ones).
+          const b = TOUCHED.slot;
+          if (b >= 0 && st.isMoto[b] && !st.wreck[b] && !st.crossing[b] && st.v[b] < STOPPED_MPS && edges[st.edge[b]].kind === 'lane') {
+            nudgeAway(st, b, k);
+            st.makeRoomUntil[b] = input.t + MAKE_ROOM_S;
+          }
+        }
       } else {
         st.frozenS[k] = 0;
         // Later agents of this step check against where this one has moved.
@@ -1294,7 +1348,10 @@ function applyPhase(st, input, sc, nReq) {
     if (st.unsafeChange[k] && st.crossing[k]) raise(st, k, FLAG['unsafe-lane-change']);
     st.heedless[k] = (st.heedless[k] && (st.redConn[k] >= 0 || st.noYieldConn[k] >= 0)) || (st.unsafeChange[k] && st.crossing[k]) ? 1 : 0;
   }
-  // A rider moving its slot into the ego's path inside the ego's stopping distance.
+  // A rider moving its slot into the ego's path inside the ego's stopping distance: raised on the
+  // step its own motion takes its body into the corridor from outside, so a rider already in the
+  // ego's path, or one the corridor grows or swings over as the ego speeds up or steers, is not
+  // cutting in.
   const corridor = egoCorridorOf(input.ego);
   if (corridor) {
     const ex = input.ego.pos.x;
@@ -1304,7 +1361,7 @@ function applyPhase(st, input, sc, nReq) {
       const lr = st.latRate[k];
       if (!st.isMoto[k] || lr === 0 || st.wreck[k]) continue;
       const toward = (-(ex - st.x[k]) * Math.sin(st.heading[k]) - (ez - st.z[k]) * Math.cos(st.heading[k])) * lr > 0;
-      if (toward && polygonsIntersect(corridor, footprint({ x: st.x[k], z: st.z[k] }, st.heading[k], st.lengthM[k], st.widthM[k]))) {
+      if (toward && !polygonsIntersect(corridor, sc.feetBefore[k]) && polygonsIntersect(corridor, footprint({ x: st.x[k], z: st.z[k] }, st.heading[k], st.lengthM[k], st.widthM[k]))) {
         raise(st, k, FLAG['unsafe-lane-change']);
       }
     }
@@ -1341,11 +1398,15 @@ export function stepTraffic(state, input) {
     x: e.pos.x,
     z: e.pos.z,
     heading: e.heading,
+    speed: e.speed,
+    // Turn rate from the last step; none across a reset (the ego is put back somewhere else).
+    yawRate: Number.isNaN(st.egoHeadingBefore) || input.egoReset ? 0 : angleDiff(st.egoHeadingBefore, e.heading) / DT,
     footprint: fp,
     spawnGuard: footprint(e.pos, e.heading, e.lengthM + 2 * st.params.spawnEgoMarginM, e.widthM + 2 * st.params.spawnEgoMarginM),
   };
   const scriptedObs = obstaclesOf(input.scripted);
 
+  st.egoHeadingBefore = e.heading;
   applyEvents(st, input, egoView);
   rebuildGrid(st.grid, st.active, st.activeCount, st.x, st.z);
   runSpawner(st, input.t, egoView, scriptedObs);
@@ -1412,7 +1473,7 @@ export function stepTraffic(state, input) {
   const corridor = egoCorridorOf(e);
   for (let i = 0; i < st.activeCount; i += 1) {
     const k = st.active[i];
-    if (!st.isMoto[k] || st.wreck[k] || st.crossing[k] || distracted(st, k, input.t) || (st.tick + st.spawnIndex[k]) % slotPeriod !== 0) continue;
+    if (!st.isMoto[k] || st.wreck[k] || st.crossing[k] || input.t < st.makeRoomUntil[k] || distracted(st, k, input.t) || (st.tick + st.spawnIndex[k]) % slotPeriod !== 0) continue;
     const edge = st.graph.edges[st.edge[k]];
     if (edge.kind !== 'lane') continue;
     edgePoint(edge, Math.min(st.s[k], edge.length), LANE_POINT);
@@ -1455,7 +1516,8 @@ function preRollEgo(map) {
 /**
  * Creates the traffic of a run and pre-rolls it for `params.preRollS` with the ego as a static
  * blocker at the map's start pose and the ring spawner reaching the ego, so the road is populated
- * at `t = 0`. Lights follow the map cycles at negative `t` (`signalState` wraps them).
+ * at `t = 0`. Lights follow the map cycles at negative `t` (`signalState` wraps them). Wrecks left
+ * by the pre-roll are removed, and the time its ego stood still is not handed over.
  * @param {GameMap} map Map with a `traffic` block.
  * @param {TrafficParams} params Compiled traffic parameters.
  * @param {number} runSeed Run seed, a 32-bit integer.
@@ -1472,7 +1534,13 @@ export function createTraffic(map, params, runSeed) {
     const t = (i - steps) * DT;
     stepTraffic(st, { ego, egoReset: false, scripted, lights: trafficLightStates(map, t), egoContacts: [], t });
   }
+  // The run opens on no crash the player did not see: wrecks still standing leave with their flags.
+  for (let i = st.activeCount - 1; i >= 0; i -= 1) if (st.wreck[st.active[i]]) despawnAgent(st, st.active[i], 'wreck');
   st.preRolling = false;
+  // The pre-roll ego stood all along; the player's ego has not stood yet.
+  st.egoStillS = 0;
+  st.egoHeadingBefore = Number.NaN;
+  scratchOf(st).egoParked.spans = null;
   st.t = 0;
   return st;
 }

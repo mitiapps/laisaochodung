@@ -119,8 +119,13 @@ Other contacts:
 - A lighter hit on the car ahead in the same lane cites 6.4.l or 7.3.i.
 - Other car contacts, static objects, kerbs and falls deduct score only.
 - A contact while the ego is slower than `contactMinEgoSpeed` is never charged. A vehicle contact
-  the fault table would charge gives a notice instead and opens the aftermath window, so a
-  struck, stopped player, or one creeping into another vehicle, still sees a notice.
+  the fault table would charge gives a notice instead (`ego-slow`: the player touched it at a
+  crawl and should keep a safe distance) and opens the aftermath window, so a struck, stopped
+  player, or one creeping into another vehicle, still sees a notice. A pedestrian contact below
+  that speed is a notice too (`pedestrian-slow`, worded neutrally, as a pedestrian may walk into a
+  standing vehicle), never a deduction and never a run end. A static object or kerb touched below
+  it gives nothing: it carries no penalty at any speed, and touching a kerb while parking would
+  fill the screen.
 
 ### Fault table
 
@@ -132,21 +137,28 @@ at fault (`src/scoring/fault.js`; first match wins):
 | `aftermath` | Within `aftermathWindowS` of a notice contact (the shove), other party not a pedestrian | notice |
 | `from-behind` | The other party came from behind and struck, unless a `rearEndContributingRules` episode (`lane-change`, `turn-signal`) put the player wrongly in front | notice |
 | `contributing` | An episode of any rule but `nonContributingRules` (`night-horn`) is active within `crashCauseWindowS` | deduction |
-| `same-lane-ahead` | The player runs into the vehicle ahead in its lane, which carries no excusing violation | deduction |
-| `ego-strikes` | The player struck a vehicle that carries no excusing violation | deduction |
+| `same-lane-ahead` | The player runs into the vehicle ahead in its lane, which carries no excusing violation the player did not speed up into | deduction |
+| `ego-strikes` | The player struck a vehicle that carries no excusing violation the player did not speed up into | deduction |
 | `otherwise` | Anything else | notice |
 
 The other party's violations are the flags traffic latched within `crashCauseWindowS`; a
 scripted actor carries `wrong-way` while it moves against the lane it is on. Only
 `excusingViolations` (`red-light`, `wrong-way`, `no-yield`, `unsafe-lane-change`) excuse a player
-who strikes; a merely speeding or tailgating vehicle does not. A notice carries the other
+who strikes; a merely speeding or tailgating vehicle does not. Nor does one the player closed in
+on: an excusing violation stops excusing once the player has gained more than
+`excuseMaxSpeedGainMps` (0.5 m/s, `design`) between the violation first showing on that vehicle
+and the contact. Another party's violation does not lift the player's own duty to observe, slow
+down and keep a safe distance (10.a), so chasing a rider that cut in is the player's crash, while
+a rider cutting in on a player who holds its speed is a notice. Traffic flags a rider's cut-in
+only on the step its own sideways move takes it into the player's stopping corridor; a rider the
+corridor grows over as the player speeds up or steers is not cutting in. A notice carries the other
 party's flags and a text from `noticeTexts`; it never states a legal conclusion. Pedestrian
 contacts never enter the table, and static objects, kerbs and falls match only `aftermath`.
 
 `paramBasis` of the collision policy gives the basis of each fault-table choice
-(`nonContributingRules`, `rearEndContributingRules`, `excusingViolations`, `aftermathWindowS`);
-all four are `design` and required once `faultRows` is set. The rules validator rejects a policy
-with a fault table and no basis for one of them.
+(`nonContributingRules`, `rearEndContributingRules`, `excusingViolations`, `aftermathWindowS`,
+`excuseMaxSpeedGainMps`); all are `design`, and every one the policy sets needs a basis. The rules
+validator rejects a policy with a fault table and no basis for one of them.
 
 ## Lane-change gaps
 

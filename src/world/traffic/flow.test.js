@@ -11,25 +11,23 @@ const MAP = JSON.parse(readFileSync(new URL('../../../public/maps/osm-pasteur.js
 /** @type {import('../../contracts/traffic.js').TrafficParams} */
 const PARAMS = JSON.parse(readFileSync(new URL('../../generated/traffic-params.json', import.meta.url), 'utf8'));
 /** The ego parked off the road between the Pasteur junctions, so the ring keeps them full. */
-const EGO = Object.freeze({ pos: { x: -40, z: -120 }, heading: 2.4, speed: 0, lengthM: 4.5, widthM: 1.8 });
+const PARKED = Object.freeze({ pos: { x: -40, z: -120 }, heading: 2.4, speed: 0, lengthM: 4.5, widthM: 1.8 });
+/** The ego standing at the route start, on the carriageway, as a player who never drives off. */
+const AT_START = Object.freeze({ pos: { ...MAP.route.start.pos }, heading: MAP.route.start.heading, speed: 0, lengthM: 4.5, widthM: 1.8 });
 
-// The full check is 20 seeds x 10 simulated minutes with TRAFFIC_LONG=1; the default suite runs 3
-// seeds of the same length to stay fast.
+// The full check is 20 seeds with TRAFFIC_LONG=1; the default suite runs 3 seeds of the same length
+// to stay fast. Parked off the road, traffic runs 10 simulated minutes; at the route start, the
+// map's time limit, the longest a player can stand there in a run.
 const { env } = process;
 const SEEDS = env.TRAFFIC_LONG ? 20 : 3;
-const SECONDS = 600;
+const PARKED_SECONDS = 600;
 
 /** An agent standing (below this speed) this long counts as stuck, seconds. */
 const STUCK_AFTER_S = 90;
 /** Below this speed an agent stands, m/s. */
 const STANDING_MPS = 0.1;
-/**
- * Most agents that may stand stuck at once. Measured 37 over 40 seeds against a target of 25. At
- * the peaks most stuck agents queue on the approaches of OSM ways 678315474 and 803279638, behind
- * heads that a steady stream of conflicting claims keeps waiting for over two minutes, so the
- * bound sits just above the measurement until that fairness gap is closed.
- */
-const MAX_STUCK = 40;
+/** Most agents that may stand stuck at once. */
+const MAX_STUCK = 25;
 /** Longest guard hold: the last-resort limit plus the time to leave the player's view. */
 const MAX_HOLD_S = STUCK_DESPAWN_S + 10;
 /** Most last-resort despawns per run. */
@@ -40,9 +38,11 @@ const MAX_ALL_STILL_S = 30;
 /**
  * Runs one seed and measures the flow.
  * @param {number} seed Run seed.
+ * @param {typeof PARKED} ego Ego, standing.
+ * @param {number} seconds Simulated time.
  * @returns {{worstShare: number, peakStuck: number, longestHold: number, allStillS: number, stuckDespawns: number, incidents: number, uncaused: string[]}} Flow.
  */
-function runSeed(seed) {
+function runSeed(seed, ego, seconds) {
   const st = createTraffic(MAP, PARAMS, seed);
   const standing = new Float64Array(st.capacity);
   let worstShare = 0;
@@ -53,9 +53,9 @@ function runSeed(seed) {
   let incidents = 0;
   /** @type {string[]} */
   const uncaused = [];
-  for (let i = 0; i < Math.round(SECONDS / DT); i += 1) {
+  for (let i = 0; i < Math.round(seconds / DT); i += 1) {
     const t = i * DT;
-    const step = stepTraffic(st, { ego: EGO, egoReset: false, scripted: [], lights: trafficLightStates(MAP, t), egoContacts: [], t });
+    const step = stepTraffic(st, { ego, egoReset: false, scripted: [], lights: trafficLightStates(MAP, t), egoContacts: [], t });
     for (const inc of step.incidents) {
       incidents += 1;
       if (inc.causes.length === 0) uncaused.push(`seed ${seed} ${inc.agentIds.join('/')}@${t.toFixed(2)}`);
@@ -85,22 +85,35 @@ function runSeed(seed) {
   return { worstShare, peakStuck, longestHold, allStillS, stuckDespawns: st.stats.despawned.stuck, incidents, uncaused };
 }
 
+/**
+ * Checks the flow of one seed against the fixed requirements.
+ * @param {ReturnType<typeof runSeed>} f Flow.
+ * @param {string} at Label.
+ * @returns {void}
+ */
+function expectFlowing(f, at) {
+  expect(f.worstShare, `${at}: share of agents stuck`).toBeLessThanOrEqual(0.5);
+  expect(f.allStillS, `${at}: every agent standing`).toBeLessThanOrEqual(MAX_ALL_STILL_S);
+  expect(f.stuckDespawns, `${at}: last-resort despawns`).toBeLessThanOrEqual(MAX_STUCK_DESPAWNS);
+  expect(f.longestHold, `${at}: longest guard hold`).toBeLessThanOrEqual(MAX_HOLD_S);
+  expect(f.peakStuck, `${at}: agents stuck at once`).toBeLessThanOrEqual(MAX_STUCK);
+  expect(f.uncaused).toEqual([]);
+}
+
 describe('traffic flow on osm-pasteur at full density', () => {
-  it(`never locks over ${SEEDS} seeds x ${SECONDS / 60} min, with the last resort rare and every incident caused`, () => {
+  it(`never locks over ${SEEDS} seeds x ${PARKED_SECONDS / 60} min, with the last resort rare and every incident caused`, () => {
     let incidents = 0;
     for (let seed = 1; seed <= SEEDS; seed += 1) {
-      const f = runSeed(seed);
-      const at = `seed ${seed}`;
-      expect(f.worstShare, `${at}: share of agents stuck`).toBeLessThanOrEqual(0.5);
-      expect(f.allStillS, `${at}: every agent standing`).toBeLessThanOrEqual(MAX_ALL_STILL_S);
-      expect(f.stuckDespawns, `${at}: last-resort despawns`).toBeLessThanOrEqual(MAX_STUCK_DESPAWNS);
-      expect(f.longestHold, `${at}: longest guard hold`).toBeLessThanOrEqual(MAX_HOLD_S);
-      expect(f.peakStuck, `${at}: agents stuck at once`).toBeLessThanOrEqual(MAX_STUCK);
-      expect(f.uncaused).toEqual([]);
+      const f = runSeed(seed, PARKED, PARKED_SECONDS);
+      expectFlowing(f, `seed ${seed}`);
       incidents += f.incidents;
     }
-    const perMin = incidents / ((SEEDS * SECONDS) / 60);
+    const perMin = incidents / ((SEEDS * PARKED_SECONDS) / 60);
     expect(perMin).toBeGreaterThanOrEqual(PARAMS.incidentBand.minPerMin);
     expect(perMin).toBeLessThanOrEqual(PARAMS.incidentBand.maxPerMin);
+  }, 1_800_000);
+
+  it(`never locks round an ego standing at the route start for the time limit, over ${SEEDS} seeds`, () => {
+    for (let seed = 1; seed <= SEEDS; seed += 1) expectFlowing(runSeed(seed, AT_START, MAP.route.timeLimitS), `route start, seed ${seed}`);
   }, 1_800_000);
 });

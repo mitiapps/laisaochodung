@@ -27,6 +27,23 @@ runs 30 settle steps (not reported) at creation and after each reset, so the veh
 suspension. `ego.pos.y` is the body height above its settled ride height: about 0 at rest, matching
 the frame builder.
 
+## Traffic around the player
+
+Traffic (`src/world/traffic/`) treats the player's vehicle as a party it perceives, never as one of
+its agents. Two of its rules are visible in play:
+
+- **A standing player closes the lane.** Once the player has stood still for `EGO_PARKED_S` (45 s,
+  longer than a red phase) during the run, traffic treats the lanes under the vehicle as closed,
+  as for a parked car, and changes lane round it instead of queueing behind it for ever. Moving
+  off reopens them. The traffic pre-roll before the run does not count towards the 45 s.
+- **Lanes that merge take turns.** Where two lanes of one road go straight on into one exit lane,
+  vehicles join it one behind the other, nearest first, and a vehicle that has waited longer at
+  the line goes before one rolling up beside it. Straight paths of one road into different exit
+  lanes run side by side, so a bus going straight never waits for riders on the lane beside it.
+
+Agents spawn around the player within the map's spawn ring and leave once they are well behind it
+or beyond the ring; no agent is spawned where those rules would remove it within a second.
+
 ## Rigs
 
 Chassis space is +X forward, +Y up, +Z right, so the body rotation about +Y equals the heading θ.

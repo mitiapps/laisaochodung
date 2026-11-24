@@ -12,6 +12,7 @@ import { createInput } from './input.js';
 import { createLoop } from './loop.js';
 import { REPLAY_CHECKPOINT_S, createSession } from './session.js';
 import { lawfulParams } from '../world/traffic/lawful-params.js';
+import { pointAtDistance, projectOntoPolyline } from '../geometry/index.js';
 
 /** @typedef {import('../contracts/index.js').GameMap} GameMap */
 /** @typedef {import('../contracts/index.js').VehicleInfo} VehicleInfo */
@@ -35,6 +36,11 @@ const PASTEUR = /** @type {GameMap} */ (json('public/maps/osm-pasteur.json'));
 const PASTEUR_SIGNAL = 'sig-w678315474-f';
 const PARAMS = /** @type {import('../contracts/index.js').TrafficParams} */ (json('src/generated/traffic-params.json'));
 const CHECKPOINT_TICKS = Math.round(REPLAY_CHECKPOINT_S / DT);
+/** The shipped population with every rider taking a cut-in into the ego's path when it can. */
+const CUTTING_RIDERS = structuredClone(PARAMS);
+for (const row of Object.values(CUTTING_RIDERS.personalities)) row.violations.cutIn = 1;
+/** A run seed on which a vehicle cuts in on the cruising ego early in the run, with no other contact for 16 s. */
+const CUT_IN_SEED = 3;
 
 beforeAll(async () => {
   await RAPIER.init();
@@ -367,9 +373,7 @@ const steerTo = (lat, along) => Math.max(-1, Math.min(1, (2 * lat) / Math.max(al
  * into it.
  * @param {Frame[]} frames Frames recorded so far.
  * @param {number} scripted Scripted actors on the map.
- * @param {'car' | 'motorbike'} [kind] Only agents of this kind; any kind by default. A rider chased
- *   this way may move across in front of the ego and carry `unsafe-lane-change`, which turns the
- *   contact into a notice, so a test of the ego's own fault chases cars only.
+ * @param {'car' | 'motorbike'} [kind] Only agents of this kind; any kind by default.
  * @returns {import('./session.js').SessionDeps['createInput']} Input factory.
  */
 function pursuitInput(frames, scripted, kind) {
@@ -378,6 +382,32 @@ function pursuitInput(frames, scripted, kind) {
     if (k === 0 || !f) return { gearCmd: 'up' };
     const best = agentAhead(f, scripted, 80, kind);
     return { throttle: 0.6, steer: best ? steerTo(best.lat, best.along) : 0 };
+  });
+}
+
+/**
+ * Input that follows the lane of the route start at a steady speed, braking for nothing.
+ * @param {Frame[]} frames Frames recorded so far.
+ * @param {number} speed Speed to hold, m/s.
+ * @returns {import('./session.js').SessionDeps['createInput']} Input factory.
+ */
+function cruiseInput(frames, speed) {
+  const start = PASTEUR.route.start.pos;
+  const lane = PASTEUR.roads
+    .flatMap((r) => r.lanes)
+    .map((l) => ({ l, d: projectOntoPolyline([start.x, start.z], l.centerline).distance }))
+    .sort((a, b) => a.d - b.d)[0].l;
+  return scriptedInput((k) => {
+    const f = frames.at(-1);
+    if (k === 0 || !f) return { gearCmd: 'up' };
+    const e = f.ego;
+    const at = pointAtDistance(lane.centerline, projectOntoPolyline([e.pos.x, e.pos.z], lane.centerline).s + 12).point;
+    const fx = Math.cos(e.heading);
+    const fz = -Math.sin(e.heading);
+    const dx = at[0] - e.pos.x;
+    const dz = at[1] - e.pos.z;
+    const throttle = e.speed < speed ? 0.5 : e.speed < speed + 0.5 ? 0.15 : 0;
+    return { throttle, steer: steerTo(dz * fx - dx * fz, dx * fx + dz * fz) };
   });
 }
 
@@ -553,8 +583,8 @@ describe('session with traffic (dev build checks)', () => {
       createSim: recordingSim(recorded),
       createInput: approachInput(recorded, PASTEUR.actors.length, target),
     });
-    await h.game.start('osm-pasteur', 'car-sedan', { seed: 4242 });
-    expect(h.game.debugInfo()).toMatchObject({ traffic: 'map', runSeed: 4242 });
+    await h.game.start('osm-pasteur', 'car-sedan', { seed: 4244 });
+    expect(h.game.debugInfo()).toMatchObject({ traffic: 'map', runSeed: 4244 });
     // The signal is red from 30 s to 60 s of each cycle.
     runFor(h, 60);
     const ego = recorded.at(-1)?.ego.pos;
@@ -592,31 +622,56 @@ describe('session with traffic (dev build checks)', () => {
     expect(h.errors).toEqual([]);
   });
 
-  it('turns a contact with a rider cutting in on osm-pasteur into a notice on the HUD and the result, with no crash charged', { timeout: 120_000 }, async () => {
+  it('turns a contact with a vehicle cutting in on osm-pasteur into a notice on the HUD and the result, while the ego holds its speed', { timeout: 120_000 }, async () => {
     /** @type {Frame[]} */
     const recorded = [];
-    // The shipped driver population: on this seed a rider moves across into the ego's path within
-    // its stopping distance and latches `unsafe-lane-change` before the contact.
+    // On this seed a car changes lane into the ego's path without checking, while the ego cruises
+    // at a steady 7 m/s in its lane; the car latches `unsafe-lane-change` before the contact, and
+    // the ego has not sped up since.
     const h = trafficHarness({
       loadMap: async () => structuredClone(PASTEUR),
+      loadTrafficParams: async () => CUTTING_RIDERS,
       createSim: recordingSim(recorded),
-      createInput: pursuitInput(recorded, PASTEUR.actors.length),
+      createInput: cruiseInput(recorded, 7),
     });
-    await h.game.start('osm-pasteur', 'car-sedan', { seed: 4242 });
-    runFor(h, 20);
+    await h.game.start('osm-pasteur', 'car-sedan', { seed: CUT_IN_SEED });
+    runFor(h, 16);
     const hits = recorded.flatMap((f) =>
       f.events.flatMap((ev) => (ev.type === 'collision' && ev.otherViolations.includes('unsafe-lane-change') ? [{ tick: f.tick, ev }] : [])),
     );
     expect(hits.length).toBeGreaterThan(0);
     const [first] = hits;
-    expect(first.ev).toMatchObject({ otherKind: 'motorbike', striker: 'ego' });
+    expect(first.ev).toMatchObject({ striker: 'ego' });
     expect(h.states.some((s) => s.notices.some((n) => n.tick === first.tick))).toBe(true);
     h.game.quit();
     const report = h.states.at(-1)?.report;
     const notice = report?.notices.find((n) => n.tick === first.tick);
-    expect(notice).toMatchObject({ kind: 'npc-fault', otherKind: 'motorbike', violations: ['unsafe-lane-change'] });
+    expect(notice).toMatchObject({ kind: 'npc-fault', violations: ['unsafe-lane-change'] });
     expect(notice?.text.vi).not.toBe('');
     expect(report?.breaches.map((b) => b.ruleId)).not.toContain('crash');
+    // The run ends before a second checkpoint, so the replay folds the whole run.
+    expect(h.game.debugInfo().replayCheck).toMatchObject({ windowed: false, equal: true });
+    expect(h.errors).toEqual([]);
+  });
+
+  it('charges an ego that speeds up into a rider ahead on osm-pasteur, whatever the rider did', { timeout: 120_000 }, async () => {
+    /** @type {Frame[]} */
+    const recorded = [];
+    // The ego chases riders with steady throttle, gaining speed all the way to the contact.
+    const h = trafficHarness({
+      loadMap: async () => structuredClone(PASTEUR),
+      createSim: recordingSim(recorded),
+      createInput: pursuitInput(recorded, PASTEUR.actors.length, 'motorbike'),
+    });
+    await h.game.start('osm-pasteur', 'car-sedan', { seed: 4242 });
+    runFor(h, 20);
+    const first = recorded.flatMap((f) => f.events.flatMap((ev) => (ev.type === 'collision' && ev.otherKind === 'motorbike' ? [{ tick: f.tick, ev }] : [])))[0];
+    expect(first?.ev).toMatchObject({ striker: 'ego' });
+    h.game.quit();
+    const report = h.states.at(-1)?.report;
+    expect(report?.notices.some((n) => n.tick === first.tick)).toBe(false);
+    expect(report?.breaches.map((b) => b.ruleId)).toContain('crash');
+    expect(report?.score).toBeLessThan(10);
     expect(h.game.debugInfo().replayCheck).toMatchObject({ windowed: true, equal: true });
     expect(h.errors).toEqual([]);
   });

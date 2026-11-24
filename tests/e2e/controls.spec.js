@@ -191,6 +191,53 @@ test.describe('touch', () => {
     await expect(page.getByTestId('hud-low-beam')).toHaveAttribute('data-on', 'true');
     expect(problems).toEqual([]);
   });
+
+  test('the throttle takes a touch hold after a restart, even with a finger still down from the last run', async ({ page }) => {
+    const problems = watchProblems(page);
+    await startRun(page, 'scooter');
+    const cdp = await page.context().newCDPSession(page);
+    const throttle = await centre(page.locator('[data-action="throttle"]'));
+    /**
+     * Sends the touch points down now (pressing new ids) or lifts the listed ones.
+     * @param {'touchStart' | 'touchEnd'} type Event.
+     * @param {{x: number, y: number, id: number}[]} touchPoints Points down after a start, or lifted by an end.
+     * @returns {Promise<unknown>} The CDP reply.
+     */
+    const touch = (type, touchPoints) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints });
+    // The HUD stands still while paused, so the throttle is read only while the run is going.
+    const throttleIs = (/** @type {number} */ want, /** @type {string} */ message) => expect.poll(() => value(page, 'hud-throttle'), { message }).toBe(want);
+
+    // Finger 1 holds the throttle and finger 2 taps pause.
+    await touch('touchStart', [{ ...throttle, id: 1 }]);
+    await throttleIs(1, 'finger 1 holds the throttle');
+    const pause = await centre(page.getByTestId('hud-pause'));
+    await touch('touchStart', [{ ...throttle, id: 1 }, { ...pause, id: 2 }]);
+    await touch('touchEnd', [{ ...pause, id: 2 }]);
+    await expect(page.getByTestId('pause-overlay')).toBeVisible();
+    // Chơi lại, with finger 1 still on the throttle. A tap by a second finger fires no click, so
+    // the click is dispatched on the button itself.
+    await page.getByTestId('pause-restart').dispatchEvent('click');
+    await expect(page.getByTestId('pause-overlay')).toHaveCount(0);
+    await throttleIs(0, 'the new run starts with the throttle released');
+
+    // A new finger on the throttle drives the new run; lifting every finger releases it.
+    await touch('touchStart', [{ ...throttle, id: 1 }, { x: throttle.x, y: throttle.y - 20, id: 3 }]);
+    await throttleIs(1, 'a new touch holds the throttle of the new run');
+    await touch('touchEnd', [{ ...throttle, id: 1 }, { x: throttle.x, y: throttle.y - 20, id: 3 }]);
+    await throttleIs(0, 'lifting every finger releases the throttle');
+
+    // A one-finger pause and restart leaves the throttle working too.
+    await page.touchscreen.tap(pause.x, pause.y);
+    await expect(page.getByTestId('pause-overlay')).toBeVisible();
+    const restart = await centre(page.getByTestId('pause-restart'));
+    await page.touchscreen.tap(restart.x, restart.y);
+    await expect(page.getByTestId('pause-overlay')).toHaveCount(0);
+    await touch('touchStart', [{ ...throttle, id: 4 }]);
+    await throttleIs(1, 'a hold after a one-finger restart');
+    await touch('touchEnd', [{ ...throttle, id: 4 }]);
+    await throttleIs(0, 'released');
+    expect(problems).toEqual([]);
+  });
 });
 
 for (const viewport of [

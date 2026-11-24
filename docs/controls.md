@@ -66,6 +66,14 @@ the next key or mouse input.
 
 The table is written by hand from `KEY_BINDINGS`; change both together.
 
+## Dev run options
+
+Dev builds (`npm run dev`) read run options from the play hash query, for example
+`#/play?map=osm-pasteur&vehicle=car-sedan&seed=42&traffic=off&agentScale=0.5`: `traffic` is `off`
+or `map`, `seed` a decimal integer, and `agentScale` a decimal in (0, 1] that scales the map's
+traffic cap (default 1). Any other value of these keys stops the run with an error. Release builds
+ignore the query.
+
 ## Not supported yet
 
 Portrait layout, fullscreen, tilt steering and gamepads. See

@@ -3,7 +3,7 @@
  * crash breach through the collision policy's clause choice) or a `Notice` with no deduction.
  *
  * Vehicle contacts (cars and motorbikes) run through the policy's `faultRows`, first match wins.
- * Pedestrian contacts never enter the table: they are always charged (D7 keeps the run end).
+ * Pedestrian contacts never enter the table: they are always charged and end the run.
  * Static objects, kerbs and falls can match only an `aftermath` row; otherwise they are charged as
  * before. Without `faultRows` every contact is charged, as before the table existed.
  *
@@ -38,6 +38,9 @@
  *   fall, or any contact when the policy has no `faultRows`), exactly as before the table existed.
  * @property {CrashCause | null} rearEndCause Worst episode of a `rearEndContributingRules` rule
  *   active within the cause window, or null.
+ * @property {boolean} egoSpedUp The player gained more than `excuseMaxSpeedGainMps` between the
+ *   other party's excusing violation first showing and the contact: it closed in on a party it saw
+ *   breaking the rule, so that violation no longer excuses it.
  */
 
 /**
@@ -102,7 +105,7 @@ function rowMatches(row, e, facts, excusing) {
   if (row.when === 'aftermath') return facts.aftermath;
   // Only vehicle contacts reach the other conditions (the caller filters the rest).
   const c = contactFields(/** @type {CollisionEvent} */ (e));
-  const excused = c.otherViolations.some((v) => excusing.includes(v));
+  const excused = !facts.egoSpedUp && c.otherViolations.some((v) => excusing.includes(v));
   switch (row.when) {
     case 'from-behind':
       return c.otherFromBehind && c.striker !== 'ego';
@@ -166,14 +169,17 @@ function capitalise(s) {
 
 /**
  * Notice text of a contact: the template of the other party's first violation, else
- * `from-behind`, else `none`; `aftermath` inside the aftermath window.
+ * `from-behind`, else `none`; `aftermath` inside the aftermath window. A contact that would be
+ * charged but for the contact speed gate takes `pedestrian-slow` with a pedestrian, else
+ * `ego-slow`.
  * @param {CollisionPolicy} policy Collision policy.
  * @param {CollisionEvent | FallEvent} e Event.
  * @param {boolean} aftermath The notice comes from the aftermath row.
+ * @param {boolean} [slow] The contact is a notice only because of the contact speed gate.
  * @returns {LocalText} Text.
  * @throws {Error} When the policy lacks the needed template (the bundle was not validated).
  */
-export function noticeText(policy, e, aftermath) {
+export function noticeText(policy, e, aftermath, slow = false) {
   const texts = policy.noticeTexts ?? {};
   /** @type {string} */
   let key = 'none';
@@ -187,6 +193,7 @@ export function noticeText(policy, e, aftermath) {
     if (first !== undefined) key = first;
     else if (c.otherFromBehind) key = 'from-behind';
   }
+  if (slow) key = kind === 'pedestrian' ? 'pedestrian-slow' : 'ego-slow';
   if (aftermath) key = 'aftermath';
   const template = texts[key];
   if (!template) throw new Error(`Collision policy has no notice text "${key}" (the rules bundle was not validated)`);

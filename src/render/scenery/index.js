@@ -20,6 +20,7 @@ import {
   Float32BufferAttribute,
   Group,
   LineBasicMaterial,
+  MeshLambertMaterial,
   MeshStandardMaterial,
   Points,
   PointsMaterial,
@@ -69,15 +70,29 @@ export const GLOW_FROM_NIGHT = 0.3;
  * The materials of the scenery, by key. Static soups use `facade` (painted, bare and metal parts
  * alike, told apart by vertex colour), `glass`, `glass-lit` and `signs`; props `prop`; cables `cable`; lamp sprites `glow`.
  * @param {number} night Night factor at build time.
+ * @param {boolean} lambert Lit surfaces use `MeshLambertMaterial` (per-vertex lighting, no
+ *   roughness or metalness) instead of `MeshStandardMaterial`: the low-cost path.
  * @returns {{materials: Record<string, import('three').Material>, textures: import('three').Texture[]}} Materials.
  */
-function createMaterials(night) {
+function createMaterials(night, lambert) {
+  /**
+   * A lit scenery surface.
+   * @param {import('three').MeshStandardMaterialParameters} params Standard parameters; Lambert drops roughness and metalness.
+   * @returns {MeshStandardMaterial | MeshLambertMaterial} Material.
+   */
+  const lit = (params) => {
+    if (!lambert) return new MeshStandardMaterial(params);
+    const rest = { ...params };
+    delete rest.roughness;
+    delete rest.metalness;
+    return new MeshLambertMaterial(rest);
+  };
   const atlas = createSignAtlasTexture();
   const glowMap = createGlowTexture();
-  const glassLit = new MeshStandardMaterial({ vertexColors: true, roughness: 0.2, metalness: 0.4, emissive: 0xffd49a });
+  const glassLit = lit({ vertexColors: true, roughness: 0.2, metalness: 0.4, emissive: 0xffd49a });
   glassLit.userData.nightEmissive = 1;
   glassLit.emissiveIntensity = night;
-  const signs = new MeshStandardMaterial({ vertexColors: true, roughness: 0.6, map: atlas });
+  const signs = lit({ vertexColors: true, roughness: 0.6, map: atlas });
   if (atlas) {
     signs.emissive.setHex(0xffffff);
     signs.emissiveMap = atlas;
@@ -95,11 +110,11 @@ function createMaterials(night) {
   });
   return {
     materials: {
-      facade: new MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0 }),
-      glass: new MeshStandardMaterial({ vertexColors: true, roughness: 0.15, metalness: 0.5 }),
+      facade: lit({ vertexColors: true, roughness: 0.85, metalness: 0 }),
+      glass: lit({ vertexColors: true, roughness: 0.15, metalness: 0.5 }),
       'glass-lit': glassLit,
       signs,
-      prop: new MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0 }),
+      prop: lit({ vertexColors: true, roughness: 0.8, metalness: 0 }),
       cable: new LineBasicMaterial({ color: 0x161616 }),
       glow,
     },
@@ -133,11 +148,13 @@ function createGlowTexture() {
  * Builds the scenery of a map.
  * @param {GameMap} map Map.
  * @param {SceneryKit} [kit] Optional models.
+ * @param {{lambert?: boolean}} [options] `lambert`: the low-cost materials of a software
+ *   rasteriser; false by default.
  * @returns {Scenery} Scenery.
  */
-export function buildScenery(map, kit = {}) {
+export function buildScenery(map, kit = {}, { lambert = false } = {}) {
   const night = 1 - daylight(map.environment.startClockMin);
-  const { materials, textures } = createMaterials(night);
+  const { materials, textures } = createMaterials(night, lambert);
   const group = new Group();
   group.name = 'scenery';
 
@@ -169,7 +186,7 @@ export function buildScenery(map, kit = {}) {
       (i) => (kind === 'tree' ? range(rngs[i], 0.8, 1.25) : 1),
       (i) => (kind === 'tree' ? greenTint(range(rngs[i], 0, 1)) : 0xffffff),
     );
-    layers.push(buildPropLayer(group, kind, instances, materials.prop, models[kind]));
+    layers.push(buildPropLayer(group, kind, instances, materials.prop, models[kind], { lambert }));
   }
   if (awnings.length > 0) {
     const instances = awnings.map((a) => ({
@@ -180,7 +197,7 @@ export function buildScenery(map, kit = {}) {
       scale: /** @type {[number, number, number]} */ ([a.width, 1, 1]),
       tint: a.color,
     }));
-    layers.push(buildPropLayer(group, 'awning', instances, materials.prop, models.awning));
+    layers.push(buildPropLayer(group, 'awning', instances, materials.prop, models.awning, { lambert }));
   }
 
   // Cables between power poles, tutorials only.

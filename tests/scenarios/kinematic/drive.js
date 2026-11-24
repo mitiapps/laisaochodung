@@ -555,9 +555,13 @@ export function speedTarget(gates, state, ctx) {
   const { cruise, ignore, signals, map } = ctx;
   let target = cruise;
   for (const g of gates) {
-    if (g.s < s - 0.5 || g.haltedAt === -2) continue;
+    if (g.s < s - 0.5) continue;
     const d = g.sStop - s;
     if (d < -0.5) continue;
+    // A light the ego was released at may change before it reaches the line (it crawls behind a
+    // slow queue): it holds again for a yellow or red it can still stop for comfortably.
+    if (g.haltedAt === -2 && !(g.kind === 'signal' && d > 0 && signalLeftGreen(g, t, signals) && v * v <= 2 * BRAKE_MPS2 * d)) continue;
+    if (g.haltedAt === -2) g.haltedAt = -1;
     if (g.kind === 'give-way') {
       if (!ignore.has('give-way') && d < GIVE_WAY_M && s < g.s) target = Math.min(target, SLOW_MPS);
       continue;
@@ -579,6 +583,18 @@ export function speedTarget(gates, state, ctx) {
     break;
   }
   return target;
+}
+
+/**
+ * Whether the light of a signal gate shows other than green now.
+ * @param {Gate} g Signal gate.
+ * @param {number} t Time.
+ * @param {Map<string, import('../../../src/contracts/index.js').Signal>} signals Signals by id.
+ * @returns {boolean} Yellow or red.
+ */
+function signalLeftGreen(g, t, signals) {
+  const sig = signals.get(g.signalId ?? '');
+  return sig !== undefined && signalState(sig, t) !== 'green';
 }
 
 /**

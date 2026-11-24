@@ -60,7 +60,7 @@ function drive(events, more = {}) {
 const crashOf = (report) => report.breaches.find((b) => b.ruleId === 'crash');
 
 describe('decideFault', () => {
-  const facts = { aftermath: false, cause: null, anyCause: null, rearEndCause: null };
+  const facts = { aftermath: false, cause: null, anyCause: null, rearEndCause: null, egoSpedUp: false };
 
   it('charges every contact as before when the policy has no fault table', async () => {
     const { faultRows, ...policy } = (await realBundle()).collisionPolicy;
@@ -268,10 +268,35 @@ describe('below the contact-speed gate', () => {
     expect(report.notices[0].violations).toEqual(['red-light']);
   });
 
-  it('turns creeping into the car ahead in the lane into a notice', async () => {
+  it('turns creeping into the car ahead in the lane into a notice that asks for a safe distance', async () => {
     const { report } = await drive([{ t: 2, event: hit({ striker: 'ego', sameLaneAhead: true, egoSpeed: CREEP }) }], { speed: CREEP, durationS: 4 });
     expect(summary(report)).toEqual([]);
     expect(report.notices).toHaveLength(1);
+    // The vehicle word stays lower case in mid-sentence.
+    expect(report.notices[0].text.vi).toBe('Bạn chạm nhẹ vào ô tô ở tốc độ rất thấp. Trò chơi không trừ điểm; hãy giữ khoảng cách an toàn.');
+  });
+
+  it('turns a pedestrian contact into a notice, never a deduction or a run end', async () => {
+    const event = hit({ otherKind: 'pedestrian', otherId: 'p', otherModel: null, striker: 'ego', egoSpeed: CREEP, relSpeed: 0.2 });
+    const { report } = await drive([{ t: 2, event }], { speed: CREEP, durationS: 4 });
+    expect(summary(report)).toEqual([]);
+    expect(report.score).toBe(10);
+    expect(report.endedBy).not.toBe('crash');
+    expect(report.notices.map((n) => [n.otherKind, n.text.vi])).toEqual([
+      ['pedestrian', 'Có va chạm nhẹ với người đi bộ ở tốc độ rất thấp. Trò chơi không trừ điểm; hãy dừng hẳn và nhường đường cho người đi bộ.'],
+    ]);
+  });
+
+  it('gives nothing for a static object or a kerb', async () => {
+    const { report } = await drive(
+      [
+        { t: 1, event: hit({ otherKind: 'kerb', otherId: null, otherModel: null, striker: 'ego', egoSpeed: CREEP, relSpeed: 0.2 }) },
+        { t: 2, event: hit({ otherKind: 'static', otherId: 'bollard-1', otherModel: null, striker: 'ego', egoSpeed: CREEP, relSpeed: 0.2 }) },
+      ],
+      { speed: CREEP, durationS: 4 },
+    );
+    expect(summary(report)).toEqual([]);
+    expect(report.notices).toEqual([]);
   });
 
   it('turns creeping into a lawful NPC into a notice', async () => {
@@ -291,6 +316,73 @@ describe('below the contact-speed gate', () => {
     expect(summary(report)).toEqual([]);
     expect(report.notices.map((n) => n.otherKind)).toEqual(['car', 'kerb']);
     expect(report.notices[1].text.vi).toMatch(/^Va chạm tiếp theo/u);
+  });
+});
+
+describe('an excusing violation and a player who speeds up', () => {
+  /** The rider cuts in at t 1; the contact comes at t 2.5, inside the latch. */
+  const CUT_AT = 1;
+  const CONTACT_AT = 2.5;
+  /**
+   * The rider ahead in the ego's lane, flagged from the cut-in on.
+   * @param {number} t Time.
+   * @returns {ActorPose} Pose.
+   */
+  const riderAt = (t) => ({
+    id: 'npc-8',
+    kind: 'motorbike',
+    pos: { x: -150 + LEGAL * t + 6, z: 1.75 },
+    heading: 0,
+    speed: 6,
+    active: true,
+    model: 'motorbike',
+    variant: 0,
+    lengthM: 1.9,
+    widthM: 0.7,
+    lights: ACTOR_LIGHTS.off,
+    state: 'moving',
+    violations: t >= CUT_AT ? Object.freeze(/** @type {NpcViolation[]} */ (['unsafe-lane-change'])) : NO_VIOLATIONS,
+  });
+
+  /**
+   * Scores the ego striking the rider at CONTACT_AT.
+   * @param {number | import('../testing/frame-builder.js').Keyframe[]} speed Ego speed script.
+   * @returns {ReturnType<typeof scoreScript>} Result.
+   */
+  const strike = (speed) =>
+    drive([], {
+      speed,
+      extraActors: (t) => [riderAt(t)],
+      extraEvents: (t) =>
+        Math.abs(t - CONTACT_AT) < 1e-6
+          ? [hit({ otherKind: 'motorbike', otherId: 'npc-8', otherModel: 'motorbike', striker: 'ego', sameLaneAhead: true, otherViolations: riderAt(t).violations })]
+          : [],
+    });
+
+  it('excuses an ego that held its speed when the rider cut in', async () => {
+    const { report } = await strike(LEGAL);
+    expect(summary(report)).toEqual([]);
+    expect(report.notices.map((n) => n.violations)).toEqual([['unsafe-lane-change']]);
+  });
+
+  it('charges an ego that sped up into the rider after it cut in', async () => {
+    const { report } = await strike([
+      { t: 0, value: LEGAL },
+      { t: CUT_AT + 0.2, value: LEGAL },
+      { t: CONTACT_AT - 0.1, value: LEGAL + 2 },
+    ]);
+    // The va chạm with the vehicle ahead in the same lane.
+    expect(summary(report)).toEqual(['crash:0:D6.4.l']);
+    expect(report.notices).toEqual([]);
+  });
+
+  it('lets the speed gain lift the excuse in the table', async () => {
+    const policy = (await realBundle()).collisionPolicy;
+    const facts = { aftermath: false, cause: null, anyCause: null, rearEndCause: null, egoSpedUp: true };
+    const event = hit({ otherKind: 'motorbike', striker: 'ego', otherViolations: ['unsafe-lane-change'] });
+    expect(decideFault(policy, event, facts)).toMatchObject({ rowId: 'ego-strikes', result: 'deduction' });
+    expect(decideFault(policy, event, { ...facts, egoSpedUp: false })).toMatchObject({ rowId: 'otherwise', result: 'notice' });
+    expect(decideFault(policy, { ...event, sameLaneAhead: true }, facts).rowId).toBe('same-lane-ahead');
   });
 });
 
@@ -438,7 +530,7 @@ describe('row 0: aftermath', () => {
     expect(report.notices.map((n) => n.otherKind)).toEqual(['motorbike', null]);
   });
 
-  it('still ends the run on a pedestrian hit inside the window (D7)', async () => {
+  it('still ends the run on a pedestrian hit inside the window', async () => {
     const { report } = await drive([
       { t: 2, event: hit({ otherFromBehind: true }) },
       { t: 2.5, event: hit({ otherKind: 'pedestrian', otherId: 'p', otherModel: null }) },

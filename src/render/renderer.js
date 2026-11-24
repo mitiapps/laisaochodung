@@ -64,17 +64,39 @@ export function softwareRenderer(gl) {
 }
 
 /**
+ * How much the renderer spends per frame. `low` serves software rasterisers (SwiftShader,
+ * llvmpipe): fewer drawing-buffer pixels and cheaper scenery materials.
+ * @typedef {'high' | 'low'} RenderQuality
+ */
+
+/** Drawing-buffer pixels per CSS pixel on the low-cost path; CSS scales the canvas up. */
+export const LOW_QUALITY_PIXEL_RATIO = 0.5;
+
+/**
+ * Drawing-buffer pixel ratio for a quality: the device ratio (at most 2) on hardware, a fixed
+ * fraction of a CSS pixel on the low-cost path.
+ * @param {RenderQuality} quality Quality.
+ * @param {number | undefined} devicePixelRatio `window.devicePixelRatio`.
+ * @returns {number} Pixel ratio.
+ */
+export function pixelRatioFor(quality, devicePixelRatio) {
+  if (quality === 'low') return LOW_QUALITY_PIXEL_RATIO;
+  return Math.min(devicePixelRatio || 1, 2);
+}
+
+/**
  * The scene of one map and vehicle, built in draw order: road, scenery, signs, lights, route
  * markers, actors (instanced), environment, then the ego and its effects. Needs no WebGL context.
  * @param {GameMap} map Map.
  * @param {VehicleInfo} vehicleInfo Player vehicle.
+ * @param {{quality?: RenderQuality}} [options] Quality; `high` by default.
  * @returns {World} The scene and its parts.
  */
-export function buildWorld(map, vehicleInfo) {
+export function buildWorld(map, vehicleInfo, { quality = 'high' } = {}) {
   const scene = new Scene();
   const road = buildRoadMeshes(map);
   scene.add(road.group);
-  const scenery = buildScenery(map, SCENERY_KIT);
+  const scenery = buildScenery(map, SCENERY_KIT, { lambert: quality === 'low' });
   scene.add(scenery.group);
   const signs = buildSigns(map);
   scene.add(signs.group);
@@ -128,15 +150,19 @@ export function buildWorld(map, vehicleInfo) {
  */
 export function createRenderer(canvas, map, vehicleInfo) {
   const gl = new WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-  gl.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2));
+  // A software rasteriser runs far below playable at full size (about 14 fps on tutorial 01 at
+  // 1280 × 720 in SwiftShader), mostly for fill, so it takes the low-cost path.
+  /** @type {RenderQuality} */
+  const quality = softwareRenderer(gl) ? 'low' : 'high';
+  gl.setPixelRatio(pixelRatioFor(quality, globalThis.devicePixelRatio));
   gl.outputColorSpace = SRGBColorSpace;
   gl.toneMapping = ACESFilmicToneMapping;
-  // Shadows cost a software rasteriser (SwiftShader, llvmpipe) about a third of its frame rate,
-  // enough to slow the sim below real time, so only a hardware GPU draws them.
-  gl.shadowMap.enabled = !softwareRenderer(gl);
+  // Shadows cost a software rasteriser about a third of its frame rate, enough to slow the sim
+  // below real time, so only a hardware GPU draws them.
+  gl.shadowMap.enabled = quality === 'high';
   gl.shadowMap.type = PCFSoftShadowMap;
 
-  const world = buildWorld(map, vehicleInfo);
+  const world = buildWorld(map, vehicleInfo, { quality });
   const { scene, lights, markers, actors, environment, ego, skids, ghosts } = world;
   const offsets = wheelOffsets(vehicleInfo.legalClass, vehicleInfo.lengthM, vehicleInfo.widthM);
   const shake = createShake();

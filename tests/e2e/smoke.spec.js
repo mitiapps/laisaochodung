@@ -95,3 +95,41 @@ test('the app loads, drives, and its pages render without console errors', async
 
   expect(problems).toEqual([]);
 });
+
+test('the home page loads no renderer code; starting a run loads it and draws', async ({ page }) => {
+  // GLSL text from three.js's shader chunks; minification keeps string literals.
+  const THREE_MARKER = '#include <begin_vertex>';
+  /** @type {{url: string, body: Promise<string>}[]} */
+  const scripts = [];
+  page.on('response', (res) => {
+    if (res.request().resourceType() === 'script') scripts.push({ url: res.url(), body: res.text() });
+  });
+  /**
+   * URLs of the scripts loaded so far that hold three.js.
+   * @returns {Promise<string[]>} URLs.
+   */
+  const withThree = async () => {
+    const bodies = await Promise.all(scripts.map((s) => s.body));
+    return scripts.filter((_s, i) => bodies[i].includes(THREE_MARKER)).map((s) => s.url);
+  };
+  /** @type {string[]} */
+  const problems = [];
+  page.on('pageerror', (err) => problems.push(`pageerror: ${err.message}`));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') problems.push(`console: ${msg.text()}`);
+  });
+
+  await page.goto('/#/');
+  await expect(page.getByTestId('start-button')).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  expect(scripts.length).toBeGreaterThan(0);
+  expect(await withThree()).toEqual([]);
+
+  await page.getByTestId('vehicle-car-sedan').check();
+  await page.getByTestId('map-tutorial-01-co-ban').check();
+  await page.getByTestId('start-button').click();
+  await expect(page.getByTestId('hud')).toBeVisible();
+  await expect(page.getByTestId('game-canvas')).toBeVisible();
+  expect(await withThree()).toHaveLength(1);
+  expect(problems).toEqual([]);
+});

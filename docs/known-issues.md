@@ -30,7 +30,9 @@ says what happens and where.
   with a car or motorbike is charged only when the player contributed: an episode of any rule but
   `nonContributingRules` active within `crashCauseWindowS` (a contributing episode), running into the vehicle ahead in the
   same lane, or striking a vehicle that carries no excusing violation (`red-light`, `wrong-way`,
-  `no-yield`, `unsafe-lane-change`). Being struck from behind is never charged unless the player
+  `no-yield`, `unsafe-lane-change`) that the player did not speed up into (more than
+  `excuseMaxSpeedGainMps`, 0.5 m/s, gained since it showed). Speed gain stands in for "could have
+  avoided it" and is a game threshold. Being struck from behind is never charged unless the player
   had just cut in or turned without signalling. Everything else is a notice with no deduction, as
   is every contact within `aftermathWindowS` after a notice (the shove). Contacts with pedestrians
   are always charged; static objects, kerbs and falls only escape inside the aftermath window.
@@ -40,7 +42,8 @@ says what happens and where.
 - **A stopped player is never charged** for a contact (`contactMinEgoSpeed`, 0.5 m/s), even while
   an episode that would count as contributing is active, such as stopping in a junction
   (6.10.a "dừng xe"): a contact the fault table would charge below the speed gate gives a notice
-  instead.
+  instead. A pedestrian touched below that speed gives a notice too and never ends the run; a
+  static object or kerb touched below it gives nothing.
 - **Va chạm and tai nạn split (design).** A charged contact with an NPC car is an accident
   (10.a / 10.b) from a closing speed of `accidentRelSpeed` (4.2 m/s). Closing speed is measured
   along the contact normal, so a fast sideswipe counts as a light contact.
@@ -109,14 +112,16 @@ says what happens and where.
 
 ## Traffic
 
-- **Traffic sometimes locks.** With every seed run on `osm-pasteur`, the heads of the Pasteur
-  approach (way 678315474) and of the Lê Duẩn approach (way 803279638-2) can wait for minutes at a
-  green light while a steady stream of crossing agents keeps claiming the junction, and the
-  queue behind them stands still. The legal test driver, stuck in such a queue, misses the time
-  limit on `osm-pasteur` in 6 of 20 seeds, and in 5 of 20 with the Đơn giản assists. At junction
-  411919193 the kerb lane of one cross street can deliver no agent in the first 2 minutes (3 of
-  10 seeds). On `tutorial-03-ban-dem` a queue on `nhanh` can spill back into junction `j-c` and
-  block it (2 of 20 seeds). No seed costs the test driver a point.
+- **A rider turning across the player can stand off with it.** On `tutorial-03-ban-dem` a rider
+  turning across the lane the player waits in can stop in front of it and wait for the player,
+  which the legal test driver, waiting for the rider, never resolves: it misses the time limit in
+  1 of 20 seeds, with and without the Đơn giản assists. On `osm-pasteur` and `tutorial-02-nga-tu`
+  it finishes all 20 seeds in both modes, and no seed costs it a point.
+- **A turning bus can brush a player waiting at the stop line.** Traffic waits behind the sweep of
+  a long vehicle turning, but the player's stop point is the painted line, which a bus turning
+  tightly can swing over. The contact is the bus's, so the player gets a notice.
+- **Traffic thins out beyond the mapped streets.** The map has no boundary: a player who drives on
+  past the last mapped street leaves the spawn ring with no road in it, and traffic fades away.
 - **Traffic agents can stop dead.** An agent that finds the agent ahead too close stops in one
   step instead of braking, so a player following too closely may run into it and be charged.
 - **No riding against the flow or on the pavement.** Traffic agents always travel with their

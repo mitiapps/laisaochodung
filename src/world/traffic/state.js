@@ -95,8 +95,9 @@ export const DESPAWN_REASONS = Object.freeze(['sink', 'edge-held', 'ring', 'behi
  * @property {Int8Array} signalCommit 0 undecided, 1 stop, 2 go, for the current approach.
  * @property {Uint32Array} rngState Agent stream state after its setup draws.
  * @property {Float64Array} classCriticalGap Class critical gap before the personality factor.
- * @property {Uint8Array} held Stood at its hold point last step unable to claim (exit full or
- *   blocked ahead); others do not wait for it.
+ * @property {Uint8Array} held Stood at its hold point last step unable to claim: `HELD_EXIT` (exit
+ *   lane full) or `HELD_BLOCKED` (blocked ahead), 0 otherwise; others do not wait for it, except
+ *   at a merge, where a head held for exit room keeps its turn.
  * @property {Uint8Array} flagNow Violation conditions raised this step (bits of `FLAG`).
  * @property {Float64Array} flagUntil Time until which each flag stays latched, `FLAG_COUNT` per slot.
  * @property {Int32Array} redConn Connector entered on red, while the agent is on it, or −1.
@@ -104,6 +105,8 @@ export const DESPAWN_REASONS = Object.freeze(['sink', 'edge-held', 'ring', 'behi
  *   the agent still covers its conflict zones, or −1.
  * @property {Float64Array} frozenS Time the agent has been held by a body in its way.
  * @property {Int32Array} heldBy Slot of the agent whose body held this one's move last step, or −1.
+ * @property {Float64Array} makeRoomUntil A rider that edged aside for one held by its body keeps
+ *   that place, making no slot choice, until this time; −Infinity otherwise.
  * @property {Uint8Array} heedless The driver is forcing its way (a red run, a short gap taken by
  *   choice, a cut-in) and does not stop for what it sees until that is over.
  * @property {Uint8Array} unsafeChange Moving across after a lane change that skipped its safety check.
@@ -138,6 +141,8 @@ export const DESPAWN_REASONS = Object.freeze(['sink', 'edge-held', 'ring', 'behi
  * @property {Uint8Array} isMoto The agent is a motorbike.
  * @property {number} egoSignalEpisode Count of times the ego has switched an indicator on.
  * @property {number} egoStillS Time the ego has stood still, seconds.
+ * @property {number} egoHeadingBefore The ego's heading last step, NaN before the first step or
+ *   after a reset.
  * @property {string} egoIndicator The ego's indicator state last step.
  * @property {Float64Array} halfWidth Half width of each lane edge (connectors: of the approach lane).
  * @property {Int32Array} laneIndexOf Map lane index of each lane edge (0 at the right kerb), −1 for connectors.
@@ -353,6 +358,7 @@ export function createTrafficState(map, params, runSeed) {
     heedless: new Uint8Array(capacity),
     frozenS: f64(),
     heldBy: i32().fill(-1),
+    makeRoomUntil: f64().fill(-Infinity),
     decisionSeed: new Uint32Array(capacity),
     decisions: i32(),
     speeding: new Uint8Array(capacity),
@@ -384,6 +390,7 @@ export function createTrafficState(map, params, runSeed) {
     isMoto: new Uint8Array(capacity),
     egoSignalEpisode: 0,
     egoStillS: 0,
+    egoHeadingBefore: Number.NaN,
     egoIndicator: 'off',
     halfWidth: laneHalfWidths(map, graph),
     openSides: laneOpenSides(map, graph),
@@ -709,6 +716,7 @@ export function spawnAgent(st, edge, s, speed, modelIndex) {
   st.heedless[slot] = 0;
   st.frozenS[slot] = 0;
   st.heldBy[slot] = -1;
+  st.makeRoomUntil[slot] = -Infinity;
   st.crossing[slot] = 0;
   st.intent[slot] = 0;
   st.intentLane[slot] = -1;

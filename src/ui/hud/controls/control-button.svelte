@@ -3,6 +3,10 @@
    * One on-screen control. A `hold` control holds its action from the first pointer down until the
    * last pointer lifts or is cancelled; a `press` control fires once on a pointer up inside it. Each
    * pointer is captured, and pointer-down is prevented so the control never takes focus.
+   *
+   * Every pointer down on a hold control forwards `onhold(true)`, whatever the control remembers:
+   * the session sends holds to the current run's input, which is new after a restart, so a finger
+   * still down from the last run must not swallow the next touch.
    * @type {{
    *   action: import('../../../contracts/controls.js').ControlAction,
    *   mode: 'hold' | 'press',
@@ -24,7 +28,6 @@
 
   /** @param {boolean} on Held. */
   function setHeld(on) {
-    if (pressed === on) return;
     pressed = on;
     if (mode === 'hold') onhold?.(on);
   }
@@ -55,7 +58,7 @@
       const inside = e.clientX >= box.left && e.clientX <= box.right && e.clientY >= box.top && e.clientY <= box.bottom;
       if (inside) onpress?.();
     }
-    if (pointers.length === 0) setHeld(false);
+    if (pointers.length === 0 && pressed) setHeld(false);
   }
 
   $effect(() => () => {

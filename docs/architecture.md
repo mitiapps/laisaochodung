@@ -24,6 +24,13 @@ rules JSON (rules + clauses + collisionPolicy) ─► scorer
   clauses. `src/generated/rules.json` is one `RulesBundle` (`src/contracts/rule.js`) and the only
   rule input the game loads. Collision clauses are chosen through `collisionPolicy`.
 - **Read-only consumers.** The renderer and the HUD read frames and scorer output only.
+- **Renderer loaded on demand.** `src/main.js` loads the renderer (three.js and `src/render/`) in
+  its own chunk through `loadRenderer()` (`src/game/browser.js`), which the session awaits with
+  the map, the rules and Rapier before it builds the view, so the home page never downloads it.
+- **Low-cost path on software GL.** When the WebGL context runs on a software rasteriser
+  (`softwareRenderer`: SwiftShader, llvmpipe), the renderer draws at half a drawing-buffer pixel
+  per CSS pixel, with Lambert scenery materials and no shadows. A hardware GPU keeps standard
+  materials, the device pixel ratio (at most 2) and shadows.
 
 ## Traffic
 

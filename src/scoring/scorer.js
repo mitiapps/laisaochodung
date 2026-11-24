@@ -20,6 +20,10 @@
  * 5. Contacts are decided per event (`fault.js`) after every other rule's episodes of the step
  *    are applied: each collision or fall is either charged or a `Notice`. Notices open no
  *    episode, deduct nothing, are debounced per other party for `rearmS` and kept in the state.
+ *    An other party's excusing violation stops excusing the player once the player has gained
+ *    more than `excuseMaxSpeedGainMps` since it first showed (the state keeps the ego speed of
+ *    that moment per actor). A vehicle contact charged but for the contact speed gate, and a
+ *    pedestrian contact below the gate, are notices with their own texts.
  *    A notice from the fault table opens the aftermath window: for `aftermathWindowS` after it
  *    (from the next step on) every further contact is a notice, and the line-crossing and
  *    pavement detectors start over each step, as after a reset, without closing any episode.
@@ -83,6 +87,9 @@ import { selectTier } from './tiers.js';
  *   none is recent (cleared by a reset).
  * @property {Record<string, number>} noticeT Last notice time per debounce key, younger than
  *   `rearmS`.
+ * @property {Record<string, number>} excuseSpeed Ego speed when each actor now showing an excusing
+ *   violation first showed one, by actor id; dropped once the actor shows none. Empty when the
+ *   policy sets no `excuseMaxSpeedGainMps`.
  */
 
 /**
@@ -109,6 +116,30 @@ const EPS_T = 1e-9;
  */
 function noticeKey(e) {
   return e.type === 'fall' ? 'fall' : `${e.otherKind}:${e.otherId ?? ''}`;
+}
+
+/**
+ * The ego speed at which each actor of the frame that shows an excusing violation first showed
+ * one, carried over from `prev` (copied only when it changes).
+ * @param {Record<string, number>} prev Speeds so far.
+ * @param {Frame} frame Frame.
+ * @param {readonly string[]} excusing Excusing violations.
+ * @returns {Record<string, number>} Speeds.
+ */
+function excuseSpeeds(prev, frame, excusing) {
+  const shows = (/** @type {import('../contracts/index.js').ActorPose} */ a) => a.violations.length > 0 && a.violations.some((v) => excusing.includes(v));
+  let kept = 0;
+  let added = false;
+  for (const a of frame.actors) {
+    if (!shows(a)) continue;
+    if (prev[a.id] === undefined) added = true;
+    else kept += 1;
+  }
+  if (!added && kept === Object.keys(prev).length) return prev;
+  /** @type {Record<string, number>} */
+  const next = {};
+  for (const a of frame.actors) if (shows(a)) next[a.id] = prev[a.id] ?? frame.ego.speed;
+  return next;
 }
 
 /** @type {ScoreContext} */
@@ -204,6 +235,15 @@ export function createScorer(bundle, map, vehicleInfo) {
    * @returns {boolean} Gated.
    */
   const belowGate = (e) => Boolean(policy.faultRows) && e.type === 'collision' && (e.otherKind === 'car' || e.otherKind === 'motorbike') && e.egoSpeed < contactMinEgoSpeed;
+  /**
+   * A pedestrian contact below the contact speed gate: never charged and never a run end, but a
+   * notice (the pedestrian may have walked into a standing vehicle).
+   * @param {CollisionEvent | FallEvent} e Contact.
+   * @returns {boolean} Slow pedestrian contact.
+   */
+  const slowPedestrian = (e) => Boolean(policy.faultRows) && e.type === 'collision' && e.otherKind === 'pedestrian' && e.egoSpeed < contactMinEgoSpeed;
+  const excusing = policy.excusingViolations ?? [];
+  const excuseGain = policy.excuseMaxSpeedGainMps;
 
   /** @type {ScorerState} */
   const initial = {
@@ -216,7 +256,7 @@ export function createScorer(bundle, map, vehicleInfo) {
     pedestrianHit: false,
     context: EMPTY_CONTEXT,
     notices: [],
-    fault: { aftermathFromT: null, noticeT: {} },
+    fault: { aftermathFromT: null, noticeT: {}, excuseSpeed: {} },
   };
 
   /**
@@ -378,17 +418,19 @@ export function createScorer(bundle, map, vehicleInfo) {
     /** @type {Notice[]} */
     const notices = [];
     let noticeT = state.fault.noticeT;
+    const excuseSpeed = excuseGain === undefined ? state.fault.excuseSpeed : excuseSpeeds(state.fault.excuseSpeed, frame, excusing);
     const contacts = /** @type {(CollisionEvent | FallEvent)[]} */ (frame.events.filter((e) => e.type === 'collision' || e.type === 'fall'));
     if (contacts.length > 0) {
       const fromT = frame.t - crashCauseWindowS;
       const cause = findCause(episodes, collisionRuleIds, fromT, stepCauseFloorT, group, (id) => !nonContributing.has(id));
       const rearEndCause = findCause(episodes, collisionRuleIds, fromT, stepCauseFloorT, group, (id) => rearEndRules.has(id));
       const anyCause = findCause(episodes, collisionRuleIds, fromT, stepCauseFloorT, group, () => true);
-      const facts = { aftermath: inAftermath, cause, anyCause, rearEndCause };
       let anchored = false;
       for (const e of contacts) {
-        const d = decideFault(policy, e, facts);
-        if (d.result === 'deduction' && !belowGate(e)) {
+        const seenAt = e.type === 'collision' && e.otherId !== null ? excuseSpeed[e.otherId] : undefined;
+        const egoSpedUp = excuseGain !== undefined && seenAt !== undefined && frame.ego.speed - seenAt > excuseGain;
+        const d = decideFault(policy, e, { aftermath: inAftermath, cause, anyCause, rearEndCause, egoSpedUp });
+        if (d.result === 'deduction' && !belowGate(e) && !slowPedestrian(e)) {
           charged.push(e);
           chargedDecisions.push(d);
           continue;
@@ -407,7 +449,7 @@ export function createScorer(bundle, map, vehicleInfo) {
           otherKind: e.type === 'collision' ? e.otherKind : null,
           otherModel: e.type === 'collision' ? contactFields(e).otherModel : null,
           violations: e.type === 'collision' ? [...contactFields(e).otherViolations] : [],
-          text: noticeText(policy, e, d.rowId !== null && !anchorRows.has(d.rowId)),
+          text: noticeText(policy, e, d.rowId !== null && !anchorRows.has(d.rowId), d.result === 'deduction'),
         });
       }
       if (anchored) aftermathFromT = frame.t;
@@ -460,7 +502,7 @@ export function createScorer(bundle, map, vehicleInfo) {
       pedestrianHit,
       context,
       notices: notices.length > 0 ? [...state.notices, ...notices] : state.notices,
-      fault: { aftermathFromT, noticeT },
+      fault: { aftermathFromT, noticeT, excuseSpeed },
     };
     return { state: next, breaches, notices, context, runEnded: ended === 'crash' ? 'crash' : null };
   }

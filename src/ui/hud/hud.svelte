@@ -22,9 +22,10 @@
    *   controls: import('../../contracts/hud.js').GameControls,
    *   onpause: () => void,
    *   ondismiss: (episodeId: string) => void,
+   *   runKey?: number,
    * }}
    */
-  let { state: hud, vehicle, toasts, controls, onpause, ondismiss } = $props();
+  let { state: hud, vehicle, toasts, controls, onpause, ondismiss, runKey = 0 } = $props();
 
   const isCar = $derived(vehicle.legalClass === 'car');
   const paused = $derived(hud.runStatus === 'paused');
@@ -59,47 +60,50 @@
     class="absolute inset-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-[max(0.75rem,env(safe-area-inset-top))]"
   >
     <div class="relative h-full w-full">
-      <!-- The control layer: the only part of the HUD that takes pointers. -->
-      <div
-        class="pointer-events-auto absolute inset-0 touch-none select-none"
-        data-testid="hud-controls"
-        role="presentation"
-        onpointerdown={(e) => e.preventDefault()}
-        oncontextmenu={(e) => e.preventDefault()}
-      >
-        <div class="absolute right-0 top-0">
-          <ControlButton
-            action="pause"
-            mode="press"
-            label={actionLabel('pause')}
-            onpress={onpause}
-            testid="hud-pause"
-            class="h-14 min-w-14 rounded-xl border border-police-600 bg-police-500 px-3 text-sm font-semibold text-stone-900 shadow-md"
-          >
-            {paused ? 'Tiếp tục' : 'Tạm dừng'}
-            <KeyBadge action="pause" shown={showBadges} class="-bottom-2 right-1" />
-          </ControlButton>
-        </div>
+      <!-- The control layer: the only part of the HUD that takes pointers. A restart (a new
+           `runKey`) rebuilds it, so no control keeps pointers from the last run. -->
+      {#key runKey}
+        <div
+          class="pointer-events-auto absolute inset-0 touch-none select-none"
+          data-testid="hud-controls"
+          role="presentation"
+          onpointerdown={(e) => e.preventDefault()}
+          oncontextmenu={(e) => e.preventDefault()}
+        >
+          <div class="absolute right-0 top-0">
+            <ControlButton
+              action="pause"
+              mode="press"
+              label={actionLabel('pause')}
+              onpress={onpause}
+              testid="hud-pause"
+              class="h-14 min-w-14 rounded-xl border border-police-600 bg-police-500 px-3 text-sm font-semibold text-stone-900 shadow-md"
+            >
+              {paused ? 'Tiếp tục' : 'Tạm dừng'}
+              <KeyBadge action="pause" shown={showBadges} class="-bottom-2 right-1" />
+            </ControlButton>
+          </div>
 
-        <div class="absolute bottom-0 left-0">
-          <SteeringSlider steer={hud.controls.steer} {showBadges} onsteer={(v) => controls.steer(v)} />
-        </div>
+          <div class="absolute bottom-0 left-0">
+            <SteeringSlider steer={hud.controls.steer} {showBadges} onsteer={(v) => controls.steer(v)} />
+          </div>
 
-        <div class="absolute bottom-0 right-0 flex flex-col items-end gap-2">
-          {#each rows as row, i (i)}
-            <div class="flex gap-2">
-              {#each row as button (button.action)}
-                <RoundButton {button} lights={hud.lights} {showBadges} onhold={holdOf(button.action)} onpress={pressOf(button.action)} />
+          <div class="absolute bottom-0 right-0 flex flex-col items-end gap-2">
+            {#each rows as row, i (i)}
+              <div class="flex gap-2">
+                {#each row as button (button.action)}
+                  <RoundButton {button} lights={hud.lights} {showBadges} onhold={holdOf(button.action)} onpress={pressOf(button.action)} />
+                {/each}
+              </div>
+            {/each}
+            <div class="flex items-end gap-2">
+              {#each pedals as control (control.action)}
+                <Pedal {control} {showBadges} onhold={holdOf(control.action)} />
               {/each}
             </div>
-          {/each}
-          <div class="flex items-end gap-2">
-            {#each pedals as control (control.action)}
-              <Pedal {control} {showBadges} onhold={holdOf(control.action)} />
-            {/each}
           </div>
         </div>
-      </div>
+      {/key}
 
       <!-- Readouts: no actions. -->
       <div class="absolute left-0 top-0 flex items-start gap-2">

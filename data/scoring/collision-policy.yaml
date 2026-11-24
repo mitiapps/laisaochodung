@@ -33,12 +33,14 @@ staticAndFall: scoreOnly
 # rows run per contact, first match wins (conditions: FaultCondition, src/contracts/rule.js). A
 # deduction row resolves the clause through the choice above; a notice row shows the player a
 # message and deducts nothing. Pedestrian contacts never enter the table: they keep the accident
-# clause and end the run. Static objects, kerbs and falls enter only the aftermath row.
+# clause and end the run (below contactMinEgoSpeed, a notice instead). Static objects, kerbs and falls enter only the aftermath row.
 #
 # A deduction needs a player breach (rows 1 and 2) or the player striking a party that had right
 # of way (rows 3 and 4, the Luật 36 Điều 12 khoản 3 duty to observe and slow down, charged as
 # 10.a). Every other contact is a notice. Contacts below contactMinEgoSpeed never deduct but
-# still raise notices, so a stopped player who is rear-ended gets a notice.
+# still raise notices, so a stopped player who is rear-ended gets a notice. A pedestrian contact
+# below that speed is a notice too, never a deduction or a run end; a static object or kerb below
+# it gives nothing.
 faultRows:
   - { id: aftermath, when: aftermath, result: notice }
   - { id: from-behind, when: from-behind, result: notice, unlessRearEndContributing: true }
@@ -55,6 +57,11 @@ rearEndContributingRules: [lane-change, turn-signal]
 # Only right-of-way violations of the other party excuse a player who strikes it; a merely
 # speeding or tailgating vehicle does not.
 excusingViolations: [red-light, wrong-way, no-yield, unsafe-lane-change]
+# Game design: an excusing violation excuses the player only if the player gained no more than
+# this speed (m/s) between the violation first showing on that party and the contact. Another
+# party's violation does not lift the player's own duty to observe, slow down and keep a safe
+# distance (10.a); a player who speeds up into a rider it has seen cut in could have avoided it.
+excuseMaxSpeedGainMps: 0.5
 # Game design: seconds after a notice contact (rows 1 to 5) during which every further contact
 # with a vehicle, a static object or a kerb, and a fall, is a notice too (the shove). Row 0
 # notices do not restart the window.
@@ -65,8 +72,10 @@ paramBasis:
   rearEndContributingRules: design
   excusingViolations: design
   aftermathWindowS: design
+  excuseMaxSpeedGainMps: design
 # Notice texts, keyed by the other party's first violation, then `from-behind`, then `none`;
-# `aftermath` for contacts inside the aftermath window. `{vehicle}` is replaced by the other
+# `aftermath` for contacts inside the aftermath window. A contact that is a notice only because
+# the player was below contactMinEgoSpeed takes `ego-slow` (a vehicle) or `pedestrian-slow`. `{vehicle}` is replaced by the other
 # vehicle's word (xe máy, ô tô, xe buýt…), capitalised at the start of the text. The game never
 # states a legal conclusion: only the police decide fault.
 noticeTexts:
@@ -79,3 +88,5 @@ noticeTexts:
   from-behind: { vi: "Xe khác va vào bạn từ phía sau. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm." }
   none: { vi: "{vehicle} va vào bạn. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm." }
   aftermath: { vi: "Va chạm tiếp theo sau khi bạn bị xe khác va vào. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm." }
+  ego-slow: { vi: "Bạn chạm nhẹ vào {vehicle} ở tốc độ rất thấp. Trò chơi không trừ điểm; hãy giữ khoảng cách an toàn." }
+  pedestrian-slow: { vi: "Có va chạm nhẹ với người đi bộ ở tốc độ rất thấp. Trò chơi không trừ điểm; hãy dừng hẳn và nhường đường cho người đi bộ." }

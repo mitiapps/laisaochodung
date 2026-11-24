@@ -1,8 +1,8 @@
 import { readFileSync, readdirSync } from 'node:fs';
-import { DirectionalLight, InstancedMesh, Mesh, Texture } from 'three';
+import { DirectionalLight, InstancedMesh, Mesh, MeshLambertMaterial, MeshStandardMaterial, Texture } from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildFrames } from '../testing/index.js';
-import { buildWorld, softwareRenderer } from './renderer.js';
+import { LOW_QUALITY_PIXEL_RATIO, buildWorld, pixelRatioFor, softwareRenderer } from './renderer.js';
 
 /** @typedef {import('../contracts/map.js').GameMap} GameMap */
 /** @typedef {import('../contracts/vehicle.js').VehicleInfo} VehicleInfo */
@@ -103,5 +103,54 @@ describe('software rasteriser detection', () => {
     expect(softwareRenderer(glNamed('llvmpipe (LLVM 19.1.1, 256 bits)'))).toBe(true);
     expect(softwareRenderer(glNamed('ANGLE (AMD, AMD Radeon 780M (radeonsi, gfx1103), OpenGL 4.6)'))).toBe(false);
     expect(softwareRenderer(glNamed(null))).toBe(false);
+  });
+});
+
+describe('render quality', () => {
+  const map = /** @type {GameMap} */ (MAPS.find((m) => m.id === 'tutorial-01-co-ban'));
+  const vehicle = /** @type {VehicleInfo} */ (VEHICLES.find((v) => v.legalClass === 'motorbike'));
+
+  /**
+   * The materials of every scenery mesh.
+   * @param {ReturnType<typeof buildWorld>} world World.
+   * @returns {import('three').Material[]} Materials.
+   */
+  const sceneryMaterials = (world) => {
+    /** @type {import('three').Material[]} */
+    const out = [];
+    world.scenery.group.traverse((o) => {
+      if (o instanceof Mesh) out.push(...(Array.isArray(o.material) ? o.material : [o.material]));
+    });
+    return out;
+  };
+
+  it('keeps the hardware path: standard scenery materials and the device pixel ratio up to 2', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    for (const world of [buildWorld(map, vehicle), buildWorld(map, vehicle, { quality: 'high' })]) {
+      const materials = sceneryMaterials(world);
+      expect(materials.length).toBeGreaterThan(3);
+      expect(materials.every((m) => m instanceof MeshStandardMaterial)).toBe(true);
+      world.dispose();
+    }
+    expect(pixelRatioFor('high', 1)).toBe(1);
+    expect(pixelRatioFor('high', 1.5)).toBe(1.5);
+    expect(pixelRatioFor('high', 3)).toBe(2);
+    expect(pixelRatioFor('high', undefined)).toBe(1);
+  });
+
+  it('draws the scenery with Lambert materials and a reduced pixel ratio on the low-cost path', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const world = buildWorld(map, vehicle, { quality: 'low' });
+    const materials = sceneryMaterials(world);
+    expect(materials.length).toBeGreaterThan(3);
+    expect(materials.every((m) => m instanceof MeshLambertMaterial)).toBe(true);
+    // The night glow still reaches the lit windows and sign boards.
+    const night = materials.filter((m) => typeof m.userData.nightEmissive === 'number');
+    expect(night.length).toBeGreaterThan(0);
+    expect(night.every((m) => 'emissiveIntensity' in m)).toBe(true);
+    world.dispose();
+    expect(pixelRatioFor('low', 2)).toBe(LOW_QUALITY_PIXEL_RATIO);
+    expect(LOW_QUALITY_PIXEL_RATIO).toBeGreaterThan(0);
+    expect(LOW_QUALITY_PIXEL_RATIO).toBeLessThan(1);
   });
 });

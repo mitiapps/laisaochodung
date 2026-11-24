@@ -6,8 +6,7 @@ import { assertMap } from './contracts/assert-map.js';
 import { createLoop } from './game/loop.js';
 import { createInput } from './game/input.js';
 import { createSession } from './game/session.js';
-import { createCanvasView, loadMap, loadRapier, loadRules, loadTrafficParams, parseDevRunQuery } from './game/browser.js';
-import { createRenderer } from './render/index.js';
+import { createCanvasView, loadMap, loadRapier, loadRenderer, loadRules, loadTrafficParams, parseDevRunQuery } from './game/browser.js';
 import { createSim } from './sim/index.js';
 import { createScorer, scoreRun } from './scoring/index.js';
 import { VEHICLES } from './ui/lib/catalog.js';
@@ -19,17 +18,26 @@ if (!target) throw new Error('Missing #app mount point in index.html');
 const canvasHost = document.createElement('div');
 canvasHost.className = 'h-full w-full';
 
+/** @type {import('./contracts/modules.js').CreateRenderer | null} The renderer, once loaded for the first run. */
+let createRenderer = null;
+
 const game = createSession({
   vehicles: VEHICLES,
   loadMap: (mapId) => loadMap(mapId),
   loadRules,
   loadRapier,
   loadTrafficParams,
-  // Dev builds only: `?traffic=off` and `?seed=<n>` in the play hash; release builds ignore both.
+  // Dev builds only: `?traffic=`, `?seed=` and `?agentScale=` in the play hash; release builds ignore them.
   ...(import.meta.env.DEV ? { devRunOptions: () => parseDevRunQuery(location.hash) } : {}),
   createSim,
   createScorer,
-  createView: (map, vehicle) => createCanvasView(canvasHost, createRenderer, map, vehicle),
+  prepareView: async () => {
+    createRenderer = await loadRenderer();
+  },
+  createView: (map, vehicle) => {
+    if (!createRenderer) throw new Error('The renderer is not loaded; prepareView must finish first');
+    return createCanvasView(canvasHost, createRenderer, map, vehicle);
+  },
   createInput,
   createLoop,
   requestFrame: (cb) => requestAnimationFrame(cb),

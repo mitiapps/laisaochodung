@@ -5,7 +5,7 @@ import { realBundle } from '../../../scripts/rules/lib/test-support.js';
 import { decideFault } from '../../scoring/fault.js';
 import { createTraffic, stepTraffic } from './index.js';
 import { lawfulParams } from './lawful-params.js';
-import { refreshBaseSpeed, spawnAgent } from './state.js';
+import { refreshBaseSpeed, spawnAgent, updatePose } from './state.js';
 import { yellowStopProbability } from './signals.js';
 import { trafficLightStates } from '../signals.js';
 import { FLAG, LATCH_S, latch, listOfMask, raise, violationsOf } from './violations.js';
@@ -333,19 +333,46 @@ describe('wrecks stop raising right-of-way flags', () => {
 });
 
 describe('cut-in and the signalling ego', () => {
-  it('flags unsafe-lane-change on a rider moving into the ego corridor inside its stopping distance', () => {
+  /**
+   * A rider on rw-e1 that cuts into the ego's path whenever it can, ahead of an ego driving along
+   * the lane line on rw-e0 (its corridor reaches over the left of rw-e1).
+   * @param {number} lateral Rider's starting lateral offset (negative: towards the ego).
+   * @param {(t: number) => number} speedAt Ego speed over time.
+   * @param {number} front Rider centre along the lane.
+   * @returns {number} Time the flag first shows, or −1.
+   */
+  function cutInFlaggedAt(lateral, speedAt, front) {
     const map = emptyMap('signal');
-    const st = createTraffic(map, LAWFUL, 5);
-    // A rider on rw-e1 10 m ahead of the ego, which drives near the line on rw-e0 at 12 m/s; the
-    // rider moves right onto the line, into the ego's path.
-    const k = place(st, 'rw-e1', 70, 6, 'motorbike', 'c-rw-e1-re-e0');
-    st.lateral[k] = -1.3;
-    st.lateralBase[k] = -1.65;
-    /** @type {(t: number) => EgoInput} */
-    const ego = (t) => ({ pos: { x: -100 + 12 * t, z: 4.3 }, heading: 0, speed: 12, lengthM: 4.5, widthM: 1.8 });
-    const steps = run(st, 0, 0.5, ego, allLights(map, 'green'));
+    const cutters = structuredClone(LAWFUL);
+    for (const row of Object.values(cutters.personalities)) row.violations.cutIn = 1;
+    const st = createTraffic(map, cutters, 5);
+    const k = place(st, 'rw-e1', front, 3, 'motorbike', 'c-rw-e1-re-e0');
+    st.lateral[k] = lateral;
+    st.lateralBase[k] = lateral;
+    updatePose(st, k);
     const id = st.ids[k];
-    expect(steps.some(({ poses }) => poses.find((p) => p.id === id)?.violations.includes('unsafe-lane-change'))).toBe(true);
+    let x = -100;
+    for (let i = 0; i < Math.round(2 / DT); i += 1) {
+      const t = i * DT;
+      const v = speedAt(t);
+      x += v * DT;
+      const { poses } = stepTraffic(st, { ego: { pos: { x, z: 3.4 }, heading: 0, speed: v, lengthM: 4.5, widthM: 1.8 }, egoReset: false, scripted: [], lights: allLights(map, 'green'), egoContacts: [], t });
+      if (poses.find((p) => p.id === id)?.violations.includes('unsafe-lane-change')) return t;
+    }
+    return -1;
+  }
+
+  it('flags unsafe-lane-change on a rider moving into the ego corridor inside its stopping distance', () => {
+    expect(cutInFlaggedAt(0, () => 12, 70)).toBeGreaterThan(0);
+  });
+
+  it('raises no cut-in for a rider already inside the ego corridor that keeps moving across', () => {
+    expect(cutInFlaggedAt(-0.5, () => 12, 70)).toBe(-1);
+  });
+
+  it('raises no cut-in when the ego speeds up and its corridor reaches a rider moving across ahead', () => {
+    // The ego pulls away from 2 m/s; its stopping corridor grows over the rider, not the reverse.
+    expect(cutInFlaggedAt(0.3, (t) => Math.min(12, 2 + 8 * t), 75)).toBe(-1);
   });
 
   it('keeps a lawful rider clear of the ego corridor, so it raises no cut-in', () => {

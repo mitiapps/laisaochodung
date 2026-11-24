@@ -184,7 +184,11 @@ traffic (10 agents per lane-km, `maxAgents` 12 and 14); `osm-pasteur` runs 30 pe
 (`maxAgents` 85). Every map with traffic mixes 75% motorbikes, 12% cars, 6% taxis, 5% trucks and
 2% buses. On `tutorial-02-nga-tu` the closed road (P.101) has no source and no agents.
 
-### `osm-pasteur` corridor choice (decision D1)
+### `osm-pasteur` corridor choice
+
+The OSM corridor is at most 1.2 km and must hold one signalled junction, one marked crossing, one
+one-way street and one turn between two mapped ways. The default road is Pasteur in its legal
+(one-way) direction, turning onto Lê Duẩn.
 
 Extract: bbox 10.7755–10.7812 N, 106.6955–106.7012 E, fetched 2026-11-23 (OSM base
 `2026-11-23T04:40:13Z`). Coverage printed by the fetch:
@@ -209,7 +213,7 @@ maxspeed hints (never a zone source; place a P.127 in overrides.yaml if a sign e
 ```
 
 The extract's node order puts Pasteur's one-way direction north-west (towards Quận 3). The
-default road therefore satisfies the D1 constraint without a fallback:
+default road therefore meets that constraint without a fallback:
 
 - Route ways 329878186, 747231131, 678315474 (Pasteur, `oneway=yes`, 3 lanes) from just past Lý
   Tự Trọng, through Nguyễn Du and Hàn Thuyên, then a right turn onto way 803279638 (Lê Duẩn,

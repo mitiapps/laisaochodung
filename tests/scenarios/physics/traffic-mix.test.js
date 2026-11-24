@@ -1,7 +1,7 @@
 /**
  * The traffic mix on `osm-pasteur`: motorbikes make up 70–80% of spawns, riders bunch side by side
  * at a red light within a few metres of the stop line, and the active count never exceeds the
- * map's derived `maxAgents`.
+ * map's derived `maxAgents`. Tutorial 03 spawns the same share.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -80,6 +80,37 @@ describe('traffic mix on osm-pasteur', () => {
     }
     const share = motorbikes / spawns;
     console.log(`motorbike share ${(share * 100).toFixed(1)}% of ${spawns} spawns; riders at one red line, worst seed ${fewestAtRed}`);
+    expect(share).toBeGreaterThanOrEqual(0.7);
+    expect(share).toBeLessThanOrEqual(0.8);
+  }, 600_000);
+
+  it('spawns 70–80% motorbikes on tutorial-03-ban-dem too, its scripted cars aside', () => {
+    const map = loadShippedMap('tutorial-03-ban-dem');
+    // The ego stands at the route start, as a player does before driving off.
+    const ego = { pos: { ...map.route.start.pos }, heading: map.route.start.heading, speed: 0, lengthM: 4.5, widthM: 1.8 };
+    let motorbikes = 0;
+    let spawns = 0;
+    for (let seed = 1; seed <= SEEDS; seed += 1) {
+      /** @type {Set<string>} */
+      const seen = new Set();
+      runTraffic(
+        map,
+        seed,
+        SECONDS,
+        (step) => {
+          // Traffic agents only: scripted actors are not part of the step's poses.
+          for (const p of step.poses) {
+            if (seen.has(p.id)) continue;
+            seen.add(p.id);
+            spawns += 1;
+            if (p.kind === 'motorbike') motorbikes += 1;
+          }
+        },
+        ego,
+      );
+    }
+    const share = motorbikes / spawns;
+    expect(spawns).toBeGreaterThan(100);
     expect(share).toBeGreaterThanOrEqual(0.7);
     expect(share).toBeLessThanOrEqual(0.8);
   }, 600_000);

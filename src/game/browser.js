@@ -68,8 +68,9 @@ export function loadTrafficParams() {
 
 /**
  * Reads the dev-only run options from the query of a hash such as
- * `#/play?map=osm-pasteur&vehicle=car-sedan&seed=42&traffic=off`. Only `traffic=off` and a
- * decimal `seed` are understood; any other value of those keys is an error, not a silent default.
+ * `#/play?map=osm-pasteur&vehicle=car-sedan&seed=42&traffic=off&agentScale=0.5`. Only `traffic`
+ * (`off` or `map`), a decimal integer `seed` and a decimal `agentScale` in (0, 1] are understood;
+ * any other value of those keys is an error, not a silent default.
  * @param {string} hash `location.hash`.
  * @returns {RunOptions} Options.
  */
@@ -87,6 +88,12 @@ export function parseDevRunQuery(hash) {
   if (seed !== null) {
     if (!/^\d{1,10}$/u.test(seed)) throw new RangeError(`Dev hash query: seed must be a decimal integer, got "${seed}"`);
     options.seed = Number(seed);
+  }
+  const agentScale = params.get('agentScale');
+  if (agentScale !== null) {
+    const value = /^(?:\d{1,3}(?:\.\d{1,6})?|\.\d{1,6})$/u.test(agentScale) ? Number(agentScale) : Number.NaN;
+    if (!(value > 0 && value <= 1)) throw new RangeError(`Dev hash query: agentScale must be a decimal in (0, 1], got "${agentScale}"`);
+    options.agentScale = value;
   }
   return checkRunOptions(options, 'Dev hash query');
 }
@@ -111,6 +118,25 @@ export function loadRapier() {
     },
   );
   return rapierPromise;
+}
+
+/** @type {Promise<import('../contracts/modules.js').CreateRenderer> | null} */
+let rendererPromise = null;
+
+/**
+ * Loads the renderer (three.js and the scene code) in its own chunk, once, so the home page does not
+ * download it.
+ * @returns {Promise<import('../contracts/modules.js').CreateRenderer>} Renderer factory.
+ */
+export function loadRenderer() {
+  rendererPromise ??= import('../render/index.js').then(
+    (m) => m.createRenderer,
+    (err) => {
+      rendererPromise = null;
+      throw err;
+    },
+  );
+  return rendererPromise;
 }
 
 /**

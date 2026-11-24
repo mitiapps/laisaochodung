@@ -28,7 +28,7 @@
   dataOn={button.testId ? button.on : null}
   class="h-14 w-14 rounded-full border-2 text-xs font-semibold shadow-md {button.on && !button.blink
     ? 'border-stone-900 bg-police-500 text-stone-900'
-    : 'border-white/70 bg-white/85 text-stone-800'}"
+    : 'border-white/70 bg-white/95 text-stone-800'}"
 >
   {#if button.action === 'signalLeft'}
     <svg viewBox="0 0 20 20" class="h-7 w-7 {lit} {button.on ? 'animate-blink' : ''}" aria-hidden="true"><path d="M2 10 L12 2 V7 H18 V13 H12 V18 Z" fill="currentColor" /></svg>

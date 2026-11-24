@@ -3,12 +3,19 @@
  *
  * - **Sources** (`map.traffic.sources`): each emits at its lane start at `ratePerH`, with intervals
  *   jittered uniformly by ±50% (mean exact), and only while it is more than `sourceMinEgoDistM`
- *   from the ego, so nobody appears in plain view. An emission blocked by the ego distance or the agent cap is skipped; one
- *   blocked only by a queue at the lane start waits for room.
+ *   from the ego, so nobody appears in plain view. An emission blocked by the ego distance or the
+ *   agent cap, one the despawn rules would remove within `SPAWN_LIFE_S` as the ego and the
+ *   agent drive on (too far behind the ego, or outside the outer ring heading away), or one too
+ *   long to fit before the lane's hold point, is skipped; one blocked only by
+ *   a queue at the lane start waits for room.
  * - **Ring spawner**: twice a second, each road with a `densityPerKm` entry is topped up towards
  *   `densityPerKm × lane length inside the spawn ring`, at lane stations inside the ring and out of
- *   the ego's view cone where possible. During the pre-roll the ring reaches the ego and the view
- *   cone is ignored, so the road is populated from the start.
+ *   the ego's view cone where possible. Stations more than `despawnBehindM` behind the ego count
+ *   neither as candidates nor towards the target, as an agent there would be despawned at once;
+ *   nor, as candidates, do stations whose agent the despawn rules would remove within
+ *   `SPAWN_LIFE_S` as the ego and the agent drive on.
+ *   During the pre-roll the ring reaches the ego and the view cone is ignored, so the road is
+ *   populated from the start.
  * - **Despawn**: an agent leaves at a sink lane end; it is removed when it is outside the outer
  *   ring and moving away from the ego, when it is more than `despawnBehindM` behind the ego, or
  *   when it has stopped at a dead end and is out of the ego's view cone.
@@ -17,7 +24,7 @@
  * 0xfffff000 up, far above any spawn index), so spawner draws never touch agent streams.
  */
 
-import { footprint, polygonsIntersect } from '../../geometry/index.js';
+import { angleDiff, footprint, headingOf, polygonsIntersect } from '../../geometry/index.js';
 import { pick, range, streamFor, uniform } from '../random.js';
 import { edgePoint } from './lane-graph.js';
 import { queryGrid } from './grid.js';
@@ -40,6 +47,25 @@ export const STATION_SPACING_M = 5;
 export const PREROLL_RING_ATTEMPTS = 3;
 /** Speed below which an agent counts as stopped, m/s. */
 export const STOPPED_MPS = 0.1;
+/**
+ * A spawn the despawn rules would remove within this time, as the ego and the agent drive on, is
+ * not made, seconds (design).
+ */
+export const SPAWN_LIFE_S = 1;
+/**
+ * The ego may start or keep turning by up to this much within `SPAWN_LIFE_S` (a car through a
+ * junction turn), radians (design).
+ */
+const EGO_TURN_RAD = 0.6;
+/** Tightest turn radius assumed for the ego, so a slow or standing ego turns little, metres (design). */
+const EGO_TURN_RADIUS_M = 6;
+/**
+ * A spawn stands up to this far from its station (a rider keeps right of the lane centre, and it
+ * moves on in the step it is spawned), metres (design).
+ */
+const SPAWN_SLACK_M = 1;
+/** A spawned agent starts at no more than this share of its desired speed. */
+const SPAWN_SPEED_SHARE = 0.9;
 
 /**
  * @typedef {object} SourceRuntime
@@ -50,14 +76,16 @@ export const STOPPED_MPS = 0.1;
  * @property {RandomStream} rng Source stream.
  * @property {number} x Lane start x.
  * @property {number} z Lane start z.
+ * @property {number} vMax Fastest spawn speed on the lane over the map mix, m/s.
  */
 
 /**
  * @typedef {object} SpawnerState
  * @property {SourceRuntime[]} sources Sources in map order.
  * @property {RandomStream} ringRng Ring spawner stream.
- * @property {{edges: Int32Array, s: Float64Array, x: Float64Array, z: Float64Array}[]} stations
- *   Ring stations per road, in map road order.
+ * @property {{edges: Int32Array, s: Float64Array, x: Float64Array, z: Float64Array, heading: Float64Array, vMax: Float64Array}[]} stations
+ *   Ring stations per road, in map road order, with the lane heading and the fastest spawn speed
+ *   of the map mix at each.
  * @property {number[]} density Agents per lane-km per road, 0 without an entry.
  * @property {Int32Array} roadOfEdge Road index of each lane edge, −1 for connectors.
  * @property {Int32Array} candidates Scratch station indices.
@@ -71,6 +99,8 @@ export const STOPPED_MPS = 0.1;
  * @property {number} heading Heading.
  * @property {Vec2[]} footprint Footprint.
  * @property {Vec2[]} spawnGuard Footprint inflated by `TrafficParams.spawnEgoMarginM`.
+ * @property {number} [speed] Forward speed, m/s (0 when absent).
+ * @property {number} [yawRate] Turn rate, rad/s, + to the left (0 when absent).
  */
 
 /**
@@ -91,13 +121,16 @@ function drawModel(st, rng) {
 export function createSpawner(st, t0) {
   const traffic = /** @type {import('../../contracts/map.js').TrafficConfig} */ (st.map.traffic);
   const edges = st.graph.edges;
+  const classes = [...new Set(st.mixModel)].map((m) => modelRows(st.params, st.modelKeys[m]).cls);
+  /** @type {(edge: import('./lane-graph.js').Edge) => number} */
+  const vMaxOf = (edge) => classes.reduce((v, cls) => Math.max(v, SPAWN_SPEED_SHARE * edgeBaseSpeed(edge, cls)), 0);
   const sources = traffic.sources.map((src, i) => {
     const edge = st.graph.edgeIndex.get(src.laneId);
     if (edge === undefined || edge >= st.graph.laneCount) throw new Error(`Traffic source names unknown lane ${src.laneId}`);
     const rng = streamFor(st.seed, st.map.id, SOURCE_STREAM_BASE + i);
     const intervalS = src.ratePerH > 0 ? 3600 / src.ratePerH : Infinity;
     const first = Number.isFinite(intervalS) ? t0 + range(rng, 0, intervalS) : Infinity;
-    return { edge, intervalS, nextT: first, model: drawModel(st, rng), rng, x: edges[edge].xs[0], z: edges[edge].zs[0] };
+    return { edge, intervalS, nextT: first, model: drawModel(st, rng), rng, x: edges[edge].xs[0], z: edges[edge].zs[0], vMax: vMaxOf(edges[edge]) };
   });
   const roadOfEdge = new Int32Array(edges.length).fill(-1);
   const stations = st.map.roads.map((road, r) => {
@@ -105,20 +138,32 @@ export function createSpawner(st, t0) {
     /** @type {number[]} */ const ss = [];
     /** @type {number[]} */ const xs = [];
     /** @type {number[]} */ const zs = [];
+    /** @type {number[]} */ const hs = [];
+    /** @type {number[]} */ const vs = [];
     const p = { x: 0, z: 0, heading: 0 };
     for (const lane of road.lanes) {
       const e = /** @type {number} */ (st.graph.edgeIndex.get(lane.id));
       roadOfEdge[e] = r;
       const edge = edges[e];
+      const vMax = vMaxOf(edge);
       for (let s = STATION_SPACING_M; s <= edge.length - STATION_SPACING_M; s += STATION_SPACING_M) {
         edgePoint(edge, s, p);
         es.push(e);
         ss.push(s);
         xs.push(p.x);
         zs.push(p.z);
+        hs.push(p.heading);
+        vs.push(vMax);
       }
     }
-    return { edges: Int32Array.from(es), s: Float64Array.from(ss), x: Float64Array.from(xs), z: Float64Array.from(zs) };
+    return {
+      edges: Int32Array.from(es),
+      s: Float64Array.from(ss),
+      x: Float64Array.from(xs),
+      z: Float64Array.from(zs),
+      heading: Float64Array.from(hs),
+      vMax: Float64Array.from(vs),
+    };
   });
   const maxStations = stations.reduce((m, s) => Math.max(m, s.s.length), 0);
   return {
@@ -147,6 +192,55 @@ export function inViewCone(ego, x, z, cone) {
   if (d < 1e-6) return true;
   const cos = (dx * Math.cos(ego.heading) - dz * Math.sin(ego.heading)) / d;
   return cos >= Math.cos((cone.viewHalfAngleDeg * Math.PI) / 180);
+}
+
+/**
+ * How far `(x, z)` lies ahead of the ego along its heading (negative behind).
+ * @param {EgoView} ego Ego.
+ * @param {number} x X.
+ * @param {number} z Z.
+ * @returns {number} Metres.
+ */
+function aheadOf(ego, x, z) {
+  return (x - ego.x) * Math.cos(ego.heading) - (z - ego.z) * Math.sin(ego.heading);
+}
+
+/**
+ * Whether the despawn rules would remove an agent spawned at `(x, z)`, heading `heading`, within
+ * `SPAWN_LIFE_S`: it falls more than `despawnBehindM` behind the ego, or it is outside the outer
+ * ring moving away. The ego drives on at its speed and may turn either way by up to `EGO_TURN_RAD`
+ * (less when slow, as on its tightest turn), or more at its present turn rate; the agent stands
+ * or moves at up to `vMax`. Any of those futures counts.
+ * @param {EgoView} ego Ego.
+ * @param {number} x X.
+ * @param {number} z Z.
+ * @param {number} heading Agent heading.
+ * @param {number} vMax Fastest spawn speed there, m/s.
+ * @param {number} behindM `despawnBehindM`.
+ * @param {number} outer Outer ring radius.
+ * @returns {boolean} Despawned at once.
+ */
+function doomed(ego, x, z, heading, vMax, behindM, outer) {
+  const egoV = Math.max(0, ego.speed ?? 0);
+  const turn = Math.max(Math.min(EGO_TURN_RAD, (egoV * SPAWN_LIFE_S) / EGO_TURN_RADIUS_M), Math.abs(ego.yawRate ?? 0) * SPAWN_LIFE_S);
+  // The distance to the ego is convex in time and the way behind it linear (for one heading), so
+  // checking now and at SPAWN_LIFE_S covers the time between.
+  for (const tau of [0, SPAWN_LIFE_S]) {
+    const ex = ego.x + Math.cos(ego.heading) * egoV * tau;
+    const ez = ego.z - Math.sin(ego.heading) * egoV * tau;
+    for (const v of tau === 0 ? [0] : [0, vMax]) {
+      const ax = x + Math.cos(heading) * v * tau;
+      const az = z - Math.sin(heading) * v * tau;
+      const dist = Math.hypot(ax - ex, az - ez) + SPAWN_SLACK_M;
+      // Behind, after a turn either way up to `turn`: worst where the agent comes nearest straight
+      // behind.
+      const rel = Math.min(Math.PI, Math.abs(angleDiff(ego.heading, headingOf(ax - ex, az - ez))) + (tau > 0 ? turn : 0));
+      if (-dist * Math.cos(rel) > behindM) return true;
+      const away = (ax - ex) * Math.cos(heading) - (az - ez) * Math.sin(heading) > 0;
+      if (away && dist > outer) return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -209,7 +303,7 @@ export function trySpawn(st, edge, s, modelIndex, ego, scripted, firstNew) {
   // A speed it can stop from before the agent ahead and the hold point (the light may be red).
   const stopGap = Math.min(blockAhead, e.sink ? gapAhead : Math.min(gapAhead, e.holdS - (sc + half)));
   const v0 = edgeBaseSpeed(e, cls);
-  const speed = Math.min(v0 * 0.9, Math.sqrt(Math.max(0, 2 * cls.comfortDecelMps2 * (stopGap - cls.minGapM))));
+  const speed = Math.min(v0 * SPAWN_SPEED_SHARE, Math.sqrt(Math.max(0, 2 * cls.comfortDecelMps2 * (stopGap - cls.minGapM))));
   return spawnAgent(st, edge, sc, speed, modelIndex);
 }
 
@@ -225,12 +319,17 @@ export function runSpawner(st, t, ego, scripted) {
   const sp = st.spawner;
   const cap = st.capacity;
   const firstNew = st.activeCount;
+  const [inner, outer] = /** @type {import('../../contracts/map.js').TrafficConfig} */ (st.map.traffic).spawnRingM;
+  const behindM = st.params.despawnBehindM;
   for (let i = 0; i < sp.sources.length; i += 1) {
     const src = sp.sources[i];
     if (t < src.nextT) continue;
     const far = Math.hypot(src.x - ego.x, src.z - ego.z) > st.params.sourceMinEgoDistM;
-    if (far && st.activeCount < cap) {
-      const { model } = modelRows(st.params, st.modelKeys[src.model]);
+    const lost = doomed(ego, src.x, src.z, st.graph.edges[src.edge].startHeading, src.vMax, behindM, outer);
+    const { model } = modelRows(st.params, st.modelKeys[src.model]);
+    // A vehicle longer than the stretch before the lane's hold point can never start there.
+    const fits = model.lengthM <= st.graph.edges[src.edge].holdS;
+    if (far && !lost && fits && st.activeCount < cap) {
       if (trySpawn(st, src.edge, model.lengthM / 2, src.model, ego, scripted, firstNew) < 0) continue;
       st.stats.sourceEmitted[i] += 1;
     }
@@ -239,7 +338,6 @@ export function runSpawner(st, t, ego, scripted) {
   }
 
   if (st.tick % RING_TICK_STEPS !== 0) return;
-  const [inner, outer] = /** @type {import('../../contracts/map.js').TrafficConfig} */ (st.map.traffic).spawnRingM;
   const lo = st.preRolling ? 0 : inner;
   const attempts = st.preRolling ? PREROLL_RING_ATTEMPTS : 1;
   for (let r = 0; r < sp.stations.length; r += 1) {
@@ -251,8 +349,9 @@ export function runSpawner(st, t, ego, scripted) {
     const cand = sp.candidates;
     for (let i = 0; i < stn.s.length; i += 1) {
       const d = Math.hypot(stn.x[i] - ego.x, stn.z[i] - ego.z);
-      if (d < lo || d > outer) continue;
+      if (d < lo || d > outer || -aheadOf(ego, stn.x[i], stn.z[i]) > behindM) continue;
       inRing += 1;
+      if (doomed(ego, stn.x[i], stn.z[i], stn.heading[i], stn.vMax[i], behindM, outer)) continue;
       if (st.preRolling || !inViewCone(ego, stn.x[i], stn.z[i], st.params)) cand[outOfView++] = i;
     }
     if (inRing === 0) continue;
@@ -261,9 +360,11 @@ export function runSpawner(st, t, ego, scripted) {
     if (nCand === 0) {
       for (let i = 0; i < stn.s.length; i += 1) {
         const d = Math.hypot(stn.x[i] - ego.x, stn.z[i] - ego.z);
-        if (d >= lo && d <= outer) cand[nCand++] = i;
+        if (d < lo || d > outer || doomed(ego, stn.x[i], stn.z[i], stn.heading[i], stn.vMax[i], behindM, outer)) continue;
+        cand[nCand++] = i;
       }
     }
+    if (nCand === 0) continue;
     const target = (density * inRing * STATION_SPACING_M) / 1000;
     let present = 0;
     for (let i = 0; i < st.activeCount; i += 1) {

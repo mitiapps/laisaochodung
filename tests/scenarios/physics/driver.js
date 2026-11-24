@@ -26,10 +26,12 @@ import { createSim } from '../../../src/sim/index.js';
 import { createScorer, scoreRun } from '../../../src/scoring/index.js';
 import {
   angleDiff,
+  footprint,
   headingOf,
   headingVector,
   pointAtDistance,
   pointInPolygon,
+  polygonsIntersect,
   polylineLength,
   projectOntoPolyline,
   slicePolyline,
@@ -117,6 +119,13 @@ const JUNCTION_MARGIN_S = 2;
 const JUNCTION_CROSS_MPS = 3;
 /** Deceleration used to stop before a merge or junction entry that is not clear, m/s². */
 const HOLD_DECEL = 2.5;
+/**
+ * Strip before the ego's front, and margin either side, that must be free of every body before it
+ * moves on, metres: a body standing at an angle right by the bonnet (a wreck the ego stands beside)
+ * can be closer than its extent along the path tells.
+ */
+const NOSE_PROBE_M = 1;
+const NOSE_SIDE_M = 0.1;
 
 /**
  * Bodies of the last frame near the ego, projected onto the path around the ego.
@@ -153,6 +162,23 @@ function halfExtents(body, rel) {
   const cs = Math.abs(Math.cos(rel));
   const sn = Math.abs(Math.sin(rel));
   return { along: (body.lengthM * cs + body.widthM * sn) / 2, across: (body.lengthM * sn + body.widthM * cs) / 2 };
+}
+
+/**
+ * Whether any body touches the strip just before the ego's front.
+ * @param {object} c Controller state.
+ * @param {Frame} frame Frame.
+ * @returns {boolean} Blocked.
+ */
+function noseBlocked(c, frame) {
+  const e = frame.ego;
+  const [hx, hz] = headingVector(e.heading);
+  const ahead = c.veh.lengthM / 2 + NOSE_PROBE_M / 2;
+  const strip = footprint({ x: e.pos.x + hx * ahead, z: e.pos.z + hz * ahead }, e.heading, NOSE_PROBE_M, c.veh.widthM + 2 * NOSE_SIDE_M);
+  const reach = c.veh.lengthM + NOSE_PROBE_M;
+  return frame.actors.some(
+    (a) => Math.hypot(a.pos.x - e.pos.x, a.pos.z - e.pos.z) < reach + a.lengthM && polygonsIntersect(strip, footprint(a.pos, a.heading, a.lengthM, a.widthM)),
+  );
 }
 
 /**
@@ -195,8 +221,8 @@ function followTarget(c, frame, s, cruise, bodies) {
       break;
     }
   }
+  if (gap < 0.8 || noseBlocked(c, frame)) return 0;
   if (gap === Infinity) return cruise;
-  if (gap < 0.8) return 0;
   const acc = idmAcceleration(v, Math.max(cruise, 0.5), gap, v - leadV, IDM.a, IDM.b, IDM.timeGap, IDM.s0, IDM.delta);
   return Math.max(0, v + acc * 0.6);
 }

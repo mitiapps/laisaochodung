@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { BoxGeometry, Frustum, Group, InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, PerspectiveCamera, Vector3 } from 'three';
+import { BoxGeometry, Frustum, Group, InstancedMesh, Matrix4, Mesh, MeshLambertMaterial, MeshStandardMaterial, PerspectiveCamera, Vector3 } from 'three';
 import map from '../../../tests/fixtures/map-minimal.json' with { type: 'json' };
 import { polygonSignedArea } from '../../geometry/index.js';
 import { FAR_M, chaseTarget } from '../scene.js';
@@ -301,6 +301,27 @@ describe('prop models', () => {
     expect(box.max.y).toBeGreaterThan(7 * 0.8 - 1e-6);
     expect(box.max.y).toBeLessThan(7 * 1.25 + 1e-6);
     scenery.dispose();
+  });
+
+  it('draws a loaded model with Lambert copies of its materials on the low-cost path, and keeps the source', async () => {
+    const source = new MeshStandardMaterial({ color: 0x336633, transparent: true, opacity: 0.8 });
+    const model = new Group();
+    model.add(new Mesh(new BoxGeometry(2, 14, 2), source));
+    loader.impl = async () => ({ scene: model });
+    const scenery = buildScenery(richMap('osm'), { propModels: { tree: { path: 'models/tree.glb', yawOffset: 0 } } }, { lambert: true });
+    await vi.waitFor(() => expect(scenery.group.getObjectByName('scenery-prop-tree-model')).toBeDefined());
+    const inst = /** @type {InstancedMesh} */ (scenery.group.getObjectByName('scenery-prop-tree-model'));
+    const drawn = /** @type {MeshLambertMaterial} */ (inst.material);
+    expect(drawn).toBeInstanceOf(MeshLambertMaterial);
+    expect(drawn.color.getHex()).toBe(0x336633);
+    expect(drawn.transparent).toBe(true);
+    expect(drawn.opacity).toBeCloseTo(0.8, 6);
+    const disposed = vi.fn();
+    drawn.addEventListener('dispose', disposed);
+    scenery.dispose();
+    // The layer frees its copy; the shared loaded model keeps its own material.
+    expect(disposed).toHaveBeenCalledTimes(1);
+    expect(/** @type {Mesh} */ (model.children[0]).material).toBe(source);
   });
 
   it('ignores a model that arrives after disposal', async () => {

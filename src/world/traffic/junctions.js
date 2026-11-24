@@ -9,7 +9,16 @@
  *   still in the box at a phase change are yielded to.
  * - **Swing zones.** Where the map lists no conflict but two connectors pass close, a long
  *   vehicle's body ends swing over the other path; those zones are exclusive only when a long
- *   vehicle is involved, and take no part in gap acceptance.
+ *   vehicle is involved, and take no part in gap acceptance. Straight connectors of one road into
+ *   different exit lanes run side by side and have none.
+ * - **Merges.** Two connectors from different lanes of one road into the same exit lane join it
+ *   one behind the other: a merge is not exclusive and takes no part in gap acceptance or
+ *   fairness. They go in order of distance to the start of the exit lane (ties to the lower spawn
+ *   index): an agent may claim unless a claimant of the merging connector is abreast of it, that
+ *   is, unless the one ahead lacks its length plus the follower's minimum gap clear, nor while
+ *   the head of the merging approach, free to go, goes first by that order (of two heads abreast,
+ *   the one that has waited longer goes first). From the claim on, the one behind follows the
+ *   one ahead until both are on the exit lane.
  * - **Gap acceptance.** Against the leading unclaimed agent approaching a conflicting connector,
  *   an agent yields when that agent has priority and its true arrival time at the zone is earlier
  *   than the agent's own plus its critical gap.
@@ -24,12 +33,12 @@
  *   it or by the deadlock breaker, enters inside another party's critical gap.
  * - **Held agents are not waited for.** An agent standing at its hold point that cannot claim
  *   because its exit lane is full, or because what lies ahead blocks it, takes no part in gap
- *   acceptance until it can go.
+ *   acceptance until it can go. At a merge, a head waiting for exit room keeps its turn.
  * - **Deadlock breaker.** An agent that has waited longer than `behaviour.deadlockS`, and longer
  *   than every agent it yields to, stops yielding (claims are still respected). It never stops
  *   yielding to a moving ego.
  * - **Fairness.** An agent that can still stop well does not ask for a claim while the head
- *   of a conflicting approach, free to go, has waited longer than `behaviour.deadlockS` and longer
+ *   of a crossing approach, free to go, has waited longer than `behaviour.deadlockS` and longer
  *   than it: claims taken one after another by a platoon cannot starve that head.
  * - **Keep-clear at a red exit.** While the light at the end of a short exit lane is not green,
  *   the exit room ends at its stop line, so a vehicle that does not fit before it waits before the
@@ -45,6 +54,11 @@ import { TURN_RANK } from './lane-graph.js';
 
 /** @typedef {import('./state.js').TrafficState} TrafficState */
 /** @typedef {import('./lane-graph.js').Edge} Edge */
+
+/** `TrafficState.held`: standing at the hold point because the exit lane has no room. */
+export const HELD_EXIT = 1;
+/** `TrafficState.held`: standing at the hold point, blocked by what lies ahead. */
+export const HELD_BLOCKED = 2;
 
 /** Below this share of its acceleration an agent is taken to cruise, for arrival estimates. */
 const CRUISE_ACCEL_SHARE = 0.05;
@@ -95,20 +109,92 @@ export function claimBlocking(st, slot, conn) {
 }
 
 /**
- * Whether a claimant of the conflicting connector still occupies or will occupy the shared zone.
- * A swing zone counts only when the asking agent or the claimant is a long vehicle.
+ * Distance from the slot's front to the start of the exit lane of connector `conn`, while the
+ * slot is on that connector or on its approach lane; −Infinity anywhere else.
  * @param {TrafficState} st State.
- * @param {import('./lane-graph.js').EdgeConflict} cf Conflict, seen from the asking agent's connector.
+ * @param {number} slot Slot.
+ * @param {number} conn Connector edge.
+ * @returns {number} Metres.
+ */
+export function toExit(st, slot, conn) {
+  const edges = st.graph.edges;
+  const c = edges[conn];
+  const front = st.s[slot] + st.lengthM[slot] / 2;
+  if (st.edge[slot] === conn) return c.length - front;
+  if (st.edge[slot] === c.fromEdge) return edges[c.fromEdge].length - front + c.length;
+  return -Infinity;
+}
+
+/**
+ * Whether agent `k` goes ahead of `slot` into the shared exit lane of a merge: nearer its start,
+ * ties to the lower spawn index.
+ * @param {number} dSlot Distance of `slot` to the exit lane.
+ * @param {number} dK Distance of `k` to the exit lane.
+ * @param {number} slotIndex Spawn index of `slot`.
+ * @param {number} kIndex Spawn index of `k`.
+ * @returns {boolean} `k` goes first.
+ */
+export function mergesAhead(dSlot, dK, slotIndex, kIndex) {
+  return dK < dSlot || (dK === dSlot && kIndex < slotIndex);
+}
+
+/**
+ * Merge order for an agent not yet holding a claim: whether the foremost agent of the merging
+ * approach that will take the merging connector, free to go (no claim yet, not a wreck, not
+ * blocked ahead, its light letting it go), goes first. The one nearer the shared exit lane goes
+ * first (ties to the lower spawn index), except that of two abreast the one that has waited
+ * longer does. So a waiting head is never passed by a stream rolling up on the lane beside it,
+ * also while it waits for room on the exit lane (the stream would take that room as it opens).
+ * @param {TrafficState} st State.
+ * @param {number} conn Connector the asking agent would take.
+ * @param {import('./lane-graph.js').EdgeConflict} cf Merge conflict, seen from `conn`.
+ * @param {number} self Slot asking.
+ * @param {Record<string, import('../../contracts/telemetry.js').LightState>} lights Light states.
+ * @returns {boolean} The other head goes first.
+ */
+export function mergeHeadFirst(st, conn, cf, self, lights) {
+  const b = st.graph.edges[cf.other];
+  const bLane = st.graph.edges[b.fromEdge];
+  const y = headFor(st, bLane.index, b.index);
+  if (y < 0 || y === self || st.claim[y] >= 0 || st.wreck[y] || st.held[y] === HELD_BLOCKED) return false;
+  const light = laneLight(st, bLane, lights);
+  if (light === 'red' || (light === 'yellow' && st.signalCommit[y] !== 2)) return false;
+  const dSelf = toExit(st, self, conn);
+  const dY = toExit(st, y, cf.other);
+  const yAhead = mergesAhead(dSelf, dY, st.spawnIndex[self], st.spawnIndex[y]);
+  const abreast = yAhead ? dSelf - dY - st.lengthM[y] < st.minGap[self] : dY - dSelf - st.lengthM[self] < st.minGap[y];
+  if (!abreast) return yAhead;
+  const wy = st.waitS[y];
+  const ws = st.waitS[self];
+  return wy > ws || (wy === ws && yAhead);
+}
+
+/**
+ * Whether a claimant of the conflicting connector still occupies or will occupy the shared zone.
+ * A swing zone counts only when the asking agent or the claimant is a long vehicle. At a merge a
+ * claimant counts only while it is abreast of the asking agent: the one going first must have its
+ * length plus the follower's minimum gap clear of the follower's front.
+ * @param {TrafficState} st State.
+ * @param {number} conn Connector the asking agent would take.
+ * @param {import('./lane-graph.js').EdgeConflict} cf Conflict, seen from `conn`.
  * @param {number} self Slot asking, never counted.
  * @returns {boolean} Zone taken.
  */
-export function zoneClaimed(st, cf, self) {
+export function zoneClaimed(st, conn, cf, self) {
   const list = st.claimants[cf.other];
   const longM = st.params.behaviour.longVehicleM;
   const selfLong = st.lengthM[self] > longM;
+  const dSelf = cf.merge ? toExit(st, self, conn) : 0;
   for (let i = 0; i < st.claimCount[cf.other]; i += 1) {
     const k = list[i];
     if (k === self || (cf.swing && !selfLong && st.lengthM[k] <= longM)) continue;
+    if (cf.merge) {
+      const dK = toExit(st, k, cf.other);
+      if (dK === -Infinity) continue;
+      const clear = mergesAhead(dSelf, dK, st.spawnIndex[self], st.spawnIndex[k]) ? dSelf - dK - st.lengthM[k] >= st.minGap[self] : dK - dSelf - st.lengthM[self] >= st.minGap[k];
+      if (!clear) return true;
+      continue;
+    }
     if (claimProgress(st, k, cf.other) <= cf.otherToS) return true;
   }
   return false;
@@ -255,7 +341,7 @@ export function checkConflicts(st, slot, conn, lights, ego, out) {
   const lane = edges[a.fromEdge];
   const toLaneEnd = lane.length - (st.s[slot] + st.lengthM[slot] / 2);
   for (const cf of a.conflicts) {
-    if (zoneClaimed(st, cf, slot)) {
+    if (zoneClaimed(st, conn, cf, slot) || (cf.merge && mergeHeadFirst(st, conn, cf, slot, lights))) {
       out.claimed = true;
       return out;
     }
@@ -264,7 +350,7 @@ export function checkConflicts(st, slot, conn, lights, ego, out) {
   const egoLight = ego.lane >= 0 ? laneLight(st, edges[ego.lane], lights) : null;
   const egoComes = ego.lane >= 0 && ego.lane !== a.fromEdge && ego.speed >= EGO_ARRIVING_MPS && egoLight !== 'red';
   for (const cf of a.conflicts) {
-    if (cf.swing) continue;
+    if (cf.swing || cf.merge) continue;
     const b = edges[cf.other];
     const bLane = edges[b.fromEdge];
     if (egoComes && b.fromEdge === ego.lane) {
@@ -346,7 +432,7 @@ export function defersToWaiter(st, slot, conn, dHold, lights) {
   const edges = st.graph.edges;
   const mine = st.waitS[slot];
   for (const cf of edges[conn].conflicts) {
-    if (cf.swing) continue;
+    if (cf.swing || cf.merge) continue;
     const b = edges[cf.other];
     const bLane = edges[b.fromEdge];
     const y = headFor(st, bLane.index, b.index);

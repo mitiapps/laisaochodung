@@ -9,7 +9,7 @@
  * Scenery never casts shadows; it only receives them.
  */
 
-import { Box3, Color, InstancedMesh, Matrix4, Object3D, Vector3 } from 'three';
+import { Box3, Color, InstancedMesh, Matrix4, MeshLambertMaterial, Object3D, Vector3 } from 'three';
 import { loadModel } from '../assets.js';
 import { headingToYaw } from '../math.js';
 import { TriangleSoup } from '../triangle-soup.js';
@@ -210,15 +210,37 @@ export function propInstances(props, scaleOf, tintOf) {
  */
 
 /**
+ * A Lambert copy of a model material, keeping its colour, texture and transparency.
+ * @param {Material} source Material of a loaded model.
+ * @returns {MeshLambertMaterial} Copy.
+ */
+function lambertCopy(source) {
+  const s = /** @type {import('three').MeshStandardMaterial} */ (source);
+  const copy = new MeshLambertMaterial({
+    ...(s.color ? { color: s.color } : {}),
+    map: s.map ?? null,
+    vertexColors: s.vertexColors,
+    transparent: s.transparent,
+    opacity: s.opacity,
+    alphaTest: s.alphaTest,
+    side: s.side,
+  });
+  copy.name = s.name;
+  return copy;
+}
+
+/**
  * Builds one instanced layer into `group`.
  * @param {Group} group Parent.
  * @param {PropModelKey} key Kind key.
  * @param {PropInstance[]} instances Placements.
  * @param {Material} material Shared vertex-coloured material of the primitives.
  * @param {PropModel | undefined} model Model of the kind, or undefined for the primitive only.
+ * @param {{lambert?: boolean}} [options] `lambert`: the model is drawn with Lambert copies of its
+ *   materials (the low-cost path); false by default.
  * @returns {PropLayer} Layer.
  */
-export function buildPropLayer(group, key, instances, material, model) {
+export function buildPropLayer(group, key, instances, material, model, { lambert = false } = {}) {
   const geometry = /** @type {BufferGeometry} */ (primitiveShape(key).toGeometry());
   const mesh = new InstancedMesh(geometry, material, instances.length);
   mesh.name = `scenery-prop-${key}`;
@@ -240,6 +262,22 @@ export function buildPropLayer(group, key, instances, material, model) {
   let disposed = false;
   /** @type {InstancedMesh[]} */
   const loaded = [];
+  /** @type {Map<Material, MeshLambertMaterial>} Lambert copies the layer owns, by source. */
+  const copies = new Map();
+  /**
+   * The material a model part is drawn with.
+   * @param {Material} source Part material.
+   * @returns {Material} Material.
+   */
+  const drawn = (source) => {
+    if (!lambert) return source;
+    let copy = copies.get(source);
+    if (!copy) {
+      copy = lambertCopy(source);
+      copies.set(source, copy);
+    }
+    return copy;
+  };
 
   if (model) {
     const modelPath = model.path;
@@ -259,7 +297,7 @@ export function buildPropLayer(group, key, instances, material, model) {
           const part = /** @type {import('three').Mesh} */ (o);
           if (!part.isMesh) return;
           const local = new Matrix4().multiplyMatrices(fit, part.matrixWorld);
-          const inst = new InstancedMesh(part.geometry, part.material, instances.length);
+          const inst = new InstancedMesh(part.geometry, Array.isArray(part.material) ? part.material.map(drawn) : drawn(part.material), instances.length);
           inst.name = `scenery-prop-${key}-model`;
           inst.castShadow = false;
           inst.receiveShadow = true;
@@ -289,6 +327,7 @@ export function buildPropLayer(group, key, instances, material, model) {
       geometry.dispose();
       mesh.dispose();
       for (const inst of loaded) inst.dispose();
+      for (const copy of copies.values()) copy.dispose();
     },
   };
 }

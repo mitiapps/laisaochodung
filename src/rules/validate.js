@@ -18,11 +18,11 @@ const DECREE_GROUPS = Object.freeze(['D6', 'D7']);
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const BASES = Object.freeze(['legal', 'design']);
 /** Collision-policy keys that are game choices and carry a `paramBasis` entry. */
-const POLICY_BASIS_KEYS = Object.freeze(['nonContributingRules', 'rearEndContributingRules', 'excusingViolations', 'aftermathWindowS']);
+const POLICY_BASIS_KEYS = Object.freeze(['nonContributingRules', 'rearEndContributingRules', 'excusingViolations', 'aftermathWindowS', 'excuseMaxSpeedGainMps']);
 const FAULT_CONDITIONS = Object.freeze(['aftermath', 'from-behind', 'contributing-episode', 'same-lane-ahead', 'ego-strikes', 'otherwise']);
 const FAULT_RESULTS = Object.freeze(['notice', 'deduction']);
 /** Notice text keys besides the violations. */
-const NOTICE_KEYS = Object.freeze(['from-behind', 'none', 'aftermath']);
+const NOTICE_KEYS = Object.freeze(['from-behind', 'none', 'aftermath', 'ego-slow', 'pedestrian-slow']);
 /** The only placeholder a notice text may hold. */
 const NOTICE_PLACEHOLDER = /\{([^}]*)\}/gu;
 
@@ -356,13 +356,16 @@ function checkFaultPolicy(p, policy, ruleIds) {
   if (policy.aftermathWindowS !== undefined && !(Number.isFinite(policy.aftermathWindowS) && /** @type {number} */ (policy.aftermathWindowS) >= 0)) {
     p.add(`${path}.aftermathWindowS`, 'expected a number ≥ 0');
   }
+  if (policy.excuseMaxSpeedGainMps !== undefined && !(Number.isFinite(policy.excuseMaxSpeedGainMps) && /** @type {number} */ (policy.excuseMaxSpeedGainMps) >= 0)) {
+    p.add(`${path}.excuseMaxSpeedGainMps`, 'expected a number ≥ 0');
+  }
   const texts = policy.noticeTexts;
   if (texts !== undefined) {
     if (!isObj(texts)) p.add(`${path}.noticeTexts`, 'expected a mapping of texts');
     else {
       for (const [k, t] of Object.entries(texts)) {
         const tp = `${path}.noticeTexts.${k}`;
-        if (!NPC_VIOLATIONS.includes(/** @type {never} */ (k)) && !NOTICE_KEYS.includes(k)) p.add(tp, 'not a violation, from-behind, none or aftermath');
+        if (!NPC_VIOLATIONS.includes(/** @type {never} */ (k)) && !NOTICE_KEYS.includes(k)) p.add(tp, 'not a violation, from-behind, none, aftermath, ego-slow or pedestrian-slow');
         checkText(p, t, tp);
         if (isObj(t) && typeof t.vi === 'string') {
           for (const m of t.vi.matchAll(NOTICE_PLACEHOLDER)) if (m[1] !== 'vehicle') p.add(tp, `unknown placeholder "{${m[1]}}"`);

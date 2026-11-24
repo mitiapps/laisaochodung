@@ -52,6 +52,8 @@ const SWING_SAMPLE_M = 0.5;
  * @property {number} otherFromS Start of the zone along the other connector.
  * @property {number} otherToS End of the zone along the other connector.
  * @property {boolean} swing A swing zone: binding only when a long vehicle is involved.
+ * @property {boolean} merge A merge: both connectors lead into the same exit lane from different
+ *   lanes of the same road, so they join one behind the other instead of crossing.
  */
 
 /**
@@ -192,9 +194,33 @@ function samples(e) {
 }
 
 /**
+ * Whether two connectors leave different lanes of the same road and go straight on into
+ * different exit lanes: parallel paths, which never swing over each other.
+ * @param {Edge[]} edges Edges.
+ * @param {Edge} a Connector.
+ * @param {Edge} b Connector.
+ * @returns {boolean} Parallel.
+ */
+function parallelStraights(edges, a, b) {
+  return a.turn === 'straight' && b.turn === 'straight' && a.toEdge !== b.toEdge && edges[a.fromEdge].roadIndex === edges[b.fromEdge].roadIndex;
+}
+
+/**
+ * Whether two connectors merge: the same exit lane, reached from different lanes of the same road.
+ * @param {Edge[]} edges Edges.
+ * @param {Edge} a Connector.
+ * @param {Edge} b Connector.
+ * @returns {boolean} Merge.
+ */
+function merging(edges, a, b) {
+  return a.toEdge === b.toEdge && a.fromEdge !== b.fromEdge && edges[a.fromEdge].roadIndex === edges[b.fromEdge].roadIndex;
+}
+
+/**
  * Adds swing zones between connectors of the same junction that the map does not list as
  * conflicting and that leave different lanes, wherever their centrelines come within
- * `swingConflictM`. Each zone spans every sample of either connector that is that close.
+ * `swingConflictM`. Each zone spans every sample of either connector that is that close. Two
+ * straight connectors of the same road into different exit lanes run side by side and get none.
  * @param {Edge[]} edges Edges.
  * @param {number} laneCount First connector index.
  * @param {number} swingConflictM Swing distance.
@@ -209,7 +235,7 @@ function addSwingConflicts(edges, laneCount, swingConflictM) {
       const a = conns[i];
       const b = conns[j];
       if (a.junctionIndex !== b.junctionIndex || a.fromEdge === b.fromEdge) continue;
-      if (a.conflicts.some((c) => c.other === b.index)) continue;
+      if (a.conflicts.some((c) => c.other === b.index) || parallelStraights(edges, a, b)) continue;
       const sa = sampled[i];
       const sb = sampled[j];
       let aFrom = Infinity;
@@ -228,8 +254,8 @@ function addSwingConflicts(edges, laneCount, swingConflictM) {
         }
       }
       if (aFrom === Infinity) continue;
-      a.conflicts.push({ other: b.index, fromS: aFrom, toS: aTo, otherFromS: bFrom, otherToS: bTo, swing: true });
-      b.conflicts.push({ other: a.index, fromS: bFrom, toS: bTo, otherFromS: aFrom, otherToS: aTo, swing: true });
+      a.conflicts.push({ other: b.index, fromS: aFrom, toS: aTo, otherFromS: bFrom, otherToS: bTo, swing: true, merge: false });
+      b.conflicts.push({ other: a.index, fromS: bFrom, toS: bTo, otherFromS: aFrom, otherToS: aTo, swing: true, merge: false });
       a.clearS = Math.max(a.clearS, aTo);
       b.clearS = Math.max(b.clearS, bTo);
     }
@@ -503,13 +529,20 @@ export function buildLaneGraph(map, params, sweep) {
     if (a === undefined || b === undefined || a < laneCount || b < laneCount) {
       throw new Error(`Conflict ${cf.id} names an unknown connector`);
     }
-    edges[a].conflicts.push({ other: b, fromS: cf.aFromS, toS: cf.aToS, otherFromS: cf.bFromS, otherToS: cf.bToS, swing: false });
-    edges[b].conflicts.push({ other: a, fromS: cf.bFromS, toS: cf.bToS, otherFromS: cf.aFromS, otherToS: cf.aToS, swing: false });
+    edges[a].conflicts.push({ other: b, fromS: cf.aFromS, toS: cf.aToS, otherFromS: cf.bFromS, otherToS: cf.bToS, swing: false, merge: false });
+    edges[b].conflicts.push({ other: a, fromS: cf.bFromS, toS: cf.bToS, otherFromS: cf.aFromS, otherToS: cf.aToS, swing: false, merge: false });
     edges[a].clearS = Math.max(edges[a].clearS, cf.aToS);
     edges[b].clearS = Math.max(edges[b].clearS, cf.bToS);
   }
   addSwingConflicts(edges, laneCount, params.swingConflictM);
   if (sweep) holdBackFromSweeps(edges, laneCount, sweep, params.maxHoldBackM);
+  for (const e of edges) {
+    for (const cf of e.conflicts) {
+      if (!merging(edges, e, edges[cf.other])) continue;
+      cf.merge = true;
+      cf.swing = false;
+    }
+  }
   for (const e of edges) e.conflicts.sort((p, q) => p.fromS - q.fromS || p.other - q.other);
 
   if (edges.length === 0) {

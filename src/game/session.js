@@ -157,6 +157,8 @@ function meanAndP95(samples) {
  *   default.
  * @property {import('../contracts/modules.js').CreateScorer} createScorer Scorer factory.
  * @property {(map: GameMap, vehicle: VehicleInfo) => View} createView View factory.
+ * @property {() => Promise<void>} [prepareView] Loads what `createView` needs (the renderer code),
+ *   awaited together with the map, the rules and Rapier, so the home page never loads it.
  * @property {(options: InputOptions) => Input} createInput Input factory.
  * @property {(deps: LoopDeps) => Loop} createLoop Loop factory.
  * @property {LoopDeps['requestFrame']} requestFrame Animation-frame scheduler.
@@ -515,7 +517,7 @@ export function createSession(deps) {
         lastHudMs: 0,
       };
       run = r;
-      /** @type {[GameMap, RulesBundle, unknown, TrafficParams | null]} */
+      /** @type {[GameMap, RulesBundle, unknown, TrafficParams | null, void]} */
       let loaded;
       const wantsParams = trafficOption === 'map' && deps.loadTrafficParams !== undefined;
       try {
@@ -524,6 +526,7 @@ export function createSession(deps) {
           deps.loadRules(),
           deps.loadRapier(),
           wantsParams ? /** @type {() => Promise<TrafficParams>} */ (deps.loadTrafficParams)() : Promise.resolve(null),
+          deps.prepareView ? deps.prepareView() : Promise.resolve(),
         ]);
       } catch (err) {
         if (run !== r) return;

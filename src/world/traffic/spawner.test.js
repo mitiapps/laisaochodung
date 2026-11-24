@@ -66,8 +66,9 @@ describe('sources', () => {
       t.maxAgents = 400;
     });
     const st = createTraffic(map, { ...PARAMS, preRollS: 0 }, 21);
-    // Off the road at the junction, more than 60 m from every source.
-    firstPoses(st, map, 600, { pos: { x: 30, z: 30 }, heading: 0, speed: 0, lengthM: 4.5, widthM: 1.8 });
+    // Off the road at the junction, more than 60 m from every source and facing diagonally, so no
+    // source lies more than despawnBehindM behind it (an emission there would be skipped).
+    firstPoses(st, map, 600, { pos: { x: 30, z: 30 }, heading: Math.PI / 4, speed: 0, lengthM: 4.5, widthM: 1.8 });
     TRAFFIC.sources.forEach((src, i) => {
       const expected = (src.ratePerH * 600) / 3600;
       expect(st.stats.sourceEmitted[i], src.laneId).toBeGreaterThanOrEqual(expected * 0.8);
@@ -92,6 +93,52 @@ describe('sources', () => {
         }
       }
     }
+  });
+});
+
+describe('sources that cannot place a vehicle', () => {
+  it('skip one too long for a short source lane instead of stalling, and one despawned at once', () => {
+    // Every source lane shorter than a car: the mix still draws cars, which can never start there.
+    const map = mapWith((m) => {
+      const t = /** @type {import('../../contracts/map.js').TrafficConfig} */ (m.traffic);
+      t.densityPerKm = {};
+      t.maxAgents = 400;
+      for (const lane of m.roads.flatMap((r) => r.lanes)) {
+        if (!t.sources.some((src) => src.laneId === lane.id)) continue;
+        const [a, b] = lane.centerline;
+        const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        // Keep the last 4.6 m: the stretch before the hold point is then shorter than a car.
+        const f = Math.max(0, 1 - 4.6 / len);
+        lane.centerline = [[a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f], b];
+      }
+    });
+    const st = createTraffic(map, { ...PARAMS, preRollS: 0 }, 23);
+    const shortest = Math.min(...TRAFFIC.sources.map((src) => st.graph.edges[/** @type {number} */ (st.graph.edgeIndex.get(src.laneId))].holdS));
+    expect(shortest).toBeLessThan(PARAMS.models.car.lengthM);
+    // Off the road, 100 m from the junction and facing it, so every source is far enough to emit.
+    const first = firstPoses(st, map, 300, { pos: { x: 80, z: 60 }, heading: Math.PI - Math.atan2(60, 80), speed: 0, lengthM: 4.5, widthM: 1.8 });
+    // Each source keeps emitting its riders (75% of the mix) through the cars it cannot place. The
+    // stretch holds two riders, so at red it fills and the source waits: well under the full rate,
+    // but far above a source that stalls on the first car it draws.
+    const riderShare = TRAFFIC.mix.filter((m) => PARAMS.models[m.model].kind === 'motorbike').reduce((a, m) => a + m.share, 0);
+    TRAFFIC.sources.forEach((src, i) => {
+      const expected = ((src.ratePerH * 300) / 3600) * riderShare;
+      expect(st.stats.sourceEmitted[i], src.laneId).toBeGreaterThanOrEqual(expected * 0.4);
+    });
+    for (const { pose } of first.values()) expect(pose.kind).toBe('motorbike');
+  });
+
+  it('skips an emission the despawn rules would remove at once', () => {
+    const map = mapWith((m) => {
+      /** @type {import('../../contracts/map.js').TrafficConfig} */ (m.traffic).densityPerKm = {};
+    });
+    const st = createTraffic(map, { ...PARAMS, preRollS: 0 }, 24);
+    // Facing east at the far end of the east arm: the west-arm sources lie more than despawnBehindM behind.
+    firstPoses(st, map, 120, { pos: { x: 140, z: 20 }, heading: 0, speed: 0, lengthM: 4.5, widthM: 1.8 });
+    TRAFFIC.sources.forEach((src, i) => {
+      if (src.laneId.startsWith('rw-')) expect(st.stats.sourceEmitted[i], src.laneId).toBe(0);
+    });
+    expect(st.stats.despawned.behind).toBe(0);
   });
 });
 
