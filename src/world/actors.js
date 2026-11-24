@@ -13,11 +13,17 @@
  * 3. Motion: an active, unheld actor moves `speed · DT` along its path. A looping path wraps from
  *    the last point back to the first; a non-looping actor stops at the last point and becomes
  *    inactive.
+ *
+ * Violation flags are facts of the pose: an active car on a lane, heading against that lane's
+ * direction of travel, carries `wrong-way` (the fault table judges a contact with it).
  */
 
 import { ACTOR_LIGHTS, NO_VIOLATIONS } from '../contracts/telemetry.js';
 import {
+  angleDiff,
   offsetPolyline,
+  pointInPolygon,
+  projectOntoPolyline,
   pointAtDistance,
   polygonsIntersect,
   polylineLength,
@@ -34,6 +40,28 @@ export const ACTOR_DECEL_MPS2 = Object.freeze({ car: 4, pedestrian: 2 });
 
 /** Extra clearance ahead of an actor's front, in metres. */
 export const HOLD_MARGIN_M = 2;
+
+/** The flags of an actor travelling against its lane. */
+const WRONG_WAY = Object.freeze(/** @type {const} */ (['wrong-way']));
+
+/**
+ * Whether a point heading `heading` travels against the lane it stands on: inside a lane polygon
+ * and more than 90° off that lane's centreline direction there. Off every lane (a junction box, a
+ * pavement) it is not against any lane.
+ * @param {GameMap} map Map.
+ * @param {Vec2} p Point.
+ * @param {number} heading Heading.
+ * @returns {boolean} Against its lane.
+ */
+export function againstLane(map, p, heading) {
+  for (const road of map.roads) {
+    for (const lane of road.lanes) {
+      if (!pointInPolygon(p, lane.polygon)) continue;
+      return Math.abs(angleDiff(heading, projectOntoPolyline(p, lane.centerline).heading)) > Math.PI / 2;
+    }
+  }
+  return false;
+}
 
 /**
  * @typedef {object} ActorRuntime
@@ -176,7 +204,7 @@ export function stepActors(actorState, map, blockers, egoSpeed, dt) {
       widthM: actor.widthM,
       lights: ACTOR_LIGHTS.off,
       state: speed > 0 ? 'moving' : 'stopped',
-      violations: NO_VIOLATIONS,
+      violations: active && actor.kind === 'car' && againstLane(map, here.point, here.heading) ? WRONG_WAY : NO_VIOLATIONS,
     });
     let s = rt.s + speed * dt;
     let done = rt.done;

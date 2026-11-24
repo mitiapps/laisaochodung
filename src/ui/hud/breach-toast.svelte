@@ -1,5 +1,6 @@
 <script>
   import BreachDetails from '../result/breach-details.svelte';
+  import { formatDeduction, formatFineBand } from '../lib/format.js';
 
   /**
    * @type {{
@@ -8,12 +9,19 @@
    * }}
    */
   let { breach, ondismiss } = $props();
+
+  // Below 480 px of viewport height (a landscape phone) the toast shows its label, title and
+  // penalty line only, so it does not cover the road; a tap on that line opens the details.
+  let expanded = $state(false);
+  const fine = $derived(breach.scoreOnly || !breach.clause ? null : formatFineBand(breach.clause.fineVnd));
+  const penalty = $derived(fine ? `${formatDeduction(breach.deduction)} · ${fine}` : formatDeduction(breach.deduction));
 </script>
 
 <article
   class="pointer-events-auto w-80 max-w-full shrink-0 rounded-lg border border-stone-200 border-l-4 border-l-kepi-500 bg-white p-2 text-stone-900 shadow-lg"
   data-testid="breach-toast"
   data-episode={breach.episodeId}
+  data-expanded={expanded}
   role="status"
 >
   <header class="mb-1 flex items-start justify-between gap-2">
@@ -30,5 +38,16 @@
       onclick={ondismiss}>×</button
     >
   </header>
-  <BreachDetails {breach} compact />
+  {#if !expanded}
+    <button
+      type="button"
+      class="hidden w-full truncate text-left text-xs font-medium text-kepi-600 [@media(max-height:480px)]:block"
+      data-testid="breach-penalty-short"
+      aria-expanded="false"
+      onclick={() => (expanded = true)}>{penalty} ▸</button
+    >
+  {/if}
+  <div class={expanded ? '' : '[@media(max-height:480px)]:hidden'} data-testid="breach-toast-details">
+    <BreachDetails {breach} compact />
+  </div>
 </article>

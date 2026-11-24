@@ -148,7 +148,10 @@ function blockedOn(st, slot, edge, shift, lo, hi) {
     if (k === slot) continue;
     // Along the lane: same edge by distance; a neighbour lane runs alongside, so by projection.
     const ds = own ? st.s[k] - st.s[slot] : alongOffset(st, slot, k);
-    if (Math.abs(ds) >= (st.lengthM[k] + st.lengthM[slot]) / 2 + ALONGSIDE_M) continue;
+    // The margin applies ahead only: a body wholly behind the rider is not in the way of a move
+    // sideways (else a rider queued close behind pins the one ahead out of its turn band).
+    const reach = (st.lengthM[k] + st.lengthM[slot]) / 2;
+    if (ds < 0 ? -ds >= reach : ds >= reach + ALONGSIDE_M) continue;
     // A body turned by its lane change swings its ends out sideways.
     const yaw = Math.abs(normalizeAngle(st.heading[k] - st.heading[slot]));
     const need = lateralNeed(st, slot, k) + (st.lengthM[k] / 2) * Math.sin(Math.min(yaw, Math.PI / 2));

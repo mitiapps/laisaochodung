@@ -7,8 +7,9 @@
  * - side pole: lowest lamp 1.7–5.8 m above the ground; 2.5 m here;
  * - cantilever arm: lowest lamp 5.2–7.8 m; 5.5 m here, with a 4 m arm (design);
  * - main lenses 200–300 mm; 300 mm here;
- * - countdown (Dạng 8): red digits on red, green digits on green. Yellow shows yellow digits here
- *   (design). The seconds come from the signal cycle at the frame time, through `signalState`.
+ * - countdown (Dạng 8): red digits on red, green digits on green; the display is blank on yellow,
+ *   which the cited source does not count. The seconds come from the signal cycle at the frame
+ *   time, through `signalState`.
  *
  * Every countdown digit lives in one merged geometry whose UVs and colours change per update, so
  * all countdowns cost one draw call.
@@ -78,17 +79,19 @@ export function headCentreY(mount) {
 }
 
 /**
- * Whole seconds left in the current phase of a signal at run time `t`, at least 1, at most 99.
+ * Whole seconds left in the current red or green phase of a signal at run time `t`, at least 1, at
+ * most 99; null on yellow, which the countdown does not count.
  * @param {Signal} signal Signal.
  * @param {number} t Run time in seconds.
- * @returns {{state: LightState, seconds: number}} Phase and seconds left.
+ * @returns {{state: 'red' | 'green', seconds: number} | null} Phase and seconds left.
  */
 export function countdown(signal, t) {
   const state = signalState(signal, t);
+  if (state !== 'red' && state !== 'green') return null;
   const { green, yellow, red, offset } = signal.cycle;
   const period = green + yellow + red;
   const u = (((t + offset) % period) + period) % period;
-  const end = state === 'green' ? green : state === 'yellow' ? green + yellow : period;
+  const end = state === 'green' ? green : period;
   return { state, seconds: Math.max(1, Math.min(99, Math.ceil(end - u - 1e-9))) };
 }
 
@@ -241,10 +244,9 @@ export function buildTrafficLights(map, options = {}) {
     group.add(mesh);
   }
 
-  /** @type {Record<LightState, [number, number, number]>} */
+  /** @type {Record<'red' | 'green', [number, number, number]>} */
   const digitColors = {
     red: [1, 0.1, 0.05],
-    yellow: [1, 0.65, 0],
     green: [0.1, 1, 0.3],
   };
 
@@ -281,7 +283,7 @@ export function buildTrafficLights(map, options = {}) {
         const c = t === undefined || !state ? null : countdown(signal, t);
         // A frame state that disagrees with the cycle (a stale frame) shows nothing.
         const cells = c && c.state === state ? digitCells(c.seconds) : [BLANK, BLANK];
-        const rgb = state ? digitColors[state] : digitColors.red;
+        const rgb = c ? digitColors[c.state] : digitColors.red;
         writeDigit(i * 2, cells[0], cells[0] === BLANK ? [0, 0, 0] : rgb);
         writeDigit(i * 2 + 1, cells[1], cells[1] === BLANK ? [0, 0, 0] : rgb);
       });

@@ -7,7 +7,7 @@
  * new run and clears the effects.
  */
 
-import { ACESFilmicToneMapping, Scene, SRGBColorSpace, Vector3, WebGLRenderer } from 'three';
+import { ACESFilmicToneMapping, PCFSoftShadowMap, Scene, SRGBColorSpace, Vector3, WebGLRenderer } from 'three';
 import { DT } from '../contracts/units.js';
 import { buildActors } from './actors.js';
 import { releaseModels } from './assets.js';
@@ -17,6 +17,8 @@ import { leanAngle, wheelOffsets } from './math.js';
 import { buildRoadMeshes } from './road-mesh.js';
 import { buildRouteMarkers } from './route-markers.js';
 import { createChaseCamera, createEnvironment } from './scene.js';
+import { buildScenery } from './scenery/index.js';
+import { SCENERY_KIT } from './scenery/kit.js';
 import { buildSigns } from './signs.js';
 import { buildTrafficLights } from './traffic-lights.js';
 import { createVehicleView, lampState } from './vehicle-view.js';
@@ -28,27 +30,52 @@ import { vehicleModel } from './vehicles/index.js';
 /** @typedef {import('../contracts/modules.js').Renderer} Renderer */
 
 /**
+ * @typedef {object} World
+ * @property {Scene} scene Scene.
+ * @property {ReturnType<typeof buildRoadMeshes>} road Road, kerbs and markings.
+ * @property {ReturnType<typeof buildScenery>} scenery Buildings and street furniture.
+ * @property {ReturnType<typeof buildSigns>} signs Signs.
+ * @property {ReturnType<typeof buildTrafficLights>} lights Signal heads.
+ * @property {ReturnType<typeof buildRouteMarkers>} markers Route markers.
+ * @property {ReturnType<typeof buildActors>} actors Scripted actors and traffic.
+ * @property {ReturnType<typeof createEnvironment>} environment Lights, fog and rain.
+ * @property {ReturnType<typeof createVehicleView>} ego Player vehicle.
+ * @property {ReturnType<typeof createSkidMarks>} skids Skid marks.
+ * @property {ReturnType<typeof createFallGhosts>} ghosts Fall ghosts.
+ * @property {() => void} dispose Frees everything built here.
+ */
+
+/**
  * Wall clock for effect animation only (never for simulation).
  * @returns {number} Seconds.
  */
 const nowS = () => performance.now() / 1000;
 
 /**
- * Creates the Three.js renderer for one map and vehicle.
- * @param {HTMLCanvasElement} canvas Canvas.
+ * Whether the WebGL context runs on a software rasteriser, by its unmasked renderer name.
+ * @param {WebGLRenderer} gl Renderer.
+ * @returns {boolean} Software.
+ */
+export function softwareRenderer(gl) {
+  const ctx = gl.getContext();
+  const ext = ctx.getExtension('WEBGL_debug_renderer_info');
+  const name = ext ? String(ctx.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : '';
+  return /swiftshader|llvmpipe|softpipe|software/iu.test(name);
+}
+
+/**
+ * The scene of one map and vehicle, built in draw order: road, scenery, signs, lights, route
+ * markers, actors (instanced), environment, then the ego and its effects. Needs no WebGL context.
  * @param {GameMap} map Map.
  * @param {VehicleInfo} vehicleInfo Player vehicle.
- * @returns {Renderer} Renderer.
+ * @returns {World} The scene and its parts.
  */
-export function createRenderer(canvas, map, vehicleInfo) {
-  const gl = new WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-  gl.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2));
-  gl.outputColorSpace = SRGBColorSpace;
-  gl.toneMapping = ACESFilmicToneMapping;
-
+export function buildWorld(map, vehicleInfo) {
   const scene = new Scene();
   const road = buildRoadMeshes(map);
   scene.add(road.group);
+  const scenery = buildScenery(map, SCENERY_KIT);
+  scene.add(scenery.group);
   const signs = buildSigns(map);
   scene.add(signs.group);
   const lights = buildTrafficLights(map);
@@ -62,12 +89,57 @@ export function createRenderer(canvas, map, vehicleInfo) {
   const config = vehicleModel(vehicleInfo.id, vehicleInfo.legalClass);
   const ego = createVehicleView({ config, lengthM: vehicleInfo.lengthM, widthM: vehicleInfo.widthM, lamps: true });
   scene.add(ego.root);
-  const offsets = wheelOffsets(vehicleInfo.legalClass, vehicleInfo.lengthM, vehicleInfo.widthM);
   const skids = createSkidMarks(vehicleInfo.legalClass === 'car' ? 0.22 : 0.12);
   scene.add(skids.mesh);
-  const shake = createShake();
   const ghosts = createFallGhosts();
   scene.add(ghosts.group);
+  return {
+    scene,
+    road,
+    scenery,
+    signs,
+    lights,
+    markers,
+    actors,
+    environment,
+    ego,
+    skids,
+    ghosts,
+    dispose() {
+      ego.dispose();
+      actors.dispose();
+      road.dispose();
+      scenery.dispose();
+      signs.dispose();
+      lights.dispose();
+      markers.dispose();
+      skids.dispose();
+      environment.dispose();
+    },
+  };
+}
+
+/**
+ * Creates the Three.js renderer for one map and vehicle.
+ * @param {HTMLCanvasElement} canvas Canvas.
+ * @param {GameMap} map Map.
+ * @param {VehicleInfo} vehicleInfo Player vehicle.
+ * @returns {Renderer} Renderer.
+ */
+export function createRenderer(canvas, map, vehicleInfo) {
+  const gl = new WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  gl.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2));
+  gl.outputColorSpace = SRGBColorSpace;
+  gl.toneMapping = ACESFilmicToneMapping;
+  // Shadows cost a software rasteriser (SwiftShader, llvmpipe) about a third of its frame rate,
+  // enough to slow the sim below real time, so only a hardware GPU draws them.
+  gl.shadowMap.enabled = !softwareRenderer(gl);
+  gl.shadowMap.type = PCFSoftShadowMap;
+
+  const world = buildWorld(map, vehicleInfo);
+  const { scene, lights, markers, actors, environment, ego, skids, ghosts } = world;
+  const offsets = wheelOffsets(vehicleInfo.legalClass, vehicleInfo.lengthM, vehicleInfo.widthM);
+  const shake = createShake();
 
   const chase = createChaseCamera(canvas.clientWidth / Math.max(1, canvas.clientHeight) || 16 / 9, vehicleInfo.legalClass);
   const focus = new Vector3();
@@ -79,6 +151,8 @@ export function createRenderer(canvas, map, vehicleInfo) {
   let lastTick = -1;
   let lastDraw = nowS();
   let disposed = false;
+  /** Draw calls of the last frame, the shadow pass included. */
+  let drawCalls = 0;
 
   /**
    * Per-tick bookkeeping for a frame not seen before.
@@ -129,11 +203,15 @@ export function createRenderer(canvas, map, vehicleInfo) {
       const night = environment.update(frame.env, focus, now);
       ego.update(pose, frame.ego, angles, lampState(frame.ego, frame.t, night));
       actors.update(prev, frame, alpha, newTick);
-      lights.update(frame.trafficLights);
+      lights.update(frame.trafficLights, frame.t);
       markers.update(frame, now);
       ghosts.update(now);
       chase.follow(pose, dtS, snap, shake.offset(now));
       gl.render(scene, chase.camera);
+      drawCalls = gl.info.render.calls;
+    },
+    drawCalls() {
+      return drawCalls;
     },
     resize(width, height) {
       const w = Math.max(1, Math.floor(width));
@@ -145,14 +223,7 @@ export function createRenderer(canvas, map, vehicleInfo) {
     dispose() {
       if (disposed) return;
       disposed = true;
-      ego.dispose();
-      actors.dispose();
-      road.dispose();
-      signs.dispose();
-      lights.dispose();
-      markers.dispose();
-      skids.dispose();
-      environment.dispose();
+      world.dispose();
       gl.dispose();
       releaseModels().catch((err) => console.error('Releasing models failed', err));
     },

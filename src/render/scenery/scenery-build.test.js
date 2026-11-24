@@ -278,7 +278,7 @@ describe('scenery build', () => {
 describe('prop models', () => {
   it('keeps the primitive when a model fails to load', async () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const scenery = buildScenery(richMap('osm'), { propModels: { tree: 'models/missing.glb' } });
+    const scenery = buildScenery(richMap('osm'), { propModels: { tree: { path: 'models/missing.glb', yawOffset: 0 } } });
     await vi.waitFor(() => expect(errors).toHaveBeenCalled());
     expect(scenery.group.getObjectByName('scenery-prop-tree')).toBeDefined();
     scenery.dispose();
@@ -288,7 +288,7 @@ describe('prop models', () => {
     const model = new Group();
     model.add(new Mesh(new BoxGeometry(2, 14, 2), new MeshStandardMaterial()));
     loader.impl = async () => ({ scene: model });
-    const scenery = buildScenery(richMap('osm'), { propModels: { tree: 'models/tree.glb' } });
+    const scenery = buildScenery(richMap('osm'), { propModels: { tree: { path: 'models/tree.glb', yawOffset: 0 } } });
     await vi.waitFor(() => expect(scenery.group.getObjectByName('scenery-prop-tree-model')).toBeDefined());
     expect(scenery.group.getObjectByName('scenery-prop-tree')).toBeUndefined();
     const inst = /** @type {InstancedMesh} */ (scenery.group.getObjectByName('scenery-prop-tree-model'));
@@ -307,7 +307,7 @@ describe('prop models', () => {
     /** @type {(v: unknown) => void} */
     let resolve = () => {};
     loader.impl = () => new Promise((r) => (resolve = r));
-    const scenery = buildScenery(richMap('osm'), { propModels: { lamp: 'models/lamp.glb' } });
+    const scenery = buildScenery(richMap('osm'), { propModels: { lamp: { path: 'models/lamp.glb', yawOffset: 0 } } });
     scenery.dispose();
     const model = new Group();
     model.add(new Mesh(new BoxGeometry(1, 9, 1)));

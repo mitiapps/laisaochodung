@@ -75,6 +75,8 @@ const MAX_SEED = 0xffffffff;
  * @property {'map' | 'off'} [traffic] `map` (default) runs the map's traffic block, `off` runs the
  *   scripted actors only.
  * @property {number} [seed] Fixed 32-bit unsigned run seed; a fresh random one by default.
+ * @property {number} [agentScale] Factor in (0, 1] on the map's `traffic.maxAgents`, rounded to a
+ *   whole agent; 1 by default. A fallback for slow devices, with no UI.
  */
 
 /**
@@ -94,7 +96,21 @@ export function checkRunOptions(options, source) {
   if (options.seed !== undefined && (!Number.isInteger(options.seed) || options.seed < 0 || options.seed > MAX_SEED)) {
     throw new RangeError(`${source}: seed must be an integer in 0..${MAX_SEED}, got ${String(options.seed)}`);
   }
+  if (options.agentScale !== undefined && !(typeof options.agentScale === 'number' && options.agentScale > 0 && options.agentScale <= 1)) {
+    throw new RangeError(`${source}: agentScale must be a number in (0, 1], got ${String(options.agentScale)}`);
+  }
   return options;
+}
+
+/**
+ * The map with its traffic cap scaled by `agentScale`; the same object when nothing changes.
+ * @param {GameMap} map Map.
+ * @param {number} agentScale Factor in (0, 1].
+ * @returns {GameMap} Map.
+ */
+export function scaleAgents(map, agentScale) {
+  if (!map.traffic || agentScale === 1) return map;
+  return { ...map, traffic: { ...map.traffic, maxAgents: Math.round(map.traffic.maxAgents * agentScale) } };
 }
 
 /**
@@ -180,6 +196,10 @@ function meanAndP95(samples) {
  *   since the sim does not report its pool.
  * @property {{mean: number, p95: number} | null} simStepMs Wall time of recent `sim.step` calls
  *   (physics, scripted actors and traffic together), rolling (dev builds).
+ * @property {{mean: number, p95: number} | null} trafficStepMs The part of those steps spent in the
+ *   world step (scripted actors and traffic) and the traffic mirror, rolling (dev builds).
+ * @property {number | null} drawCalls Draw calls of the last rendered frame, shadow pass included;
+ *   null without a renderer that counts them.
  * @property {number} keptFrames Frames kept (dev builds).
  * @property {ReplayCheck | null} replayCheck Result of the last finished run (dev builds).
  * @property {number[]} frameWorkMs Step-and-render time of recent animation frames (dev builds).
@@ -240,6 +260,8 @@ export function createSession(deps) {
   const frameWorkMs = [];
   /** @type {number[]} */
   const simStepMs = [];
+  /** @type {number[]} */
+  const trafficStepMs = [];
 
   /** @param {HudState} state State. */
   const emit = (state) => {
@@ -324,6 +346,11 @@ export function createSession(deps) {
     if (dev) {
       simStepMs.push(deps.now() - t0);
       if (simStepMs.length > SIM_STEP_SAMPLES) simStepMs.shift();
+      const ms = sim.trafficMs?.() ?? null;
+      if (ms !== null) {
+        trafficStepMs.push(ms);
+        if (trafficStepMs.length > SIM_STEP_SAMPLES) trafficStepMs.shift();
+      }
       deps.assertFrame?.(frame);
       r.frames.push(frame);
     }
@@ -455,6 +482,7 @@ export function createSession(deps) {
       const trafficOption = options.traffic ?? query.traffic ?? 'map';
       if ((options.traffic ?? query.traffic) === 'map' && !deps.loadTrafficParams) throw new Error('Traffic was asked for, but the session has no loadTrafficParams');
       const runSeed = options.seed ?? query.seed ?? randomSeed();
+      const agentScale = options.agentScale ?? query.agentScale ?? 1;
       const tuning = tuningOf(vehicle.id);
       lastStart = { mapId, vehicleId, options };
       /** @type {Run} */
@@ -503,9 +531,10 @@ export function createSession(deps) {
         throw err;
       }
       if (run !== r) return;
-      const [map, bundle, rapier, params] = loaded;
+      const [loadedMap, bundle, rapier, params] = loaded;
       try {
-        if (dev) deps.assertMap?.(map);
+        if (dev) deps.assertMap?.(loadedMap);
+        const map = scaleAgents(loadedMap, agentScale);
         r.map = map;
         r.bundle = bundle;
         if (params && map.traffic) {
@@ -515,7 +544,7 @@ export function createSession(deps) {
         const controls = resolveControlPreset(options.controlPreset, bundle, tuning);
         r.controlPreset = controls.preset;
         const traffic = params ? { traffic: /** @type {const} */ ('map'), runSeed, params } : { traffic: /** @type {const} */ ('off'), runSeed };
-        r.sim = deps.createSim(rapier, map, vehicle, { ...traffic, assists: controls.simAssists });
+        r.sim = deps.createSim(rapier, map, vehicle, { ...traffic, assists: controls.simAssists, ...(dev ? { now: deps.now } : {}) });
         r.scorer = deps.createScorer(bundle, map, vehicle);
         r.scorerState = r.scorer.initial;
         r.replayBase = r.scorer.initial;
@@ -652,6 +681,8 @@ export function createSession(deps) {
         agents: agents.length,
         mirrored: params ? Math.min(params.maxMirrored, near) : 0,
         simStepMs: meanAndP95(simStepMs),
+        trafficStepMs: meanAndP95(trafficStepMs),
+        drawCalls: run?.view?.renderer.drawCalls?.() ?? null,
         keptFrames: run ? run.frames.length : 0,
         replayCheck,
         frameWorkMs: [...frameWorkMs],

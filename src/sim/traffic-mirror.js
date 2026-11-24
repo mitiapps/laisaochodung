@@ -11,8 +11,10 @@
  *    it gets kinematic targets only from its next update. An agent already overlapping the ego is
  *    not assigned (it would start inside the ego).
  * 3. Each assigned body follows its agent's pose, except:
- *    - a wreck (`crashed` or `fallen`) holds its body where it is, so an agent pose that ran on
- *      before traffic wrecked it never pushes the ego;
+ *    - a standing wreck (`crashed` or `fallen` at speed 0) holds its body where it is, so an
+ *      agent pose that ran on before traffic stopped it dead at an ego contact never pushes the
+ *      ego. A car wreck from a contact between agents slides on (speed above 0): its body keeps
+ *      following the pose, swept-touch rule included, up to and including the step it stops;
  *    - when the agent's swept footprint from the body to its pose reaches the ego footprint, the
  *      body travels freely to a small margin short of the touch, then moves by
  *      `v · m_npc / (m_npc + m_ego) · DT` per step instead of following its agent, so the contact
@@ -82,6 +84,8 @@ const APPROACH_MARGIN_M = 0.02;
  * @property {ActorPose | null} pose Agent pose this step.
  * @property {number} x Body centre x as last commanded.
  * @property {number} z Body centre z as last commanded.
+ * @property {boolean} sliding The last pose was a wreck still sliding, so the body follows the
+ *   pose once more, to where the slide ended.
  */
 
 /**
@@ -118,7 +122,7 @@ export function createTrafficMirror(R, world, tags, cfg) {
     const body = world.createRigidBody(R.RigidBodyDesc.kinematicPositionBased().setEnabled(false));
     const collider = world.createCollider(R.ColliderDesc.cuboid(0.5, 0.5, 0.5).setCollisionGroups(groups), body);
     /** @type {Slot} */
-    const slot = { body, collider, id: null, pose: null, x: 0, z: 0 };
+    const slot = { body, collider, id: null, pose: null, x: 0, z: 0, sliding: false };
     slots.push(slot);
     slotByHandle.set(collider.handle, slot);
   }
@@ -133,6 +137,7 @@ export function createTrafficMirror(R, world, tags, cfg) {
     tags.delete(slot.collider.handle);
     slot.id = null;
     slot.pose = null;
+    slot.sliding = false;
   };
 
   /**
@@ -153,6 +158,7 @@ export function createTrafficMirror(R, world, tags, cfg) {
     slot.pose = p;
     slot.x = p.pos.x;
     slot.z = p.pos.z;
+    slot.sliding = false;
   };
 
   /**
@@ -221,7 +227,12 @@ export function createTrafficMirror(R, world, tags, cfg) {
         }
         byId.delete(slot.id);
         slot.pose = p;
-        if (p.state === 'crashed' || p.state === 'fallen') continue;
+        if (p.state === 'crashed' || p.state === 'fallen') {
+          const slides = p.speed > 0;
+          const follow = slides || slot.sliding;
+          slot.sliding = slides;
+          if (!follow) continue;
+        } else slot.sliding = false;
         const next = nextCentre(slot, p, egoFp);
         slot.x = next.x;
         slot.z = next.z;

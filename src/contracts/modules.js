@@ -64,6 +64,9 @@
  *   the next step, which emits `reset`; run time and route progress are kept. A full restart of the
  *   run creates a new sim.
  * @property {() => void} dispose Free physics resources.
+ * @property {() => number | null} [trafficMs] Wall time the last step spent in the world step
+ *   (scripted actors and traffic) and the traffic mirror, by `SimOptions.now`; null without that
+ *   clock or before the first step (diagnostics, never part of a frame).
  */
 
 /**
@@ -74,6 +77,8 @@
  * @property {import('./traffic.js').TrafficParams} [params] Compiled traffic parameters; needed
  *   when `traffic` is `map`.
  * @property {import('./controls.js').ControlAssists} [assists] Driving assists; default all off.
+ * @property {() => number} [now] Wall clock in milliseconds for `Sim.trafficMs`; leave it out to
+ *   time nothing.
  */
 
 /**
@@ -91,6 +96,8 @@
  *   from `prev` to `frame` by `alpha` in 0..1.
  * @property {(width: number, height: number) => void} resize Resize the drawing buffer.
  * @property {() => void} dispose Free GPU resources.
+ * @property {() => number} [drawCalls] Draw calls of the last `render`, every pass included
+ *   (diagnostics).
  */
 
 /**

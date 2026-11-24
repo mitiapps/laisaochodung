@@ -469,6 +469,25 @@ describe('createSim traffic option', () => {
     expect(() => createSim(RAPIER, JUNCTION, CAR, { traffic: 'map', params: /** @type {never} */ ({ ...PARAMS, maxMirrored: 2.5 }) })).toThrow(/maxMirrored/);
   });
 
+  it('times the world step and mirror with an injected clock and leaves the frames unchanged', () => {
+    let clock = 0;
+    // Each clock read advances 0.25 ms, so a timed step reads exactly two of them.
+    const now = () => (clock += 0.25);
+    const timed = createSim(RAPIER, JUNCTION, CAR, { ...TRAFFIC, now });
+    const plain = createSim(RAPIER, JUNCTION, CAR, TRAFFIC);
+    expect(timed.trafficMs?.()).toBeNull();
+    expect(plain.trafficMs?.()).toBeNull();
+    const ft = run(timed, 120, busy);
+    const fp = run(plain, 120, busy);
+    expect(timed.trafficMs?.()).toBe(0.25);
+    expect(clock).toBe(120 * 0.5);
+    expect(plain.trafficMs?.()).toBeNull();
+    timed.dispose();
+    plain.dispose();
+    expect(JSON.stringify(ft)).toBe(JSON.stringify(fp));
+    expect(() => createSim(RAPIER, JUNCTION, CAR, { ...TRAFFIC, now: /** @type {never} */ (5) })).toThrow(/now/);
+  });
+
   it('steps traffic after the scripted actors and gives equal frames for the same seed and input', () => {
     const map = structuredClone(JUNCTION);
     map.actors = [{ id: 'ped-x', kind: 'pedestrian', model: 'pedestrian', lengthM: 0.5, widthM: 0.5, path: [[-60, 12], [-60, 14]], trigger: { atS: 1e6 }, loop: false, speed: 1 }];

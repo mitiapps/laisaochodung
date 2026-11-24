@@ -156,6 +156,11 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
   const cancelCfg = assists.signalAutoCancel;
   const trafficOpts = parseTraffic(options, map);
   const params = trafficOpts.params;
+  if (options.now !== undefined && typeof options.now !== 'function') throw new TypeError('options.now must be a function');
+  const now = options.now ?? null;
+  /** Wall time of the last step's world step and traffic mirror, in clock units; null without a clock. */
+  /** @type {number | null} */
+  let trafficMs = null;
 
   const world = new R.World({ x: 0, y: -9.81, z: 0 });
   world.timestep = DT;
@@ -237,6 +242,7 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
 
       const pre = vehicle.pose();
       const lights = trafficLightStates(map, t);
+      const t0 = now === null ? 0 : now();
       const ws = stepWorld(worldState, {
         ego: {
           pos: pre.pos,
@@ -254,6 +260,7 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
       worldState = ws.worldState;
       actorBodies.update(ws.scriptedPoses);
       mirror?.update(ws.trafficPoses, pre);
+      if (now !== null) trafficMs = now() - t0;
 
       if (cancelCfg !== null) {
         const sc = stepSignalCancel(signalCancel, map, pre, electrics.indicators, cancelCfg, DT);
@@ -321,6 +328,10 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
     reset() {
       if (disposed) throw new Error('Sim already disposed');
       pendingReset = true;
+    },
+
+    trafficMs() {
+      return trafficMs;
     },
 
     dispose() {

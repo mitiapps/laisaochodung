@@ -250,13 +250,10 @@ personalities:
       noSignal: 0.1
       distracted: 0.05
       speeding: 0
-      wrongWay: 0
-      sidewalk: 0
-      illegalUturn: 0
       cutIn: 0
       paramBasis:
         { redLight: design, earlyStart: design, noSignal: design, distracted: design, speeding: design,
-          wrongWay: design, sidewalk: design, illegalUturn: design, cutIn: design }
+          cutIn: design }
     paramBasis:
       share: design
       v0Factor: design
@@ -299,13 +296,10 @@ personalities:
       noSignal: 0.4
       distracted: 0.2
       speeding: 0.1
-      wrongWay: 0.01
-      sidewalk: 0.02
-      illegalUturn: 0.02
       cutIn: 0.01
       paramBasis:
         { redLight: design, earlyStart: design, noSignal: design, distracted: design, speeding: design,
-          wrongWay: design, sidewalk: design, illegalUturn: design, cutIn: design }
+          cutIn: design }
     paramBasis:
       share: design
       v0Factor: design
@@ -348,13 +342,10 @@ personalities:
       noSignal: 0.8
       distracted: 0.35
       speeding: 0.8
-      wrongWay: 0.08
-      sidewalk: 0.15
-      illegalUturn: 0.1
       cutIn: 0.15
       paramBasis:
         { redLight: design, earlyStart: design, noSignal: design, distracted: design, speeding: design,
-          wrongWay: design, sidewalk: design, illegalUturn: design, cutIn: design }
+          cutIn: design }
     paramBasis:
       share: design
       v0Factor: design

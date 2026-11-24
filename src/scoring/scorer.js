@@ -196,6 +196,14 @@ export function createScorer(bundle, map, vehicleInfo) {
   const aftermathS = policy.aftermathWindowS ?? 0;
   /** Rows that open the aftermath window when they give a notice (every row but `aftermath`). */
   const anchorRows = new Set((policy.faultRows ?? []).filter((r) => r.when !== 'aftermath').map((r) => r.id));
+  const contactMinEgoSpeed = bundle.scoring.contactMinEgoSpeed;
+  /**
+   * A vehicle contact the fault table decides, made below the contact speed gate: it can never
+   * deduct, so a deduction row gives a notice instead (and opens the aftermath window).
+   * @param {CollisionEvent | FallEvent} e Contact.
+   * @returns {boolean} Gated.
+   */
+  const belowGate = (e) => Boolean(policy.faultRows) && e.type === 'collision' && (e.otherKind === 'car' || e.otherKind === 'motorbike') && e.egoSpeed < contactMinEgoSpeed;
 
   /** @type {ScorerState} */
   const initial = {
@@ -380,7 +388,7 @@ export function createScorer(bundle, map, vehicleInfo) {
       let anchored = false;
       for (const e of contacts) {
         const d = decideFault(policy, e, facts);
-        if (d.result === 'deduction') {
+        if (d.result === 'deduction' && !belowGate(e)) {
           charged.push(e);
           chargedDecisions.push(d);
           continue;

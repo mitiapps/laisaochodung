@@ -1,33 +1,49 @@
 /**
- * Short key labels for the badges on the on-screen controls, and the rule for when badges show.
- * The labels are derived from `KEY_BINDINGS`; the contract carries no badge text.
+ * Key names: short cap text for the badges on the on-screen controls (`keyLabel`), Vietnamese
+ * names for running text and the help table (`keyName`), and the rule for when badges show. The
+ * labels are derived from `KEY_BINDINGS`; the contract carries no badge text.
  */
 
 import { KEY_BINDINGS } from '../../contracts/controls.js';
 
 /** @typedef {import('../../contracts/controls.js').ControlAction} ControlAction */
 
-/** Short names of `KeyboardEvent.code` values that are not a single letter or digit. */
-const SHORT_NAMES = Object.freeze({
-  ArrowUp: '↑',
-  ArrowDown: '↓',
-  ArrowLeft: '←',
-  ArrowRight: '→',
-  Space: 'Space',
-  Escape: 'Esc',
-});
+const ARROWS = Object.freeze({ ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→' });
+/** Cap text of `KeyboardEvent.code` values that are not a single letter or digit. */
+const CAP_NAMES = Object.freeze({ ...ARROWS, Space: 'Space', Escape: 'Esc' });
+/** Vietnamese names of the same codes, for running text. */
+const VI_NAMES = Object.freeze({ ...ARROWS, Space: 'Phím cách', Escape: 'Esc' });
 
 /**
- * Short label of a key code for a badge.
+ * Name of a key code from a table, then the letter or digit it carries, then the code itself.
+ * @param {Readonly<Record<string, string>>} names Names of special keys.
  * @param {string} code `KeyboardEvent.code`.
- * @returns {string} E.g. `W`, `Space`, `Esc`, `↑`.
+ * @returns {string} Name.
  */
-export function keyLabel(code) {
-  if (Object.hasOwn(SHORT_NAMES, code)) return SHORT_NAMES[/** @type {keyof SHORT_NAMES} */ (code)];
+function nameFrom(names, code) {
+  if (Object.hasOwn(names, code)) return names[code];
   const letter = /^Key([A-Z])$/u.exec(code);
   if (letter) return letter[1];
   const digit = /^Digit(\d)$/u.exec(code);
   return digit ? digit[1] : code;
+}
+
+/**
+ * Short label of a key code for a badge (the text on the key cap).
+ * @param {string} code `KeyboardEvent.code`.
+ * @returns {string} E.g. `W`, `Space`, `Esc`, `↑`.
+ */
+export function keyLabel(code) {
+  return nameFrom(CAP_NAMES, code);
+}
+
+/**
+ * Vietnamese name of a key code for running text and the help table.
+ * @param {string} code `KeyboardEvent.code`.
+ * @returns {string} E.g. `W`, `↑`, `Phím cách`.
+ */
+export function keyName(code) {
+  return nameFrom(VI_NAMES, code);
 }
 
 /**

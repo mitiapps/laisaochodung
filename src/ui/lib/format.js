@@ -179,26 +179,3 @@ export function formatDate(iso) {
   const match = typeof iso === 'string' ? /^(\d{4})-(\d{2})-(\d{2})$/u.exec(iso) : null;
   return match ? `${match[3]}/${match[2]}/${match[1]}` : null;
 }
-
-/** Readable names of `KeyboardEvent.code` values that are not a single letter. */
-const KEY_NAMES = Object.freeze({
-  ArrowUp: '↑',
-  ArrowDown: '↓',
-  ArrowLeft: '←',
-  ArrowRight: '→',
-  Space: 'Phím cách',
-  Escape: 'Esc',
-});
-
-/**
- * Human label of a key code for the help table.
- * @param {string} code `KeyboardEvent.code`.
- * @returns {string} E.g. `W`, `↑`, `Phím cách`.
- */
-export function keyLabel(code) {
-  if (Object.hasOwn(KEY_NAMES, code)) return KEY_NAMES[/** @type {keyof KEY_NAMES} */ (code)];
-  const letter = /^Key([A-Z])$/u.exec(code);
-  if (letter) return letter[1];
-  const digit = /^Digit(\d)$/u.exec(code);
-  return digit ? digit[1] : code;
-}

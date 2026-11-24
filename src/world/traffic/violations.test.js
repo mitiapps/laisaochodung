@@ -9,6 +9,7 @@ import { refreshBaseSpeed, spawnAgent } from './state.js';
 import { yellowStopProbability } from './signals.js';
 import { trafficLightStates } from '../signals.js';
 import { FLAG, LATCH_S, latch, listOfMask, raise, violationsOf } from './violations.js';
+import { makeWreck } from './contacts.js';
 
 /** @typedef {import('../../contracts/map.js').GameMap} GameMap */
 /** @typedef {import('../../contracts/telemetry.js').ActorPose} ActorPose */
@@ -219,6 +220,115 @@ describe('the ego at a conflict zone', () => {
     const k = place(st, 'rs-n', 136, 6, 'car', 'c-rs-n-rn-n');
     run(st, 0, 3, () => ({ pos: { x: 40, z: -1.75 }, heading: Math.PI, speed: 0, lengthM: 4.5, widthM: 1.8 }), {});
     expect(st.graph.edges[st.edge[k]].kind).toBe('connector');
+  });
+});
+
+describe('wrecks stop raising right-of-way flags', () => {
+  /**
+   * The ego striking a standing traffic wreck, decided by the shipped fault table.
+   * @param {string} id Wreck id.
+   * @param {readonly import('../../contracts/telemetry.js').NpcViolation[]} violations Its latched violations.
+   * @returns {Promise<import('../../scoring/fault.js').FaultDecision>} Decision.
+   */
+  const egoStrikes = async (id, violations) =>
+    decideFault(
+      (await realBundle()).collisionPolicy,
+      {
+        type: 'collision',
+        otherKind: 'car',
+        otherId: id,
+        impulse: 3000,
+        egoSpeed: 8,
+        relSpeed: 8,
+        sameLaneAhead: false,
+        otherModel: 'car',
+        striker: 'ego',
+        otherFromBehind: false,
+        otherViolations: [...violations],
+      },
+      { aftermath: false, cause: null, anyCause: null, rearEndCause: null },
+    );
+
+  /**
+   * Steps traffic from `t0` for `seconds` with every light red; returns the last pose of `id`.
+   * @param {TrafficState} st State.
+   * @param {number} t0 Start.
+   * @param {number} seconds Duration.
+   * @param {string} id Agent id.
+   * @param {string[]} [contactsFirst] Ego contacts fed on the first step.
+   * @returns {ActorPose} Pose.
+   */
+  const stepRed = (st, t0, seconds, id, contactsFirst = []) => {
+    const lights = allLights(st.map, 'red');
+    /** @type {ActorPose | undefined} */
+    let pose;
+    for (let i = 0; i < Math.round(seconds / DT); i += 1) {
+      const t = t0 + i * DT;
+      const step = stepTraffic(st, { ego: EGO_AWAY, egoReset: false, scripted: [], lights, egoContacts: i === 0 ? contactsFirst : [], t });
+      pose = step.poses.find((p) => p.id === id);
+    }
+    return /** @type {ActorPose} */ (pose);
+  };
+
+  it('drops red-light from a red runner wrecked on the connector once its latch runs out, so striking it is a deduction', async () => {
+    const map = emptyMap('signal');
+    const st = createTraffic(map, LAWFUL, 2);
+    const k = place(st, 'rs-n', 120, 10, 'car', 'c-rs-n-rn-n');
+    st.distractUntil[k] = 1e9;
+    const id = st.ids[k];
+    // It rolls past the red stop line into the junction.
+    let t = 0;
+    while (st.graph.edges[st.edge[k]].kind !== 'connector' && t < 4) {
+      stepRed(st, t, DT, id);
+      t += DT;
+    }
+    expect(st.graph.edges[st.edge[k]].kind).toBe('connector');
+    expect(st.redConn[k]).toBe(st.edge[k]);
+    // An ego contact stops it dead on the connector, still flagged within its latch.
+    const wrecked = stepRed(st, t, DT, id, [id]);
+    expect(wrecked.state).toBe('crashed');
+    expect(wrecked.speed).toBe(0);
+    expect(wrecked.violations).toContain('red-light');
+    const early = stepRed(st, t + DT, LATCH_S - 0.5, id);
+    expect(early.violations).toContain('red-light');
+    expect((await egoStrikes(id, early.violations)).result).toBe('notice');
+    // Past the latch the wreck stands in the junction with no flag; the ego that drives into it
+    // failed its duty to observe and slow down.
+    const late = stepRed(st, t + LATCH_S - 0.5 + DT, 1, id);
+    expect(st.graph.edges[st.edge[k]].kind).toBe('connector');
+    expect(late.state).toBe('crashed');
+    expect(late.violations).toEqual([]);
+    const decision = await egoStrikes(id, late.violations);
+    expect(decision.result).toBe('deduction');
+    expect(decision.rowId).toBe('ego-strikes');
+  });
+
+  it('drops no-yield from an agent wrecked by another agent on the connector it forced into', () => {
+    const map = emptyMap('give-way');
+    const st = createTraffic(map, LAWFUL, 4);
+    const k = place(st, 'rs-n', 136, 6, 'car', 'c-rs-n-rn-n');
+    st.criticalGap[k] = 0.2;
+    const id = st.ids[k];
+    const egoWest = (/** @type {number} */ t) => ({ pos: { x: 47 - 10 * t, z: -1.75 }, heading: Math.PI, speed: 10, lengthM: 4.5, widthM: 1.8, indicators: /** @type {const} */ ('off') });
+    let t = 0;
+    while (st.noYieldConn[k] < 0 && t < 3) {
+      stepTraffic(st, { ego: egoWest(t), egoReset: false, scripted: [], lights: {}, egoContacts: [], t });
+      t += DT;
+    }
+    expect(st.noYieldConn[k]).toBeGreaterThanOrEqual(0);
+    makeWreck(st, k, t);
+    expect(st.noYieldConn[k]).toBe(-1);
+    expect(st.redConn[k]).toBe(-1);
+    /** @type {ActorPose | undefined} */
+    let pose;
+    for (let i = 0; i < Math.round((LATCH_S + 0.5) / DT); i += 1) {
+      const step = stepTraffic(st, { ego: EGO_AWAY, egoReset: false, scripted: [], lights: {}, egoContacts: [], t: t + i * DT });
+      pose = step.poses.find((p) => p.id === id);
+      // The latch still carries the flag at first.
+      if (i === 1) expect(pose?.violations).toContain('no-yield');
+    }
+    expect(pose?.state).toBe('crashed');
+    expect(pose?.violations).toEqual([]);
   });
 });
 

@@ -128,11 +128,11 @@ describe('signs, lights and markers', () => {
     expect(SIGN_BOTTOM_M).toBe(2);
   });
 
-  it('counts down the seconds left in the phase in the phase colour', () => {
+  it('counts down the red and green phases in their colour and leaves yellow blank', () => {
     const signal = { ...fixture.signals[0], cycle: { green: 27, yellow: 3, red: 30, offset: 0 } };
     expect(countdown(signal, 0)).toEqual({ state: 'green', seconds: 27 });
     expect(countdown(signal, 26.2)).toEqual({ state: 'green', seconds: 1 });
-    expect(countdown(signal, 28)).toEqual({ state: 'yellow', seconds: 2 });
+    expect(countdown(signal, 28)).toBeNull();
     expect(countdown(signal, 30)).toEqual({ state: 'red', seconds: 30 });
     expect(digitCells(7)).toEqual([10, 7]);
     expect(digitCells(30)).toEqual([3, 0]);

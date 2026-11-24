@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { KEY_BINDINGS } from '../../contracts/controls.js';
-import { badgeFor, badgesShownAfter, keyLabel, watchBadgeVisibility } from './key-label.js';
+import { badgeFor, badgesShownAfter, keyLabel, keyName, watchBadgeVisibility } from './key-label.js';
 
 /**
  * A pointer-down event of a kind.
@@ -17,6 +17,13 @@ describe('keyLabel and badgeFor', () => {
     expect(keyLabel('ArrowUp')).toBe('↑');
     expect(keyLabel('Digit3')).toBe('3');
     expect(keyLabel('F13')).toBe('F13');
+  });
+
+  it('gives Vietnamese names for running text', () => {
+    expect(keyName('KeyW')).toBe('W');
+    expect(keyName('ArrowUp')).toBe('↑');
+    expect(keyName('Space')).toBe('Phím cách');
+    expect(keyName('Digit3')).toBe('3');
   });
 
   it('labels every action by the first key of its binding', () => {

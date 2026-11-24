@@ -256,6 +256,77 @@ describe('createTrafficMirror', () => {
     h.dispose();
   });
 
+  /**
+   * The collider handle of the one enabled mirror body.
+   * @param {import('@dimforge/rapier3d-compat').World} world World.
+   * @returns {number} Handle.
+   */
+  const findHandle = (world) => {
+    /** @type {number[]} */
+    const found = [];
+    world.forEachCollider((c) => {
+      const b = c.parent();
+      if (b && b.isKinematic() && b.isEnabled()) found.push(c.handle);
+    });
+    expect(found).toHaveLength(1);
+    return found[0];
+  };
+
+  /**
+   * The centre of the one enabled mirror body.
+   * @param {import('@dimforge/rapier3d-compat').World} world World.
+   * @returns {{x: number, z: number}} Centre.
+   */
+  const mirroredBody = (world) => {
+    /** @type {{x: number, z: number}[]} */
+    const found = [];
+    world.forEachRigidBody((b) => {
+      if (b.isKinematic() && b.isEnabled()) found.push({ x: b.translation().x, z: b.translation().z });
+    });
+    expect(found).toHaveLength(1);
+    return found[0];
+  };
+
+  it('keeps the body of a sliding car wreck on its pose until it stops, and reports its true motion', () => {
+    const h = harness('car-sedan');
+    // A car wrecked by another agent 20 m ahead in the next lane slides east from 10 m/s, as
+    // traffic slides it, then stands.
+    const decel = PARAMS.behaviour.wreckSlideDecelMps2;
+    const a = agent({ id: 'npc-w', model: 'car', x: START.x + 20, z: 5.25 });
+    let speed = 10;
+    for (let k = 0; k < 150; k += 1) {
+      const pose = { ...poseOf({ ...a, wreck: true }), speed };
+      h.mirror.update([pose], h.vehicle.pose());
+      h.vehicle.prepare({ ...neutralInput(), ...BRAKED });
+      h.world.step();
+      h.vehicle.read();
+      const body = mirroredBody(h.world);
+      expect(Math.hypot(body.x - a.x, body.z - a.z), `step ${k}`).toBeLessThan(1e-3);
+      const motion = h.mirror.motionOf(findHandle(h.world));
+      expect(motion?.velocity.x ?? NaN).toBeCloseTo(speed, 6);
+      const next = Math.max(0, speed - decel * DT);
+      a.x += ((speed + next) / 2) * DT;
+      speed = next;
+    }
+    // The slide is over (10 m/s at 6 m/s² stops in under 2 s, about 8.3 m on).
+    expect(speed).toBe(0);
+    expect(a.x - (START.x + 20)).toBeGreaterThan(8);
+    expect(mirroredBody(h.world).x).toBeCloseTo(a.x, 3);
+    h.dispose();
+  });
+
+  it('holds the body of a standing wreck where it is, whatever its pose says', () => {
+    const h = harness('car-sedan');
+    const a = agent({ id: 'npc-s', model: 'car', x: START.x + 20, z: 5.25, wreck: true });
+    h.step([a], BRAKED);
+    const at = mirroredBody(h.world);
+    // The pose of a car stopped dead at an ego contact can lie ahead of its body: it never moves it.
+    a.x += 3;
+    for (let k = 0; k < 10; k += 1) h.step([a], BRAKED);
+    expect(mirroredBody(h.world)).toEqual(at);
+    h.dispose();
+  });
+
   it('does not assign an agent that already overlaps the ego', () => {
     const h = harness('car-sedan');
     const inside = agent({ id: 'npc-in', model: 'motorbike', x: START.x + 0.5, z: START.z });

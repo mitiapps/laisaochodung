@@ -10,11 +10,13 @@ world logic (lights, actors, route) comes from `src/world/` and is not copied he
 
 1. Sanitise the input. Tick 0 carries `run-start`. A pending reset (after a fall or `reset()`)
    places the ego at the last passed checkpoint, or the start, and the frame carries `reset`.
-2. `stepActors` with the ego footprint before the step; kinematic bodies move to the returned poses
-   during this step's `world.step`, so contacts see their real velocity (one step behind the pose
-   logic).
-3. Electrics, then `vehicle.prepare`: gearbox, rate-limited steering, per-wheel commands, drag
-   impulse, grip update and `updateVehicle(DT)`; then `world.step(eventQueue)`.
+2. `stepWorld` with the ego pose and indicators before the step: scripted actors, then traffic when
+   it runs. Scripted kinematic bodies, and the mirror bodies of traffic agents near the ego, move
+   to the returned poses during this step's `world.step`, so contacts see their real velocity (one
+   step behind the pose logic).
+3. With the indicator auto-cancel assist, `stepSignalCancel`; then electrics and
+   `vehicle.prepare`: gearbox, rate-limited steering, per-wheel commands, drag impulse, grip
+   update and `updateVehicle(DT)`; then `world.step(eventQueue)`.
 4. Contact-force events of the chassis become `collision` events, one per contact episode and other
    body (re-armed after 0.5 s without contact). A scripted fall emits `fall` and schedules the reset
    for the next step.
@@ -120,6 +122,25 @@ Other values:
   6500 rpm limiter, reverse refused at 2 km/h or more.
 - **Scooter:** 180 kg with rider, CVT 900 N at standstill fading to 0 at 26 m/s.
 - **Steering:** the lock halves at 15 m/s (car) or 6 m/s (scooter).
+
+## Assists
+
+The Đơn giản preset ([controls.md](controls.md)) turns on three assists; none performs a scored
+duty.
+
+- **Auto-shift (car).** The gear keys move a selector R ← N ← D; in D the box shifts up one gear
+  at `upRpm` 2,100 while the throttle is open and down at `downRpm` 1,100 to the highest lower
+  gear that turns above it, never twice within `minIntervalS` 0.8 s, and moves off in first below
+  a crawl (`src/physics/gearbox.js`, values `design` in `vehicles/car-sedan.js`). Measured: 0–60
+  km/h in 8.9 s against 8.4 s on the test driver's manual schedule, up-shifts at 17.5, 28.8, 42.9
+  and 60.0 km/h; 30 km/h holds 3rd at about 1,450 rpm and 50 km/h holds 4th at about 1,730 rpm.
+  The lowest rpm after an up-shift (2,100 × 2.1 / 3.5 = 1,260) stays above `downRpm`, so the box
+  cannot hunt.
+- **Combined brake (scooter).** The brake key adds rear brake `combinedRearPerGrip × grip` (1.0,
+  `design`) to the capped front brake `0.55 × grip`. Measured on a straight stop from 50 km/h: dry
+  14.5 m in 2.1 s, grip 0.6 23.7 m in 3.5 s, with no skid and no fall at either grip.
+- **Indicator auto-cancel.** After a signalled junction turn of at least the `turn-signal` rule's
+  `turnMinDeg`, the indicator switches off once no junction lies within its `signalFromM` ahead.
 
 ## Determinism
 

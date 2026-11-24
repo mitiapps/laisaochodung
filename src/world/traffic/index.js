@@ -45,11 +45,11 @@ import { FLAG, draw, latch, raise, rateOf, violationsOf } from './violations.js'
 import { distracted, perceiveLeader, resetPerception } from './human-factors.js';
 import { chooseSlot, inTurnBand, moveTouches, overlapsAt, pathBlocked } from './moto-slots.js';
 import { stepMobil } from './mobil.js';
-import { detectContacts } from './contacts.js';
+import { detectContacts, makeWreck } from './contacts.js';
 import { STOPPED_MPS, createSpawner, inViewCone, runSpawner } from './spawner.js';
 import { queryGrid, rebuildGrid } from './grid.js';
 import { changingLane, moveAcross, tryMandatoryLaneChange } from './lane-change.js';
-import { edgePoint, lanesUnder } from './lane-graph.js';
+import { edgeLateral, edgePoint, lanesUnder } from './lane-graph.js';
 import {
   chooseNext,
   claimAdd,
@@ -115,10 +115,18 @@ export const PREROLL_EGO_SIZE = Object.freeze({ lengthM: 4.5, widthM: 1.8 });
  * (design: with a 4.5 m car the cleared box is about 12.5 × 9.8 m).
  */
 export const RESET_CLEAR_MARGIN_M = 4;
-/** Agent ahead on a sibling connector counts as a leader until its rear is this far in, metres. */
-export const SIBLING_DIVERGE_M = 8;
+/**
+ * An agent ahead on a sibling connector stops counting as a leader once its rear is clear of the
+ * follower's own path, sideways, by this much beyond the follower's half width, metres (design).
+ */
+export const SIBLING_CLEAR_M = 0.3;
 /** Leaders farther than this along the route are ignored, metres (design). */
 export const LEADER_LOOK_M = 200;
+/**
+ * An agent held by a body in its way longer than this leaves once out of the player's view,
+ * seconds (design). The flow test caps how often it happens, so it cannot hide a broken rule.
+ */
+export const STUCK_DESPAWN_S = 20;
 /** A stopped agent this close to the end of a sink lane leaves the map once out of view, metres (design). */
 export const SINK_EDGE_M = 10;
 /** Small clearance kept to an obstacle when the advance is clamped, metres. */
@@ -134,6 +142,11 @@ export const TAILGATE_MIN_MPS = 3;
 export const EGO_STOP_DECEL_MPS2 = 6;
 /** Reaction time added to the ego's stopping distance, seconds (design). */
 export const EGO_REACTION_S = 0.5;
+/** An ego standing still this long closes the lane under it, like a parked vehicle, seconds (design: longer than a red phase). */
+export const EGO_PARKED_S = 45;
+/** A standing ego that shifts this far, metres, or turns this much, radians, is looked up again. */
+const EGO_PARKED_SHIFT_M = 0.1;
+const EGO_PARKED_TURN_RAD = 0.02;
 /** Sideways speed above which a signalling ego counts as moving across, m/s (design). */
 export const EGO_SIDEWAYS_MPS = 0.2;
 /** A red stop line just past a junction is looked for this far beyond the braking distance, metres. */
@@ -167,6 +180,8 @@ const VALID_INDICATORS = Object.freeze(['off', 'left', 'right', 'hazard']);
  * @property {Obstacle[]} perceived Ego, scripted actors and static obstacles, for lane changes.
  * @property {import('./lane-graph.js').LaneSpan[]} parked Lane stretches under scripted actors
  *   not moving along their path, for lane changes.
+ * @property {{x: number, z: number, heading: number, spans: import('./lane-graph.js').LaneSpan[] | null}} egoParked
+ *   Lane stretches under the standing ego, and the pose they were found at.
  * @property {Map<string, import('./lane-graph.js').LaneSpan[]>} parkedSpans Those stretches by
  *   actor id and place.
  * @property {Uint8Array} noYield 1 when going now enters inside another party's critical gap.
@@ -212,6 +227,7 @@ function scratchOf(st) {
       perceived: [],
       parked: [],
       parkedSpans: new Map(),
+      egoParked: { x: 0, z: 0, heading: 0, spans: null },
       noYield: new Uint8Array(n),
       runner: new Uint8Array(n),
       forcing: new Uint8Array(n),
@@ -415,24 +431,54 @@ function accel(st, slot, v0, gap, vLead) {
 }
 
 /**
+ * Whether the agent `k` on a sibling connector has parted from the path the slot follows: both
+ * rear corners of its body lie to one side of the slot's band on `path` (its lateral offset ± half
+ * its width), with `SIBLING_CLEAR_M` to spare. Sibling paths share their first metres and part as
+ * they turn, so this is measured on the real geometry, not by a distance along the connector.
+ * @param {TrafficState} st State.
+ * @param {number} slot Follower.
+ * @param {number} path Edge the follower is on, or will take next.
+ * @param {number} k Agent on a sibling connector.
+ * @returns {boolean} Parted.
+ */
+function siblingParted(st, slot, path, k) {
+  const edge = st.graph.edges[path];
+  const h = st.heading[k];
+  const c = Math.cos(h);
+  const sn = Math.sin(h);
+  const half = st.lengthM[k] / 2;
+  const hw = st.widthM[k] / 2;
+  // Rear centre, then the two rear corners (left of heading θ is (−sin θ, −cos θ)).
+  const rx = st.x[k] - c * half;
+  const rz = st.z[k] + sn * half;
+  const a = edgeLateral(edge, rx - sn * hw, rz - c * hw);
+  const b = edgeLateral(edge, rx + sn * hw, rz + c * hw);
+  const lo = st.lateral[slot] - st.widthM[slot] / 2;
+  const hi = st.lateral[slot] + st.widthM[slot] / 2;
+  return Math.min(a, b) > hi + SIBLING_CLEAR_M || Math.max(a, b) < lo - SIBLING_CLEAR_M;
+}
+
+/**
  * Takes the first agent of an edge that overlaps the slot laterally as the leader when it is
  * nearer than the one in `out`.
  * @param {TrafficState} st State.
  * @param {number} slot Asking slot.
  * @param {number} edge Edge.
  * @param {number} offset Path distance from the asking agent's front to the edge start.
- * @param {number} maxRear Ignore an agent whose rear is farther along the edge than this.
  * @param {Float64Array} out `[gap, speed]`, updated.
- * @param {boolean} sibling The edge is a sibling connector: its agents count whatever their offset.
+ * @param {number} path −1 for an edge on the slot's route; for a sibling connector, the edge of
+ *   the slot's own path: its first agent counts whatever its offset until it has parted from it.
  * @returns {void}
  */
-function considerFirst(st, slot, edge, offset, maxRear, out, sibling) {
+function considerFirst(st, slot, edge, offset, out, path) {
   const list = st.edgeAgents[edge];
   for (let i = 0; i < st.edgeCount[edge]; i += 1) {
     const k = list[i];
     const rear = st.s[k] - st.lengthM[k] / 2;
-    if (rear > maxRear || offset + rear >= out[0]) return;
-    if (!sibling && !overlapsAt(st, slot, st.lateral[slot], k)) continue;
+    if (offset + rear >= out[0]) return;
+    if (path >= 0) {
+      if (siblingParted(st, slot, path, k) || st.heldBy[k] === slot) return;
+    } else if (!overlapsAt(st, slot, st.lateral[slot], k)) continue;
     out[0] = offset + rear;
     out[1] = st.v[k];
     return;
@@ -468,15 +514,16 @@ function leaderAhead(st, slot, listPos, out) {
     break;
   }
   // Connectors leaving the same lane share their first metres: the nearest agent ahead on a
-  // sibling counts until it has diverged, whatever its offset (the paths cross there). Side by
-  // side, the lower spawn index goes first.
+  // sibling counts until it has parted from this path, whatever its offset (the paths cross
+  // there). Side by side, the lower spawn index goes first.
   for (const sib of edges[e].siblings) {
     const sl = st.edgeAgents[sib];
     for (let j = 0; j < st.edgeCount[sib]; j += 1) {
       const k = sl[j];
       if (st.s[k] < st.s[slot] || (st.s[k] === st.s[slot] && st.spawnIndex[k] > st.spawnIndex[slot])) continue;
       const rear = st.s[k] - st.lengthM[k] / 2;
-      if (rear <= SIBLING_DIVERGE_M && rear - front < out[0]) {
+      // One whose move this agent's body blocks waits for it to go first.
+      if (rear - front < out[0] && st.heldBy[k] !== slot && !siblingParted(st, slot, e, k)) {
         out[0] = rear - front;
         out[1] = st.v[k];
       }
@@ -487,11 +534,11 @@ function leaderAhead(st, slot, listPos, out) {
   const next = st.nextEdge[slot];
   if (next < 0) return;
   const rem = edges[e].length - front;
-  considerFirst(st, slot, next, rem, Infinity, out, false);
+  considerFirst(st, slot, next, rem, out, -1);
   const ne = edges[next];
   if (ne.kind === 'connector') {
-    for (const sib of ne.siblings) considerFirst(st, slot, sib, rem, SIBLING_DIVERGE_M, out, true);
-    if (out[0] === Infinity) considerFirst(st, slot, ne.toEdge, rem + ne.length, Infinity, out, false);
+    for (const sib of ne.siblings) considerFirst(st, slot, sib, rem, out, next);
+    if (out[0] === Infinity) considerFirst(st, slot, ne.toEdge, rem + ne.length, out, -1);
   }
   if (out[0] > LEADER_LOOK_M) {
     out[0] = Infinity;
@@ -537,15 +584,12 @@ function applyEvents(st, input, ego) {
   for (const id of input.egoContacts) {
     if (typeof id !== 'string' || !id.startsWith('npc-')) continue;
     const slot = st.slotBySpawn.get(Number(id.slice(4)));
-    if (slot === undefined || st.wreck[slot]) continue;
-    st.wreck[slot] = 1;
-    st.wreckT[slot] = input.t;
+    if (slot === undefined) continue;
+    // Struck by the ego (or striking it), a car stops dead instead of sliding on; a wreck already
+    // sliding stops there too, as its slide does not see the ego.
+    makeWreck(st, slot, input.t);
     st.v[slot] = 0;
     st.acc[slot] = 0;
-    st.crossing[slot] = 0;
-    // A wreck still on its approach lane never enters the junction: free its claim.
-    const c = st.claim[slot];
-    if (c >= 0 && st.edge[slot] === st.graph.edges[c].fromEdge) claimDrop(st, slot);
   }
   if (input.egoReset) {
     const e = input.ego;
@@ -588,10 +632,14 @@ function applyEvents(st, input, ego) {
     const e = st.graph.edges[st.edge[k]];
     const toEnd = e.length - (st.s[k] + st.lengthM[k] / 2);
     if (st.v[k] >= STOPPED_MPS || inViewCone(ego, st.x[k], st.z[k], st.params)) continue;
-    if (e.deadEnd && toEnd < st.minGap[k] + 1) despawnAgent(st, k, 'dead-end');
+    // Last resort: held by a body in its way for too long, out of the player's sight, it leaves
+    // (as SUMO teleports a vehicle stuck past its time-to-teleport). Waiting at a light or a
+    // claim is not a hold and never counts.
+    if (st.frozenS[k] > STUCK_DESPAWN_S) despawnAgent(st, k, 'stuck');
+    else if (e.deadEnd && toEnd < st.minGap[k] + 1) despawnAgent(st, k, 'dead-end');
     // Held up at the edge of the map (by a scripted actor parked at the end of its path): it
-    // leaves as if it had reached the end.
-    else if (e.sink && toEnd < SINK_EDGE_M) despawnAgent(st, k, 'sink');
+    // leaves as if it had reached the end, counted apart from the agents that drove off it.
+    else if (e.sink && toEnd < SINK_EDGE_M) despawnAgent(st, k, 'edge-held');
   }
 }
 
@@ -771,10 +819,20 @@ function computePhase(st, input, egoObs, scriptedObs, sc) {
     if (egoDist <= st.params.egoPerceptionM) near.push(egoObs[0]);
     for (const o of scriptedObs) near.push(o);
     for (const o of statics) near.push(o);
-    // Agents of its own lane are leaders already; only those moving across are not.
-    for (const m of movers) if (m.slot !== k && (st.edge[m.slot] !== st.edge[k] || changingLane(st, m.slot))) near.push(m.obstacle);
-    // Moving across, it still overlaps the lane it left: it keeps watching the agents there.
+    // Agents of its own lane are leaders already; only those moving across are not. One moving
+    // across is in the way only once wholly ahead: alongside, the agent keeps going and the one
+    // moving across waits (its contact guard holds it). Between two moving across, the later
+    // spawned gives way to the other wherever it is.
     const across = changingLane(st, k);
+    const hx = Math.cos(st.heading[k]);
+    const hz = -Math.sin(st.heading[k]);
+    for (const m of movers) {
+      const j = m.slot;
+      if (j === k || (st.edge[j] === st.edge[k] && !changingLane(st, j))) continue;
+      const rearAhead = (st.x[j] - st.x[k]) * hx + (st.z[j] - st.z[k]) * hz - st.lengthM[j] / 2 > half;
+      if (rearAhead || (across && changingLane(st, j) && st.spawnIndex[k] > st.spawnIndex[j])) near.push(m.obstacle);
+    }
+    // Moving across, it still overlaps the lane it left: it keeps watching the agents there.
     if (across) for (const n of e.neighbours) pushNeighbours(st, n, k, near);
     if (near.length > 0) {
       const look = Math.max(8, Math.min(st.params.egoPerceptionM, (v * v) / (2 * b) + v * st.timeGap[k] + st.minGap[k] + 5));
@@ -995,15 +1053,15 @@ function touchesNew(st, slot, ds, feet) {
 const PREVIEW = { x: 0, z: 0, heading: 0 };
 /** The body the last `touchesNew` found in the way. */
 const TOUCHED = { slot: -1 };
-/** A rider held by the body in its way this long starts to edge away from it, seconds (design). */
+/** An agent held by the body in its way this long starts to edge away from it, seconds (design). */
 export const NUDGE_AFTER_S = 1;
-/** How far a held rider edges sideways at a time, metres (design). */
+/** How far a held agent edges sideways at a time, metres (design). */
 const NUDGE_M = 0.4;
 
 /**
- * Moves a held rider's lateral target away from the body in its way, within its lane.
+ * Moves a held agent's lateral target away from the body in its way, within its lane.
  * @param {TrafficState} st State.
- * @param {number} slot Rider.
+ * @param {number} slot Held agent.
  * @param {number} other Body in its way.
  * @returns {void}
  */
@@ -1114,27 +1172,49 @@ function applyPhase(st, input, sc, nReq) {
     }
     const latBefore = st.lateral[k];
     const rateBefore = st.latRate[k];
+    st.heldBy[k] = -1;
     moveAcross(st, k, dt);
     // A driver who sees what is around it never drives into it; one distracted or breaking a rule
     // may (that is how an accident happens).
     const dLat = st.lateral[k] - latBefore;
     // A change of lateral speed turns the body (lane-change yaw), which can swing it into another.
     if (ds > 0 || dLat !== 0 || st.latRate[k] !== rateBefore) {
-      if (guarded(st, k, input.t) && touchesNew(st, k, ds, feet)) {
+      let held = guarded(st, k, input.t) && touchesNew(st, k, ds, feet);
+      const turned = dLat !== 0 || st.latRate[k] !== rateBefore;
+      if (held && turned && ds > 0) {
+        // Forward only: the sideways move is what touches, so give it up and keep going.
+        const lat = st.lateral[k];
+        const rate = st.latRate[k];
+        st.lateral[k] = latBefore;
+        st.latRate[k] = rateBefore;
+        held = touchesNew(st, k, ds, feet);
+        if (held) {
+          st.lateral[k] = lat;
+          st.latRate[k] = rate;
+        }
+      }
+      if (held) {
         ds = 0;
         st.v[k] = 0;
         const blocker = TOUCHED.slot;
-        // Held where it is; it may still move sideways if that alone touches nothing, else its body
-        // stays turned as it was.
+        // Held where it is; it may still move sideways, its body kept straight as when edged across
+        // at a standstill, if that alone touches nothing; else its body stays turned as it was.
+        st.latRate[k] = 0;
         if (dLat === 0 || touchesNew(st, k, 0, feet)) {
           st.lateral[k] = latBefore;
           st.latRate[k] = rateBefore;
+        } else {
+          // Later agents of this step check against where it has moved sideways.
+          posePreview(st, k, st.edge[k], st.s[k], st.lateral[k], 0, 0, PREVIEW);
+          feet[k] = footprint(PREVIEW, PREVIEW.heading, st.lengthM[k], st.widthM[k]);
         }
         TOUCHED.slot = blocker;
+        st.heldBy[k] = blocker;
         st.frozenS[k] += dt;
-        // A rider held this way for a while edges sideways, away from the body in its way, so two
-        // riders cannot hold each other for ever.
-        if (st.isMoto[k] && !st.crossing[k] && st.frozenS[k] > NUDGE_AFTER_S) nudgeAway(st, k, TOUCHED.slot);
+        // Held this way for a while, an agent edges sideways within its lane, away from the body in
+        // its way, so two agents cannot hold each other for ever. One moving across keeps its
+        // target: it still watches the lane it is leaving, and others see it as moving across.
+        if (!st.crossing[k] && st.frozenS[k] > NUDGE_AFTER_S) nudgeAway(st, k, TOUCHED.slot);
       } else {
         st.frozenS[k] = 0;
         // Later agents of this step check against where this one has moved.
@@ -1208,7 +1288,7 @@ function applyPhase(st, input, sc, nReq) {
     }
     const ny = st.noYieldConn[k];
     if (ny >= 0) {
-      if (st.claim[k] === ny || (st.wreck[k] && st.edge[k] === ny)) raise(st, k, FLAG['no-yield']);
+      if (st.claim[k] === ny) raise(st, k, FLAG['no-yield']);
       else st.noYieldConn[k] = -1;
     }
     if (st.unsafeChange[k] && st.crossing[k]) raise(st, k, FLAG['unsafe-lane-change']);
@@ -1299,6 +1379,21 @@ export function stepTraffic(state, input) {
     }
     for (const sp of spans) parked.push(sp);
   });
+  // An ego standing still for longer than a red phase closes the lane under it, as a parked
+  // vehicle does: traffic behind changes lane round it instead of queueing for ever.
+  st.egoStillS = Math.abs(e.speed) < STOPPED_MPS && !input.egoReset ? st.egoStillS + DT : 0;
+  if (st.egoStillS > EGO_PARKED_S) {
+    // The ego only jitters while it stands, so the lanes under it are found again only once it has
+    // shifted noticeably.
+    const ep = sc.egoParked;
+    if (ep.spans === null || Math.hypot(e.pos.x - ep.x, e.pos.z - ep.z) > EGO_PARKED_SHIFT_M || Math.abs(angleDiff(e.heading, ep.heading)) > EGO_PARKED_TURN_RAD) {
+      ep.x = e.pos.x;
+      ep.z = e.pos.z;
+      ep.heading = e.heading;
+      ep.spans = lanesUnder(st.map, st.graph.edgeIndex, fp);
+    }
+    for (const sp of ep.spans) parked.push(sp);
+  }
   // The ego's signalling episodes, for agents that make way for it.
   const ind = e.indicators ?? 'off';
   if ((ind === 'left' || ind === 'right') && ind !== st.egoIndicator) st.egoSignalEpisode += 1;

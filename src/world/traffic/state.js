@@ -25,8 +25,12 @@ import { DT } from '../../contracts/units.js';
 /** @typedef {import('./grid.js').Grid} Grid */
 
 /** Despawn reasons counted in `TrafficStats.despawned`. */
-export const DESPAWN_REASONS = Object.freeze(['sink', 'ring', 'behind', 'dead-end', 'reset', 'wreck']);
-/** @typedef {'sink' | 'ring' | 'behind' | 'dead-end' | 'reset' | 'wreck'} DespawnReason */
+export const DESPAWN_REASONS = Object.freeze(['sink', 'edge-held', 'ring', 'behind', 'dead-end', 'reset', 'wreck', 'stuck']);
+/**
+ * Why an agent left: `sink` it drove off the map, `edge-held` it stood held up at a map exit,
+ * `stuck` a body in its way held it past the last-resort limit; the rest as named.
+ * @typedef {'sink' | 'edge-held' | 'ring' | 'behind' | 'dead-end' | 'reset' | 'wreck' | 'stuck'} DespawnReason
+ */
 
 /**
  * @typedef {object} TrafficStats
@@ -99,6 +103,7 @@ export const DESPAWN_REASONS = Object.freeze(['sink', 'ring', 'behind', 'dead-en
  * @property {Int32Array} noYieldConn Connector entered inside another party's critical gap, while
  *   the agent still covers its conflict zones, or −1.
  * @property {Float64Array} frozenS Time the agent has been held by a body in its way.
+ * @property {Int32Array} heldBy Slot of the agent whose body held this one's move last step, or −1.
  * @property {Uint8Array} heedless The driver is forcing its way (a red run, a short gap taken by
  *   choice, a cut-in) and does not stop for what it sees until that is over.
  * @property {Uint8Array} unsafeChange Moving across after a lane change that skipped its safety check.
@@ -132,6 +137,7 @@ export const DESPAWN_REASONS = Object.freeze(['sink', 'ring', 'behind', 'dead-en
  * @property {Float64Array} heldV Perceived leader speed held through it.
  * @property {Uint8Array} isMoto The agent is a motorbike.
  * @property {number} egoSignalEpisode Count of times the ego has switched an indicator on.
+ * @property {number} egoStillS Time the ego has stood still, seconds.
  * @property {string} egoIndicator The ego's indicator state last step.
  * @property {Float64Array} halfWidth Half width of each lane edge (connectors: of the approach lane).
  * @property {Int32Array} laneIndexOf Map lane index of each lane edge (0 at the right kerb), −1 for connectors.
@@ -346,6 +352,7 @@ export function createTrafficState(map, params, runSeed) {
     unsafeChange: new Uint8Array(capacity),
     heedless: new Uint8Array(capacity),
     frozenS: f64(),
+    heldBy: i32().fill(-1),
     decisionSeed: new Uint32Array(capacity),
     decisions: i32(),
     speeding: new Uint8Array(capacity),
@@ -376,6 +383,7 @@ export function createTrafficState(map, params, runSeed) {
     heldV: f64(),
     isMoto: new Uint8Array(capacity),
     egoSignalEpisode: 0,
+    egoStillS: 0,
     egoIndicator: 'off',
     halfWidth: laneHalfWidths(map, graph),
     openSides: laneOpenSides(map, graph),
@@ -395,7 +403,7 @@ export function createTrafficState(map, params, runSeed) {
       spawned: 0,
       sourceEmitted: traffic.sources.map(() => 0),
       ringSpawned: 0,
-      despawned: { sink: 0, ring: 0, behind: 0, 'dead-end': 0, reset: 0, wreck: 0 },
+      despawned: { sink: 0, 'edge-held': 0, ring: 0, behind: 0, 'dead-end': 0, reset: 0, wreck: 0, stuck: 0 },
     },
   };
   return state;
@@ -700,6 +708,7 @@ export function spawnAgent(st, edge, s, speed, modelIndex) {
   st.unsafeChange[slot] = 0;
   st.heedless[slot] = 0;
   st.frozenS[slot] = 0;
+  st.heldBy[slot] = -1;
   st.crossing[slot] = 0;
   st.intent[slot] = 0;
   st.intentLane[slot] = -1;

@@ -41,14 +41,15 @@ import { buildTower } from './tower.js';
 /** @typedef {import('../../contracts/map.js').GameMap} GameMap */
 /** @typedef {import('../../contracts/map.js').Prop} Prop */
 /** @typedef {import('./props.js').PropModelKey} PropModelKey */
+/** @typedef {import('./props.js').PropModel} PropModel */
 /** @typedef {import('./props.js').PropLayer} PropLayer */
 /** @typedef {import('./shophouse.js').AwningInstance} AwningInstance */
 
 /**
  * Optional models for the scenery.
  * @typedef {object} SceneryKit
- * @property {Partial<Record<PropModelKey, string>>} [propModels] GLB path (relative to `public/`)
- *   per prop kind or `awning`; kinds without one keep their primitive shape.
+ * @property {Partial<Record<PropModelKey, PropModel>>} [propModels] Model per prop kind or
+ *   `awning`; kinds without one keep their primitive shape.
  */
 
 /**

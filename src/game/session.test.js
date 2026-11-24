@@ -332,16 +332,18 @@ function recordingSim(out) {
  * @param {Frame} f Frame.
  * @param {number} scripted Scripted actors on the map, listed before the traffic agents.
  * @param {number} rangeM Search range.
+ * @param {'car' | 'motorbike'} [kind] Only agents of this kind; any kind by default.
  * @returns {{d: number, lat: number, along: number} | null} Distance, lateral offset (+ to the
  *   right, the sign of `steer`) and distance along the ego heading.
  */
-function agentAhead(f, scripted, rangeM) {
+function agentAhead(f, scripted, rangeM, kind) {
   const e = f.ego;
   const fx = Math.cos(e.heading);
   const fz = -Math.sin(e.heading);
   /** @type {{d: number, lat: number, along: number} | null} */
   let best = null;
   for (const a of f.actors.slice(scripted)) {
+    if (kind !== undefined && a.kind !== kind) continue;
     const dx = a.pos.x - e.pos.x;
     const dz = a.pos.z - e.pos.z;
     const along = dx * fx + dz * fz;
@@ -362,16 +364,19 @@ const steerTo = (lat, along) => Math.max(-1, Math.min(1, (2 * lat) / Math.max(al
 
 /**
  * Input that steers the ego at the nearest traffic agent ahead with steady throttle, so it runs
- * into the back of it.
+ * into it.
  * @param {Frame[]} frames Frames recorded so far.
  * @param {number} scripted Scripted actors on the map.
+ * @param {'car' | 'motorbike'} [kind] Only agents of this kind; any kind by default. A rider chased
+ *   this way may move across in front of the ego and carry `unsafe-lane-change`, which turns the
+ *   contact into a notice, so a test of the ego's own fault chases cars only.
  * @returns {import('./session.js').SessionDeps['createInput']} Input factory.
  */
-function pursuitInput(frames, scripted) {
+function pursuitInput(frames, scripted, kind) {
   return scriptedInput((k) => {
     const f = frames.at(-1);
     if (k === 0 || !f) return { gearCmd: 'up' };
-    const best = agentAhead(f, scripted, 80);
+    const best = agentAhead(f, scripted, 80, kind);
     return { throttle: 0.6, steer: best ? steerTo(best.lat, best.along) : 0 };
   });
 }
@@ -570,7 +575,7 @@ describe('session with traffic (dev build checks)', () => {
       // Lawful traffic, so the agent ahead does not leave the lane or start a crash of its own.
       loadTrafficParams: async () => lawfulParams(PARAMS),
       createSim: recordingSim(recorded),
-      createInput: pursuitInput(recorded, PASTEUR.actors.length),
+      createInput: pursuitInput(recorded, PASTEUR.actors.length, 'car'),
     });
     await h.game.start('osm-pasteur', 'car-sedan', { seed: 4242 });
     runFor(h, 20);
@@ -584,6 +589,74 @@ describe('session with traffic (dev build checks)', () => {
     const info = h.game.debugInfo();
     expect(info.replayCheck).toMatchObject({ windowed: true, equal: true });
     expect(info.replayCheck?.frames).toBeLessThanOrEqual(2 * CHECKPOINT_TICKS);
+    expect(h.errors).toEqual([]);
+  });
+
+  it('turns a contact with a rider cutting in on osm-pasteur into a notice on the HUD and the result, with no crash charged', { timeout: 120_000 }, async () => {
+    /** @type {Frame[]} */
+    const recorded = [];
+    // The shipped driver population: on this seed a rider moves across into the ego's path within
+    // its stopping distance and latches `unsafe-lane-change` before the contact.
+    const h = trafficHarness({
+      loadMap: async () => structuredClone(PASTEUR),
+      createSim: recordingSim(recorded),
+      createInput: pursuitInput(recorded, PASTEUR.actors.length),
+    });
+    await h.game.start('osm-pasteur', 'car-sedan', { seed: 4242 });
+    runFor(h, 20);
+    const hits = recorded.flatMap((f) =>
+      f.events.flatMap((ev) => (ev.type === 'collision' && ev.otherViolations.includes('unsafe-lane-change') ? [{ tick: f.tick, ev }] : [])),
+    );
+    expect(hits.length).toBeGreaterThan(0);
+    const [first] = hits;
+    expect(first.ev).toMatchObject({ otherKind: 'motorbike', striker: 'ego' });
+    expect(h.states.some((s) => s.notices.some((n) => n.tick === first.tick))).toBe(true);
+    h.game.quit();
+    const report = h.states.at(-1)?.report;
+    const notice = report?.notices.find((n) => n.tick === first.tick);
+    expect(notice).toMatchObject({ kind: 'npc-fault', otherKind: 'motorbike', violations: ['unsafe-lane-change'] });
+    expect(notice?.text.vi).not.toBe('');
+    expect(report?.breaches.map((b) => b.ruleId)).not.toContain('crash');
+    expect(h.game.debugInfo().replayCheck).toMatchObject({ windowed: true, equal: true });
+    expect(h.errors).toEqual([]);
+  });
+
+  it('halves the active traffic cap with agentScale 0.5 and reports traffic step time and draw calls', { timeout: 120_000 }, async () => {
+    /** @type {(number | undefined)[]} */
+    const caps = [];
+    /** @type {import('../contracts/index.js').CreateSim} */
+    const capturing = (rapier, map, vehicle, options) => {
+      caps.push(map.traffic?.maxAgents);
+      return createSim(rapier, map, vehicle, options);
+    };
+    const full = /** @type {NonNullable<GameMap['traffic']>} */ (PASTEUR.traffic).maxAgents;
+    const h = trafficHarness({
+      loadMap: async () => structuredClone(PASTEUR),
+      createSim: capturing,
+      createView: () => ({ renderer: { render() {}, resize() {}, dispose() {}, drawCalls: () => 42 }, dispose() {} }),
+    });
+    await h.game.start('osm-pasteur', 'car-sedan', { seed: 4242, agentScale: 0.5 });
+    const half = Math.round(full * 0.5);
+    expect(caps).toEqual([half]);
+    let peak = 0;
+    h.frames.tick(0);
+    while (h.game.debugInfo().tick < 30 / DT) {
+      h.frames.tick(1000 / 60);
+      peak = Math.max(peak, h.game.debugInfo().agents);
+    }
+    expect(peak).toBeLessThanOrEqual(half);
+    expect(peak).toBeGreaterThan(half / 2);
+    const info = h.game.debugInfo();
+    expect(info.trafficStepMs?.mean).toBeGreaterThanOrEqual(0);
+    expect(info.drawCalls).toBe(42);
+    h.game.quit();
+
+    await h.game.start('osm-pasteur', 'car-sedan', { seed: 4242 });
+    expect(caps).toEqual([half, full]);
+    h.game.quit();
+    for (const bad of [0, -1, 1.5, Number.NaN]) {
+      await expect(h.game.start('osm-pasteur', 'car-sedan', { agentScale: bad })).rejects.toThrow(/agentScale/);
+    }
     expect(h.errors).toEqual([]);
   });
 

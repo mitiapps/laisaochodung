@@ -4,9 +4,8 @@
  *
  * - Far plane 300 m. The day fog leaves about 1% of a surface's colour at that distance, so the
  *   cut never shows, and it lets distant scenery chunks be culled.
- * - Shadows: the sun's shadow camera is set up and follows the camera focus, but `castShadow` on
- *   the sun and `renderer.shadowMap` stay off until the integration enables them. Only the ego and
- *   traffic cast; scenery and road only receive.
+ * - Shadows: the sun casts, with its shadow camera following the camera focus; the renderer turns
+ *   `shadowMap` on. Only the ego and traffic cast; scenery and road only receive.
  * - Night: materials with a numeric `userData.nightEmissive` get `emissiveIntensity = night × value`
  *   (lit windows, sign boards), and objects with a numeric `userData.nightOnly` show only from that
  *   night factor on (lamp glow sprites). The scene is scanned again whenever its child count
@@ -75,6 +74,7 @@ export function createEnvironment(scene, asphalt) {
   const hemi = new HemisphereLight(0xdfefff, 0x4a4535, 1);
   scene.add(hemi);
   const sun = new DirectionalLight(0xfff1d8, 2);
+  sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.camera.left = -SHADOW_HALF_M;
   sun.shadow.camera.right = SHADOW_HALF_M;

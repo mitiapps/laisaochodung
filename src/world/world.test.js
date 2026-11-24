@@ -14,8 +14,10 @@ import {
   stepRoute,
   trafficLightStates,
 } from './index.js';
+import { againstLane } from './actors.js';
 
-/** @type {import('../contracts/index.js').GameMap} */
+/** @typedef {import('../contracts/index.js').GameMap} GameMap */
+/** @type {GameMap} */
 const MAP = JSON.parse(readFileSync(new URL('../../tests/fixtures/map-minimal.json', import.meta.url), 'utf8'));
 
 /** A footprint far from every path and trigger. */
@@ -188,6 +190,32 @@ describe('stepActors', () => {
     });
     expect(poses.find((p) => p.id === 'npc-1')?.state).toBe('moving');
     expect(poses.find((p) => p.id === 'ped-1')?.state).toBe('stopped');
+  });
+
+  it('flags a scripted car travelling against its lane as wrong-way, and only while it travels', () => {
+    // npc-1 runs west in the westbound lane; the same path driven in the eastbound lane runs
+    // against it.
+    const npc = /** @type {GameMap['actors'][number]} */ (MAP.actors.find((a) => a.id === 'npc-1'));
+    const against = structuredClone(MAP);
+    const car = /** @type {GameMap['actors'][number]} */ (against.actors.find((a) => a.id === 'npc-1'));
+    car.path = npc.path.map(([x, z]) => /** @type {[number, number]} */ ([x, -z]));
+    car.loop = false;
+    let state = createActorState(against);
+    let r = stepActors(state, against, [AWAY], 0, DT);
+    expect(r.poses.find((p) => p.id === 'npc-1')?.violations).toEqual(['wrong-way']);
+    expect(stepActors(createActorState(MAP), MAP, [AWAY], 0, DT).poses.find((p) => p.id === 'npc-1')?.violations).toBe(NO_VIOLATIONS);
+    // Parked at the end of its path, it no longer travels against anything.
+    for (let i = 0; i < 6000 && r.poses.find((p) => p.id === 'npc-1')?.active; i += 1) {
+      state = r.state;
+      r = stepActors(state, against, [AWAY], 0, DT);
+    }
+    expect(r.poses.find((p) => p.id === 'npc-1')?.active).toBe(false);
+    expect(r.poses.find((p) => p.id === 'npc-1')?.violations).toBe(NO_VIOLATIONS);
+    // Pedestrians never carry it.
+    expect(r.poses.find((p) => p.id === 'ped-1')?.violations).toBe(NO_VIOLATIONS);
+    expect(againstLane(MAP, [150, 1.75], Math.PI)).toBe(true);
+    expect(againstLane(MAP, [150, 1.75], 0)).toBe(false);
+    expect(againstLane(MAP, [150, 50], Math.PI)).toBe(false);
   });
 });
 

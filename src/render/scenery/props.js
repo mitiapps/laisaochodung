@@ -1,9 +1,10 @@
 /**
  * Street furniture as one `InstancedMesh` per prop kind. Each kind has a primitive shape built in
- * code (front along local +X, the prop heading), sized to the collider the sim gives that kind,
- * so the layer works with no model files. When the kit names a GLB for a kind, it is loaded
- * through `loadModel` and replaces the primitive once it arrives; a failed load keeps the
- * primitive and logs the error.
+ * code (local +X along the prop heading, the travel direction of the nearside lanes, so local −Z
+ * faces the carriageway), sized to the collider the sim gives that kind, so the layer works with
+ * no model files. When the kit names a GLB for a kind, it is loaded through `loadModel` and
+ * replaces the primitive once it arrives; a failed load keeps the primitive and logs the error. A
+ * kit entry carries the yaw that turns the model's own axes into that local frame.
  *
  * Scenery never casts shadows; it only receives them.
  */
@@ -19,6 +20,14 @@ import { TriangleSoup } from '../triangle-soup.js';
 /** @typedef {import('three').BufferGeometry} BufferGeometry */
 /** @typedef {[number, number]} Vec2 */
 /** @typedef {Prop['kind'] | 'awning'} PropModelKey */
+
+/**
+ * A model for one prop kind.
+ * @typedef {object} PropModel
+ * @property {string} path GLB path relative to `public/`.
+ * @property {number} yawOffset Yaw added to every instance, radians: turns the model's own front
+ *   onto the prop's local frame (for a lamp, its arm onto local −Z).
+ */
 
 /**
  * One instance: ground position, yaw, scale and an instance tint.
@@ -56,8 +65,8 @@ export const PROP_HEIGHT_M = Object.freeze({
   awning: 0.5,
 });
 
-/** Lamp head position on the primitive lamp, local `[x, y, z]` (the arm reaches along +X). */
-export const LAMP_HEAD = Object.freeze([1.6, 8.85, 0]);
+/** Lamp head position on the primitive lamp, local `[x, y, z]` (the arm reaches along −Z, over the road). */
+export const LAMP_HEAD = Object.freeze([0, 8.85, -1.6]);
 /** Cable attachment points on a power pole, local `[x, y, z]` (crossarm across the heading). */
 export const POLE_ATTACH = Object.freeze([
   [0, 7.6, -0.7],
@@ -108,8 +117,8 @@ export function primitiveShape(kind) {
       break;
     case 'lamp':
       s.setColor(0x7d8287).addPrismBetween(octagon(0, 0, 0.11), 0, 9);
-      box(0x7d8287, [0.8, 8.95, 0], [1.6, 0.08, 0.08]);
-      box(0xd9d4c3, [LAMP_HEAD[0], LAMP_HEAD[1], 0], [0.6, 0.15, 0.3]);
+      box(0x7d8287, [0, 8.95, LAMP_HEAD[2] / 2], [0.08, 0.08, -LAMP_HEAD[2]]);
+      box(0xd9d4c3, [LAMP_HEAD[0], LAMP_HEAD[1], LAMP_HEAD[2]], [0.3, 0.15, 0.6]);
       break;
     case 'power-pole':
       box(0xb9b5ad, [0, 4.25, 0], [0.3, 8.5, 0.3]);
@@ -206,10 +215,10 @@ export function propInstances(props, scaleOf, tintOf) {
  * @param {PropModelKey} key Kind key.
  * @param {PropInstance[]} instances Placements.
  * @param {Material} material Shared vertex-coloured material of the primitives.
- * @param {string | undefined} modelPath GLB path relative to `public/`, or undefined.
+ * @param {PropModel | undefined} model Model of the kind, or undefined for the primitive only.
  * @returns {PropLayer} Layer.
  */
-export function buildPropLayer(group, key, instances, material, modelPath) {
+export function buildPropLayer(group, key, instances, material, model) {
   const geometry = /** @type {BufferGeometry} */ (primitiveShape(key).toGeometry());
   const mesh = new InstancedMesh(geometry, material, instances.length);
   mesh.name = `scenery-prop-${key}`;
@@ -232,7 +241,9 @@ export function buildPropLayer(group, key, instances, material, modelPath) {
   /** @type {InstancedMesh[]} */
   const loaded = [];
 
-  if (modelPath) {
+  if (model) {
+    const modelPath = model.path;
+    const turn = new Matrix4().makeRotationY(model.yawOffset);
     loadModel(modelPath)
       .then((gltf) => {
         if (disposed) return;
@@ -243,7 +254,7 @@ export function buildPropLayer(group, key, instances, material, modelPath) {
         if (!(size.y > 0)) throw new Error(`${modelPath} has no height`);
         const k = PROP_HEIGHT_M[key] / size.y;
         const centre = box.getCenter(new Vector3());
-        const fit = new Matrix4().makeScale(k, k, k).multiply(new Matrix4().makeTranslation(-centre.x, -box.min.y, -centre.z));
+        const fit = turn.multiply(new Matrix4().makeScale(k, k, k)).multiply(new Matrix4().makeTranslation(-centre.x, -box.min.y, -centre.z));
         scene.traverse((o) => {
           const part = /** @type {import('three').Mesh} */ (o);
           if (!part.isMesh) return;

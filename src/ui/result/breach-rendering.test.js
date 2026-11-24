@@ -81,6 +81,7 @@ describe('result screen', () => {
     const report = {
       score: 8.5,
       breaches: [FULL, second],
+      notices: [],
       licence: { start: 12, deducted: 4, remaining: 8 },
       fineTotalVnd: { min: 18800000, max: 21000000 },
       finished: true,
@@ -94,5 +95,34 @@ describe('result screen', () => {
     expect(text).toContain('Tổng tiền phạt (ước tính) 18.800.000–21.000.000 ₫');
     expect(text).toContain('12 → 8 điểm');
     expect(text).toContain('Về đích');
+    expect(body).not.toContain('result-notices');
+    expect(text).not.toContain('Thông báo');
+  });
+
+  it('lists each notice with its text after the breaches', () => {
+    /** @type {import('../../contracts/score.js').Notice[]} */
+    const notices = [
+      { kind: 'npc-fault', tick: 300, t: 5, pos: { x: 0, z: 0 }, otherKind: 'motorbike', otherModel: null, violations: ['red-light'], text: { vi: 'Xe máy vượt đèn đỏ va vào bạn.' } },
+      { kind: 'npc-fault', tick: 4500, t: 75, pos: { x: 3, z: 1 }, otherKind: 'car', otherModel: 'taxi', violations: ['tailgating'], text: { vi: 'Ô tô phía sau không giữ khoảng cách.' } },
+    ];
+    /** @type {ScoreReport} */
+    const report = {
+      score: 9,
+      breaches: [{ ...BASE, episodeId: 'speeding-1' }],
+      notices,
+      licence: { start: 12, deducted: 0, remaining: 12 },
+      fineTotalVnd: { min: 800000, max: 1000000 },
+      finished: true,
+      endedBy: 'finish',
+    };
+    const { body } = render(ResultScreen, { props: { report, onretry: () => {}, onchangemap: () => {} } });
+    const text = textOf(body);
+    expect(body.match(/data-testid="result-notice"/gu)).toHaveLength(2);
+    const heading = text.indexOf('Thông báo (không trừ điểm)');
+    expect(heading).toBeGreaterThan(text.indexOf('Các lỗi vi phạm (1)'));
+    expect(heading).toBeGreaterThan(text.indexOf(BASE.title.vi));
+    expect(text.indexOf('Xe máy vượt đèn đỏ va vào bạn.')).toBeGreaterThan(heading);
+    expect(text.indexOf('Ô tô phía sau không giữ khoảng cách.')).toBeGreaterThan(text.indexOf('Xe máy vượt đèn đỏ va vào bạn.'));
+    expect(text).toContain('1:15');
   });
 });

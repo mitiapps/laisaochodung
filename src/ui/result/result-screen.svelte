@@ -59,6 +59,20 @@
     {/if}
   </div>
 
+  {#if report.notices.length > 0}
+    <div>
+      <h3 class="mb-2 font-semibold">Thông báo (không trừ điểm)</h3>
+      <ol class="space-y-2" data-testid="result-notices">
+        {#each report.notices as notice, i (i)}
+          <li class="flex justify-between gap-2 rounded-lg border border-stone-200 border-l-4 border-l-stone-400 bg-white px-3 py-2 text-sm" data-testid="result-notice">
+            <span>{notice.text.vi}</span>
+            <span class="shrink-0 text-xs tabular-nums text-stone-600">{formatClock(notice.t)}</span>
+          </li>
+        {/each}
+      </ol>
+    </div>
+  {/if}
+
   <footer class="flex justify-end gap-3">
     <button type="button" class="rounded-lg border border-stone-300 bg-white text-stone-900 hover:bg-stone-100 px-4 py-2" data-testid="result-change-map" onclick={onchangemap}>
       Đổi bản đồ

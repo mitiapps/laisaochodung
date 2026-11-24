@@ -29,6 +29,7 @@ import { idmAcceleration } from './idm.js';
 import { edgePoint } from './lane-graph.js';
 import { chooseNext, edgeInsert, edgeRemove, refreshBaseSpeed } from './state.js';
 import { draw } from './violations.js';
+import { pathBlocked } from './moto-slots.js';
 import { PERSONALITIES } from '../../contracts/traffic.js';
 
 /** @typedef {import('./state.js').TrafficState} TrafficState */
@@ -308,6 +309,21 @@ export function switchLane(st, slot, ti, at, unsafe) {
 }
 
 /**
+ * Whether the way across to lane `ti` is free within the agent's own lane: no agent stands
+ * alongside between it and the lane line on that side. A change that starts with someone in the
+ * way can only stop half across, holding both.
+ * @param {TrafficState} st State.
+ * @param {number} slot Slot.
+ * @param {number} ti Target lane.
+ * @returns {boolean} Free.
+ */
+export function wayAcrossClear(st, slot, ti) {
+  const e = st.edge[slot];
+  const side = st.laneIndexOf[ti] > st.laneIndexOf[e] ? 1 : -1;
+  return !pathBlocked(st, slot, side * st.halfWidth[e]);
+}
+
+/**
  * Tries the mandatory lane change of one agent. Call it before list positions are taken for the
  * step; it keeps every edge list sorted.
  * @param {TrafficState} st State.
@@ -351,7 +367,7 @@ export function tryMandatoryLaneChange(st, slot, perceived, parked, t) {
       // Judged against a standing agent: until it is across, whatever closes its old lane may stop it.
       if (nb.followerGap < st.minGap[f] || demand(st, f, nb.followerGap, 0) < -safe) return false;
     }
-    if (!stretchClear(st, slot, t2, at.s, perceived)) return false;
+    if (!stretchClear(st, slot, t2, at.s, perceived) || !wayAcrossClear(st, slot, ti)) return false;
     switchLane(st, slot, ti, at, false);
     return true;
   }

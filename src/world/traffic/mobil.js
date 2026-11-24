@@ -29,6 +29,7 @@ import {
   signalled,
   stretchClear,
   switchLane,
+  wayAcrossClear,
 } from './lane-change.js';
 import { draw, rateOf } from './violations.js';
 
@@ -126,6 +127,7 @@ export function stepMobil(st, slot, perceived, t, egoDistM) {
     if (!unsafe && (!safe(st, slot, nb) || !stretchClear(st, slot, edges[ti], at.s, perceived))) return false;
     // A cut-in still never lands on top of another body.
     if (unsafe && (nb.leaderGap <= 0 || nb.followerGap <= 0)) return false;
+    if (!wayAcrossClear(st, slot, ti)) return false;
     switchLane(st, slot, ti, at, unsafe);
     return true;
   }

@@ -527,6 +527,18 @@ export function buildLaneGraph(map, params, sweep) {
  */
 
 /**
+ * Signed lateral offset of a point from an edge's centreline (positive left of its direction), at
+ * the nearest centreline point.
+ * @param {Edge} edge Edge.
+ * @param {number} x Point x.
+ * @param {number} z Point z.
+ * @returns {number} Offset in metres.
+ */
+export function edgeLateral(edge, x, z) {
+  return projectOntoPolyline([x, z], edge.points).lateral;
+}
+
+/**
  * Point and heading at distance `s` along an edge, clamped to the edge, written into `out`.
  * @param {Edge} edge Edge.
  * @param {number} s Distance along it.

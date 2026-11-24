@@ -13,7 +13,6 @@ import {
   formatSpeed,
   formatSuspension,
   formatVnd,
-  keyLabel,
   sourceLabel,
 } from './format.js';
 
@@ -88,11 +87,5 @@ describe('numbers and labels', () => {
     expect(formatSuspension(null)).toBeNull();
     expect(formatDate('2026-08-15')).toBe('15/08/2026');
     expect(formatDate(null)).toBeNull();
-  });
-
-  it('labels key codes', () => {
-    expect(keyLabel('KeyW')).toBe('W');
-    expect(keyLabel('ArrowUp')).toBe('↑');
-    expect(keyLabel('Space')).toBe('Phím cách');
   });
 });

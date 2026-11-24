@@ -52,7 +52,9 @@ function causesOf(st, slot, t, out) {
 
 /**
  * Turns an agent into a wreck: a motorbike falls (speed 0), a car keeps its speed to slide; a claim
- * still before the junction is given back.
+ * still before the junction is given back. A wreck has stopped driving, so it no longer runs the red
+ * or forces its way in: the `red-light` and `no-yield` conditions stop being raised, and only their
+ * latch carries them on for `LATCH_S`.
  * @param {TrafficState} st State.
  * @param {number} slot Slot.
  * @param {number} t Time.
@@ -66,6 +68,8 @@ export function makeWreck(st, slot, t) {
   if (st.isMoto[slot]) st.v[slot] = 0;
   // The body keeps the turn it had (a sudden straightening would swing it into its neighbours).
   st.crossing[slot] = 0;
+  st.redConn[slot] = -1;
+  st.noYieldConn[slot] = -1;
   const c = st.claim[slot];
   if (c >= 0 && st.edge[slot] === st.graph.edges[c].fromEdge) claimDrop(st, slot);
 }

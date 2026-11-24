@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ACTOR_LIGHTS } from '../../contracts/telemetry.js';
 import { DT } from '../../contracts/units.js';
-import { CAUSE_INATTENTIVE } from './contacts.js';
+import { CAUSE_INATTENTIVE, makeWreck } from './contacts.js';
 import { createTraffic, stepTraffic } from './index.js';
 import { lawfulParams } from './lawful-params.js';
 import { spawnAgent } from './state.js';
@@ -127,6 +127,25 @@ describe('NPC contacts', () => {
     expect(incidents).toHaveLength(1);
     expect(incidents[0].agentIds).toEqual([st.ids[bike], 'npc-parked']);
     expect(st.wreck[bike]).toBe(1);
+  });
+
+  it('slides a car wreck on, and stops it dead where the ego touches it', () => {
+    const map = emptyMap();
+    const st = createTraffic(map, LAWFUL, 35);
+    const car = place(st, 'rw-e1', 40, 9, 'car');
+    const id = st.ids[car];
+    makeWreck(st, car, 0);
+    const slid = run(st, map, 0, 0.5).poses.find((p) => p.id === id);
+    expect(slid?.state).toBe('crashed');
+    expect(slid?.speed).toBeGreaterThan(0);
+    const lights = Object.fromEntries(map.signals.map((s) => [s.id, /** @type {const} */ ('green')]));
+    stepTraffic(st, { ego: EGO_AWAY, egoReset: false, scripted: [], lights, egoContacts: [id], t: 0.5 });
+    const s = st.s[car];
+    const after = run(st, map, 0.5 + DT, 1).poses.find((p) => p.id === id);
+    expect(after?.speed).toBe(0);
+    expect(st.s[car]).toBe(s);
+    // Still the wreck made at t 0: it clears on the original schedule.
+    expect(st.wreckT[car]).toBe(0);
   });
 
   it('clears the wrecks within wreckClearS and the lane flows again within 30 s', () => {

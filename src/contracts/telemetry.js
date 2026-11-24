@@ -95,8 +95,8 @@
  * @property {'moving' | 'stopped' | 'crashed' | 'fallen'} state `moving` above 0 m/s, `stopped` at 0;
  *   `crashed` a wrecked car, `fallen` a fallen motorbike and rider.
  * @property {readonly NpcViolation[]} violations Flags true within the last `crashCauseWindowS`
- *   (latched by the traffic module). The empty case is the shared `NO_VIOLATIONS` array; scripted
- *   actors always carry it.
+ *   (latched by the traffic module). The empty case is the shared `NO_VIOLATIONS` array. A
+ *   scripted actor carries only `wrong-way`, while it travels against the lane it is on.
  */
 
 /**

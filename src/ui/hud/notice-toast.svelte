@@ -13,9 +13,10 @@
   data-tick={notice.tick}
   role="status"
 >
-  <header class="mb-1 flex items-start justify-between gap-2">
+  <header class="mb-1 flex [@media(max-height:480px)]:mb-0 items-start justify-between gap-2">
     <p class="text-xs font-semibold uppercase tracking-wide text-stone-600">Va chạm</p>
     <span class="rounded bg-stone-100 px-1.5 py-0.5 text-xs font-semibold text-stone-700" data-testid="notice-badge">Không trừ điểm</span>
   </header>
-  <p class="text-sm" data-testid="notice-text">{notice.text.vi}</p>
+  <!-- One clamped line on a short landscape view; the full text stays in the title and the result. -->
+  <p class="text-sm [@media(max-height:480px)]:truncate" data-testid="notice-text" title={notice.text.vi}>{notice.text.vi}</p>
 </article>

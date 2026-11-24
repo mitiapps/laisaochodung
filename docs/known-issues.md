@@ -5,10 +5,7 @@ says what happens and where.
 
 ## Release blockers
 
-`npm run release:check` lists them; with today's data it fails on:
-
-- **Sign figures.** No sign drawing in `public/signs/` has been compared with its figure in the
-  official QCVN 41 annex; every `figureChecked` in `data/signs/signs.yaml` is `null`.
+`npm run release:check` lists them; with today's data it passes.
 
 ## Legal readings
 
@@ -29,9 +26,24 @@ says what happens and where.
 - **TT 38 "V = 60".** TT 38 Bảng 3, row 1, prints "V = 60" in the official text too; it most likely
   means V ≤ 60. No rule uses Bảng 3: below 60 km/h the circular sets no distance, and the
   following-distance rule deducts score only.
-- **Va chạm and tai nạn split (design).** A contact with an NPC car is an accident (10.a / 10.b)
-  from a closing speed of `accidentRelSpeed` (4.2 m/s). Closing speed is measured along the
-  contact normal, so a fast sideswipe counts as a light contact.
+- **Fault in a contact (design table, `data/scoring/collision-policy.yaml` `faultRows`).** A contact
+  with a car or motorbike is charged only when the player contributed: an episode of any rule but
+  `nonContributingRules` active within `crashCauseWindowS` (a contributing episode), running into the vehicle ahead in the
+  same lane, or striking a vehicle that carries no excusing violation (`red-light`, `wrong-way`,
+  `no-yield`, `unsafe-lane-change`). Being struck from behind is never charged unless the player
+  had just cut in or turned without signalling. Everything else is a notice with no deduction, as
+  is every contact within `aftermathWindowS` after a notice (the shove). Contacts with pedestrians
+  are always charged; static objects, kerbs and falls only escape inside the aftermath window.
+- **A notice is a game ruling, not a legal one.** The notice text says the game records no fault;
+  it never says the player had none. Law 36 Điều 12 khoản 3 still asks every driver to watch the
+  road and slow down, and only the police decide fault.
+- **A stopped player is never charged** for a contact (`contactMinEgoSpeed`, 0.5 m/s), even while
+  an episode that would count as contributing is active, such as stopping in a junction
+  (6.10.a "dừng xe"): a contact the fault table would charge below the speed gate gives a notice
+  instead.
+- **Va chạm and tai nạn split (design).** A charged contact with an NPC car is an accident
+  (10.a / 10.b) from a closing speed of `accidentRelSpeed` (4.2 m/s). Closing speed is measured
+  along the contact normal, so a fast sideswipe counts as a light contact.
 - **High beam and anti-glare medians.** ND 168 excepts oncoming traffic behind "dải phân cách có
   khả năng chống chói". Maps record only `road.divided`, so on a divided road oncoming cars never
   count; a median that does not block glare is missed rather than wrongly cited.
@@ -81,14 +93,54 @@ says what happens and where.
   turn-signal or lane-change breach.
 - **Live toasts.** An accident's cause shows `fineAbsorbedBy` only in the final report, not on its
   live toast.
-- **Indicators** do not cancel themselves after a turn; pressing the same side again turns them off.
+
+## Controls
+
+- **The auto-cancel and a quick second change.** On Đơn giản, the indicator switches off once a
+  signalled junction turn is done and no junction lies within the `turn-signal` rule's distance.
+  A lane change to the same side within about 1.5 s of the junction exit then finds the indicator
+  already off, and it must be signalled again.
+- **The auto-cancel rarely fires on `osm-pasteur`**, where the next junction often lies within that
+  distance of the last one; the indicator then stays on until the player switches it off.
+- **Touch pedals are on or off.** A tap holds full throttle or full brake; there is no half
+  pedal on a touch screen.
+- **Portrait, fullscreen, tilt steering and gamepads** are not supported yet.
+- On Thực tế, indicators do not cancel themselves; pressing the same side again turns them off.
+
+## Traffic
+
+- **Traffic sometimes locks.** With every seed run on `osm-pasteur`, the heads of the Pasteur
+  approach (way 678315474) and of the Lê Duẩn approach (way 803279638-2) can wait for minutes at a
+  green light while a steady stream of crossing agents keeps claiming the junction, and the
+  queue behind them stands still. The legal test driver, stuck in such a queue, misses the time
+  limit on `osm-pasteur` in 6 of 20 seeds, and in 5 of 20 with the Đơn giản assists. At junction
+  411919193 the kerb lane of one cross street can deliver no agent in the first 2 minutes (3 of
+  10 seeds). On `tutorial-03-ban-dem` a queue on `nhanh` can spill back into junction `j-c` and
+  block it (2 of 20 seeds). No seed costs the test driver a point.
+- **Traffic agents can stop dead.** An agent that finds the agent ahead too close stops in one
+  step instead of braking, so a player following too closely may run into it and be charged.
+- **No riding against the flow or on the pavement.** Traffic agents always travel with their
+  lane; the HCMC habits of riding a short way against the flow or along the pavement are not
+  modelled. A scripted actor that moves against its lane carries `wrong-way`.
+- **Design motorbike parameters.** Motorbike speeds, gaps, lateral slots and violation rates in
+  `data/traffic/params.yaml` are game values (`paramBasis: design`), not measured HCMC data.
+- **Procedural motorbikes and bus.** The player's scooter, traffic motorbikes and the bus are
+  built from code, not from model files; cars, taxis, trucks, riders and pedestrians use Kenney
+  models.
+- **NPCs cannot wreck scripted actors.** Traffic agents stop for scripted actors (perceived
+  exactly), and a scripted actor holds for anything in its path, so neither ever strikes the other.
+- **A parked scripted actor closes its lane.** A scripted actor that ends its path on a lane stays
+  there, and traffic changes lane round it.
+- **All signal heads stand on side poles.** No map data says which heads hang on a cantilever.
+- **Civic fences are drawn only.** They have no collider, so the player can drive through them.
+- **Signal countdowns** count red and green only, as the countdown lamps in Ho Chi Minh City do.
 
 ## Physics and maps
 
 - The scooter rig locks rotations on world axes, so it is valid on flat maps only
   ([physics.md](physics.md)).
 - Replays are deterministic on one machine and build only; the deterministic Rapier build is not
-  used.
+  used, so a recorded run replays only on the same engine build.
 - Frame time has been measured only in headless software rendering, not on a real GPU.
 - The straight side of a T-junction has no pavement or kerb: corner pavements fill only real
   corners. On `tutorial-02-nga-tu` the larger trim at j4 widens that open side from about 9 m to

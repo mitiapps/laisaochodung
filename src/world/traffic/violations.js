@@ -137,7 +137,7 @@ export function rateOf(st, slot, rate, egoDistM) {
   const pers = st.params.personalities[PERSONALITIES[st.personality[slot]]];
   const v = st.params.violations;
   let p = pers.violations[rate];
-  const scaled = rate === 'redLight' || rate === 'earlyStart' || rate === 'wrongWay' || rate === 'sidewalk';
+  const scaled = rate === 'redLight' || rate === 'earlyStart';
   if (scaled && st.params.models[st.modelKeys[st.model[slot]]].class !== 'motorbike') p *= v.carScale;
   if (egoDistM <= v.nearEgoBoostRadiusM) p *= v.nearEgoViolationBoost;
   return p;

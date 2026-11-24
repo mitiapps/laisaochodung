@@ -88,7 +88,65 @@ Everything else is placed by way and distance, so authors write no polygons:
   `environment`, `timeLimitS`, `lit`.
 - `layout: <id>` reuses another tutorial's source; keys set here replace the layout's.
 
-Actor `model` keys used: `pedestrian` and `npc-sedan`.
+Actor `model` keys used: `pedestrian` and `npc-sedan`. A scripted actor that ends its path on a
+lane stays there as a parked vehicle: it closes that lane, and traffic changes lane round it. A car
+that moves against the lane it is on carries `wrong-way`.
+
+Street dressing, on tutorial and OSM sources alike:
+
+- `buildings`: rows `{way, side, fromS, toS, heightM?}` become shophouse rows (OSM maps import
+  the extract's building footprints instead). Every pavement edge left without a building gets
+  generated shophouse rows, seeded by the map id.
+- `props`: fixed props `{id, kind, way, side, s, offsetM?}`, with `kind` one of the map
+  contract's `PROP_KINDS` (tree, lamp, power pole, cabinet, bin, bus stop, stall,
+  parked motorbikes…) and `offsetM` from the kerb to the prop centre. The build adds a seeded
+  fill along every pavement; no prop overlaps a lane, junction, building, sign post, crosswalk
+  landing or another prop, and each pavement keeps a 1.5 m clear walking strip.
+- `stubM` (OSM sources): how far side-road stubs reach from the route corridor, 30 m by default.
+  The build logs every stub kept shorter.
+
+## Traffic
+
+A `traffic` key in `source.yaml` turns NPC traffic on for the map (`scripts/maps/lib/traffic.js`).
+It is not inherited through `layout`.
+
+```yaml
+traffic:
+  densityPerKm: 30            # agents per lane-km on every road (design)
+  spawnRingM: [60, 150]       # inner and outer radius of the ring spawner around the ego
+  mix:                        # model shares of new agents, summing to 1
+    - { model: motorbike, share: 0.75 }
+    - { model: car, share: 0.12 }
+  seed: 123                   # optional map seed; default a hash of the map id
+  roadDensityPerKm: { cam: 0 }        # optional per-road overrides
+  sourceRatePerH: { cam-b0: 0 }       # optional per-source overrides
+```
+
+The build derives the rest of the map's `traffic` block:
+
+- **Sources and sinks:** every lane start on the map boundary is a source, emitting
+  `densityPerKm × 25 km/h` agents per hour unless overridden; every lane end there is a sink.
+- **`maxAgents`:** the most agents the ring spawner can hold, the largest sum of density times
+  lane length within the outer ring over ego positions every 10 m along the route.
+- **`timeLimitS`:** never below the authored one, and at least
+  `⌈1.25 · (L / 15 km/h + Σ waits)⌉` rounded up to 10 s, with `L` the route through the lane graph
+  and a full light cycle per signalled approach or 10 s per other junction crossed (all design).
+- **Lane graph:** junction `connectors` with their `conflicts`, and `laneJoins`, plain joins where
+  a lane's end meets the start of a lane of another road (within 0.1 m) with no junction, such as
+  where a road widens. Traffic runs straight on through a join with no hold point and no claim. A
+  lane end that is neither a sink, a connector start nor a join start is a dead end, where agents
+  stop and despawn once out of view.
+
+Driver and vehicle parameters are not per map: they live in `data/traffic/params.yaml`, compiled
+by `npm run build:traffic` to `src/generated/traffic-params.json`. Every number there needs a
+`paramBasis` entry (`design` or a listed source). Groups: `classes` (IDM and gap-acceptance values
+per vehicle class), `models` (size, mass and variants per model key), `personalities` (driver
+shares and factors), `humanFactors` (perception drift, distraction), `violations` (how rule
+breaking is drawn), `motorbike` (lateral slots and filtering), `behaviour` (turn weights, lane
+changes, junction deadlock breaking, rain braking), `incidentBand`, the mirror limits
+(`mirrorRadiusM`, `maxMirrored`), wreck clearing and spawn and despawn distances. Every model key
+of a map's `mix` must be a key of `models`, and the release gate checks that each one draws from a
+credited model file or a procedural builder.
 
 ## OSM sources
 
@@ -117,9 +175,14 @@ attribution `© OpenStreetMap contributors, ODbL`; the data licence is in
 | Id | Teaches |
 | --- | --- |
 | `tutorial-01-co-ban` | R.420; one lane each way (centre line dashed, then solid) widening to two (dashed, then solid lane lines); P.127 40 zone ended by DP.134; crosswalk with a triggered pedestrian; road works in the inner lane, so the route moves to the kerb lane while the lane line is dashed; P.130 stretch before a side junction; finish |
-| `tutorial-02-nga-tu` | R.420; signalled crossroads with P.123a and P.124a on the approach; W.208 give-way entry onto an I.401 priority road; P.101 closed side road; one-way street (I.407a) with P.102 at its far end; R.122 STOP junction; right turns kerb lane to kerb lane at the two one-way junctions, widened with `trimM: 8` |
-| `tutorial-03-ban-dem` | The tutorial-01 roads at 22:30 in rain (grip 0.7, a game value), lit, with its own road works (kerb lane) and route (inner lane); NPC car ahead, NPC car in the kerb lane, oncoming NPC cars |
-| `osm-pasteur` | About 0.4 km of Pasteur and Lê Duẩn, Quận 1, TP.HCM, from OpenStreetMap |
+| `tutorial-02-nga-tu` | R.420; signalled crossroads with P.123a and P.124a on the approach; W.208 give-way entry onto an I.401 priority road; P.101 closed side road; one-way street (I.407a) with P.102 at its far end; R.122 STOP junction; right turns kerb lane to kerb lane at the two one-way junctions, widened with `trimM: 8`; light traffic |
+| `tutorial-03-ban-dem` | The tutorial-01 roads at 22:30 in rain (grip 0.7, a game value), lit, with its own road works (kerb lane) and route (inner lane); NPC car ahead, NPC car in the kerb lane, oncoming NPC cars; light traffic |
+| `osm-pasteur` | About 0.4 km of Pasteur and Lê Duẩn, Quận 1, TP.HCM, from OpenStreetMap; full inner-city traffic |
+
+Traffic: `tutorial-01-co-ban` has none; `tutorial-02-nga-tu` and `tutorial-03-ban-dem` run light
+traffic (10 agents per lane-km, `maxAgents` 12 and 14); `osm-pasteur` runs 30 per lane-km
+(`maxAgents` 85). Every map with traffic mixes 75% motorbikes, 12% cars, 6% taxis, 5% trucks and
+2% buses. On `tutorial-02-nga-tu` the closed road (P.101) has no source and no agents.
 
 ### `osm-pasteur` corridor choice (decision D1)
 

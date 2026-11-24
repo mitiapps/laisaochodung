@@ -8,7 +8,9 @@
  * - `src/config/site.js` has no contact channel or donate QR, a malformed one, or a donate QR
  *   whose image is missing from `public/`;
  * - a file under `public/models/` or `public/signs/` has no entry in `data/credits/credits.json`;
- * - an OSM map has no attribution, or `data/maps/LICENSE-ODbL.md` is missing.
+ * - an OSM map has no attribution, or `data/maps/LICENSE-ODbL.md` is missing;
+ * - a traffic model key of `data/traffic/params.yaml` or of a map's `traffic.mix` draws with neither
+ *   a credited model file nor a procedural builder (a mix key must also be a traffic model).
  */
 
 import { access, readdir, readFile } from 'node:fs/promises';
@@ -16,11 +18,16 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkSiteConfig, SITE } from '../src/config/site.js';
 import { countUnverified } from '../src/rules/index.js';
+import { KENNEY_BODIES, resolveLook } from '../src/render/vehicles/index.js';
+import { MOTORBIKE_TYPES } from '../src/render/vehicles/motorbike.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /** Folders under `public/` whose every file needs a credit entry. */
 export const CREDITED_DIRS = Object.freeze(['models', 'signs']);
+
+/** Variants tried per traffic model: more than any model's `variants`, so every look is reached. */
+const LOOK_VARIANTS = 8;
 
 /**
  * @typedef {object} ReleaseInput
@@ -28,7 +35,10 @@ export const CREDITED_DIRS = Object.freeze(['models', 'signs']);
  * @property {import('../src/config/site.js').SiteConfig} site Site settings.
  * @property {string[]} assetFiles Files under the credited folders, relative to `public/`.
  * @property {import('../src/contracts/catalog.js').Credit[]} credits Credit entries.
- * @property {{id: string, kind: string, attribution?: string}[]} maps Built maps.
+ * @property {{id: string, kind: string, attribution?: string, mix: string[]}[]} maps Built maps, with the
+ *   model keys of their `traffic.mix` (empty without traffic).
+ * @property {Record<string, {kind: 'car' | 'motorbike'}>} trafficModels Models of the compiled traffic
+ *   parameters, by key.
  * @property {boolean} odblLicence `data/maps/LICENSE-ODbL.md` exists.
  * @property {boolean} donateQrExists The donate QR image exists under `public/`.
  */
@@ -65,7 +75,39 @@ export function releaseProblems(input) {
     }
   }
   if (!input.odblLicence) problems.push('data/maps/LICENSE-ODbL.md is missing');
+
+  const keys = new Set(Object.keys(input.trafficModels));
+  for (const m of input.maps) {
+    for (const model of m.mix) {
+      if (Object.hasOwn(input.trafficModels, model)) continue;
+      problems.push(`map ${m.id}: traffic mix model ${model} is not in data/traffic/params.yaml`);
+    }
+  }
+  for (const model of keys) {
+    const missing = modelProblem(model, input.trafficModels[model].kind, credited);
+    if (missing) problems.push(`traffic model ${model}: ${missing}`);
+  }
   return problems;
+}
+
+/**
+ * Why a traffic model cannot be drawn, if it cannot: every look it resolves to must be a procedural
+ * builder (a motorbike type or the bus) or a Car Kit body whose model file is credited.
+ * @param {string} model Model key.
+ * @param {'car' | 'motorbike'} kind Actor kind of the model.
+ * @param {Set<string>} credited Credited files.
+ * @returns {string | null} Problem, or null when every look draws.
+ */
+function modelProblem(model, kind, credited) {
+  for (let variant = 0; variant < LOOK_VARIANTS; variant += 1) {
+    const look = resolveLook({ id: `npc-${variant}`, kind, model, variant });
+    if (look.family === 'bike' && MOTORBIKE_TYPES.includes(look.body)) continue;
+    if (look.family === 'bus') continue;
+    const body = look.family === 'kenney' ? KENNEY_BODIES[look.body] : undefined;
+    if (!body) return `look ${look.family}/${look.body} has no builder`;
+    if (!credited.has(body.glb)) return `${body.glb} has no entry in data/credits/credits.json`;
+  }
+  return null;
 }
 
 /**
@@ -115,9 +157,14 @@ export async function loadReleaseInput(root = ROOT) {
   const index = /** @type {{id: string}[]} */ (await readJson(path.join(publicDir, 'maps', 'index.json')));
   const maps = [];
   for (const entry of index) {
-    const map = /** @type {{kind: string, attribution?: string}} */ (await readJson(path.join(publicDir, 'maps', `${entry.id}.json`)));
-    maps.push({ id: entry.id, kind: map.kind, attribution: map.attribution });
+    const map = /** @type {{kind: string, attribution?: string, traffic?: {mix: {model: string}[]}}} */ (
+      await readJson(path.join(publicDir, 'maps', `${entry.id}.json`))
+    );
+    maps.push({ id: entry.id, kind: map.kind, attribution: map.attribution, mix: (map.traffic?.mix ?? []).map((x) => x.model) });
   }
+  const params = /** @type {{models: Record<string, {kind: 'car' | 'motorbike'}>}} */ (
+    await readJson(path.join(root, 'src', 'generated', 'traffic-params.json'))
+  );
   const assetFiles = [];
   for (const dir of CREDITED_DIRS) assetFiles.push(...(await listFiles(path.join(publicDir, dir), publicDir)));
   const odblLicence = await access(path.join(root, 'data', 'maps', 'LICENSE-ODbL.md')).then(
@@ -130,7 +177,7 @@ export async function loadReleaseInput(root = ROOT) {
       () => true,
       () => false,
     ));
-  return { bundle, site: SITE, assetFiles, credits, maps, odblLicence, donateQrExists };
+  return { bundle, site: SITE, assetFiles, credits, maps, odblLicence, donateQrExists, trafficModels: params.models };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

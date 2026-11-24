@@ -252,6 +252,48 @@ describe('row 4: the ego strikes', () => {
   });
 });
 
+describe('below the contact-speed gate', () => {
+  /** Under the 0.5 m/s gate. */
+  const CREEP = 0.2;
+
+  it('turns a contributing-episode contact into a notice, keeping the episode breach', async () => {
+    // Speeding until t 2.5, then creeping when a red-light runner strikes at t 3.
+    const event = hit({ otherViolations: ['red-light'], egoSpeed: CREEP, relSpeed: 6 });
+    const { report } = await drive([{ t: 3, event }], {
+      speed: [{ t: 0, value: FAST }, { t: 2.5, value: FAST }, { t: 2.51, value: CREEP }],
+      durationS: 5,
+    });
+    expect(report.breaches.map((b) => b.ruleId)).toEqual(['speeding']);
+    expect(report.notices).toHaveLength(1);
+    expect(report.notices[0].violations).toEqual(['red-light']);
+  });
+
+  it('turns creeping into the car ahead in the lane into a notice', async () => {
+    const { report } = await drive([{ t: 2, event: hit({ striker: 'ego', sameLaneAhead: true, egoSpeed: CREEP }) }], { speed: CREEP, durationS: 4 });
+    expect(summary(report)).toEqual([]);
+    expect(report.notices).toHaveLength(1);
+  });
+
+  it('turns creeping into a lawful NPC into a notice', async () => {
+    const { report } = await drive([{ t: 2, event: hit({ striker: 'ego', egoSpeed: CREEP }) }], { speed: CREEP, durationS: 4 });
+    expect(summary(report)).toEqual([]);
+    expect(report.notices).toHaveLength(1);
+  });
+
+  it('opens the aftermath window, so the shove that follows is a notice too', async () => {
+    const { report } = await drive(
+      [
+        { t: 2, event: hit({ striker: 'ego', egoSpeed: CREEP }) },
+        { t: 2.8, event: hit({ otherKind: 'kerb', otherId: null, otherModel: null, striker: 'ego', relSpeed: 5 }) },
+      ],
+      { durationS: 4 },
+    );
+    expect(summary(report)).toEqual([]);
+    expect(report.notices.map((n) => n.otherKind)).toEqual(['car', 'kerb']);
+    expect(report.notices[1].text.vi).toMatch(/^Va chạm tiếp theo/u);
+  });
+});
+
 describe('row 5: otherwise', () => {
   it('gives a legal ego struck by a red-light runner a notice', async () => {
     const event = hit({ otherKind: 'motorbike', otherModel: 'motorbike', otherViolations: ['red-light'], relSpeed: 8 });

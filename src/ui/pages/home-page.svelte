@@ -2,7 +2,8 @@
   import PageShell from '../layout/page-shell.svelte';
   import { KEY_BINDINGS } from '../../contracts/controls.js';
   import { readControlPreset, writeControlPreset } from '../lib/control-preset-store.js';
-  import { formatDistance, keyLabel } from '../lib/format.js';
+  import { formatDistance } from '../lib/format.js';
+  import { keyName } from '../lib/key-label.js';
   import { PRESET_NAMES } from '../lib/hud-view.js';
   import { pageHref, playHref } from '../lib/route.js';
 
@@ -157,7 +158,7 @@
           <tr class="border-b border-stone-200">
             <td class="py-1 pr-4">
               {#each binding.keys as key (key)}
-                <kbd class="mr-1 rounded border border-stone-300 bg-stone-100 text-stone-800 px-1.5 py-0.5 font-mono text-xs">{keyLabel(key)}</kbd>
+                <kbd class="mr-1 rounded border border-stone-300 bg-stone-100 text-stone-800 px-1.5 py-0.5 font-mono text-xs">{keyName(key)}</kbd>
               {/each}
             </td>
             <td class="py-1 text-stone-700">{binding.label.vi}</td>

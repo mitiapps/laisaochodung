@@ -46,17 +46,13 @@ import { Checker } from './check.js';
 
 /**
  * Per-personality probabilities of a violation, drawn at the matching decision point (motorbike
- * values; cars scale the red-light, early-start, wrong-way and sidewalk rows by
- * `ViolationParams.carScale`).
+ * values; cars scale the red-light and early-start rows by `ViolationParams.carScale`).
  * @typedef {object} ViolationRates
  * @property {number} redLight Enter after red onset.
  * @property {number} earlyStart Start while the red has less than `earlyStartRedRemainingS` left.
  * @property {number} noSignal No indicator before a turn or lane change.
  * @property {number} distracted Prone to distraction episodes.
  * @property {number} speeding Draw the desired speed above the limit.
- * @property {number} wrongWay Short wrong-way hop.
- * @property {number} sidewalk Ride on the pavement when queued.
- * @property {number} illegalUturn U-turn where not allowed.
  * @property {number} cutIn Skip the lane-change safety check, per change.
  */
 
@@ -92,8 +88,8 @@ import { Checker } from './check.js';
 
 /**
  * @typedef {object} ViolationParams
- * @property {number} carScale Factor on the red-light, early-start, wrong-way and sidewalk rates
- *   for every class except motorbikes.
+ * @property {number} carScale Factor on the red-light and early-start rates for every class except
+ *   motorbikes.
  * @property {number} earlyStartRedRemainingS Red time left below which an early starter goes.
  * @property {number} yellowLogisticK Steepness of `P(stop) = 1 / (1 + exp(k·(b_req − b_stop)))`, s²/m.
  * @property {number} stopLineOvershootShare Share of queued motorbikes that stop past the stop line.
@@ -219,9 +215,6 @@ const VIOLATION_RATES = Object.freeze([
   'noSignal',
   'distracted',
   'speeding',
-  'wrongWay',
-  'sidewalk',
-  'illegalUturn',
   'cutIn',
 ]);
 /** Scalar keys of the top level, of `violations`, `motorbike`, `behaviour` and `incidentBand`. */

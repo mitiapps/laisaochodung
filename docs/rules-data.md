@@ -118,7 +118,47 @@ Other contacts:
 
 - A lighter hit on the car ahead in the same lane cites 6.4.l or 7.3.i.
 - Other car contacts, static objects, kerbs and falls deduct score only.
-- Any contact while the ego is slower than `contactMinEgoSpeed` is ignored.
+- A contact while the ego is slower than `contactMinEgoSpeed` is never charged. A vehicle contact
+  the fault table would charge gives a notice instead and opens the aftermath window, so a
+  struck, stopped player, or one creeping into another vehicle, still sees a notice.
+
+### Fault table
+
+Before a contact with a car or a motorbike is charged, `faultRows` decides whether the player is
+at fault (`src/scoring/fault.js`; first match wins):
+
+| Row | When | Result |
+| --- | --- | --- |
+| `aftermath` | Within `aftermathWindowS` of a notice contact (the shove), other party not a pedestrian | notice |
+| `from-behind` | The other party came from behind and struck, unless a `rearEndContributingRules` episode (`lane-change`, `turn-signal`) put the player wrongly in front | notice |
+| `contributing` | An episode of any rule but `nonContributingRules` (`night-horn`) is active within `crashCauseWindowS` | deduction |
+| `same-lane-ahead` | The player runs into the vehicle ahead in its lane, which carries no excusing violation | deduction |
+| `ego-strikes` | The player struck a vehicle that carries no excusing violation | deduction |
+| `otherwise` | Anything else | notice |
+
+The other party's violations are the flags traffic latched within `crashCauseWindowS`; a
+scripted actor carries `wrong-way` while it moves against the lane it is on. Only
+`excusingViolations` (`red-light`, `wrong-way`, `no-yield`, `unsafe-lane-change`) excuse a player
+who strikes; a merely speeding or tailgating vehicle does not. A notice carries the other
+party's flags and a text from `noticeTexts`; it never states a legal conclusion. Pedestrian
+contacts never enter the table, and static objects, kerbs and falls match only `aftermath`.
+
+`paramBasis` of the collision policy gives the basis of each fault-table choice
+(`nonContributingRules`, `rearEndContributingRules`, `excusingViolations`, `aftermathWindowS`);
+all four are `design` and required once `faultRows` is set. The rules validator rejects a policy
+with a fault table and no basis for one of them.
+
+## Lane-change gaps
+
+The `lane-change` rule's `unsafeGap` tier fires when the player moves in front of or behind a
+vehicle too closely, bumper to bumper (`src/scoring/detectors/lane-line-cross.js`). A car counts
+when its centre is in the target lane; a motorbike only when its footprint overlaps the strip the
+player moves into, so a rider along the far side of a wide kerb lane does not block a lawful
+merge. A vehicle below `stoppedSpeedMps` (a wreck always) is too close under `gapAheadM` ahead or
+`gapBehindM` behind. A moving one is too close under a moving floor: the larger of a fixed floor
+and `gapTimeS` times the follower's speed (the player's for a vehicle ahead, the vehicle's own
+for one behind). The fixed floor is `gapMotorbikeMinM` (2 m, `design`) for a motorbike, so a
+merge into dense motorbike traffic stays possible, and `gapAheadM` or `gapBehindM` for a car.
 
 Danger: the crash rule has two tiers. A light contact (an NPC car or a static object or kerb
 below `accidentRelSpeed`) is danger 3; a pedestrian, an accident, a static or kerb hit at or above

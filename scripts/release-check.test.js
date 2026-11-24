@@ -18,13 +18,14 @@ async function passing() {
       donateQr: { src: '/donate/qr.jpg', alt: 'QR' },
     },
     assetFiles: ['models/car-kit/sedan.glb', 'signs/P.101.svg'],
+    trafficModels: { motorbike: { kind: 'motorbike' }, bus: { kind: 'car' } },
     credits: [
       { file: 'models/car-kit/sedan.glb', title: 'Sedan', author: 'Kenney', sourceUrl: 'https://kenney.nl/assets/car-kit', licence: 'CC0 1.0', licenceUrl: 'https://creativecommons.org/publicdomain/zero/1.0/', ownWork: false },
       { file: 'signs/P.101.svg', title: 'P.101', author: 'laisaochodung', sourceUrl: 'https://example.com', licence: 'Apache-2.0', licenceUrl: 'https://www.apache.org/licenses/LICENSE-2.0', ownWork: true },
     ],
     maps: [
-      { id: 'osm-a', kind: 'osm', attribution: '© OpenStreetMap contributors, ODbL' },
-      { id: 'tutorial-a', kind: 'tutorial' },
+      { id: 'osm-a', kind: 'osm', attribution: '© OpenStreetMap contributors, ODbL', mix: ['motorbike', 'bus'] },
+      { id: 'tutorial-a', kind: 'tutorial', mix: [] },
     ],
     odblLicence: true,
     donateQrExists: true,
@@ -47,6 +48,8 @@ describe('releaseProblems', () => {
     input.assetFiles.push('models/extra.glb');
     input.maps[0].attribution = undefined;
     input.odblLicence = false;
+    input.maps[1].mix = ['rickshaw'];
+    input.trafficModels.taxi = { kind: 'car' };
     const sign = input.bundle.signs[0].code;
     expect(releaseProblems(input)).toEqual([
       `unverified clauses: ${input.bundle.clauses[0].id}`,
@@ -59,6 +62,8 @@ describe('releaseProblems', () => {
       'public/models/extra.glb has no entry in data/credits/credits.json',
       'map osm-a: OSM map without an OpenStreetMap attribution',
       'data/maps/LICENSE-ODbL.md is missing',
+      'map tutorial-a: traffic mix model rickshaw is not in data/traffic/params.yaml',
+      'traffic model taxi: models/car-kit/taxi.glb has no entry in data/credits/credits.json',
     ]);
   });
 });
