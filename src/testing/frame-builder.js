@@ -8,12 +8,18 @@
  * scripted lateral offset. The heading follows the motion (from this tick's position to the next
  * tick's) and falls back to the path tangent while stationary. Gear, rpm, wheels and the derived
  * `input` are plausible approximations, not physics; scripts may override them.
+ *
+ * With `egoTrack`, recorded ego poses (one per tick) replace the path kinematics. With `traffic`,
+ * the map's traffic block runs through `stepWorld`, the same world step the sim makes: the ego
+ * pose of the tick, the indicator state from before the tick's control changes, a `reset` event
+ * as `egoReset`, and the actor ids of the previous tick's collision events as `egoContacts`.
  */
 
 import { DT, mpsToKmh } from '../contracts/units.js';
 import { neutralInput } from '../contracts/controls.js';
 import { footprint, headingOf, headingVector, leftVector, angleDiff, pointAtDistance, polylineLength } from '../geometry/index.js';
 import { clockAt, createActorState, createRouteState, stepActors, stepRoute, trafficLightStates } from '../world/index.js';
+import { createWorld, stepWorld } from '../world/traffic/index.js';
 
 /** @typedef {import('../contracts/index.js').GameMap} GameMap */
 /** @typedef {import('../contracts/index.js').VehicleInfo} VehicleInfo */
@@ -26,6 +32,15 @@ import { clockAt, createActorState, createRouteState, stepActors, stepRoute, tra
 /** @typedef {import('../contracts/index.js').Lights} Lights */
 /** @typedef {import('../contracts/index.js').Vec2} Vec2 */
 /** @typedef {import('../contracts/index.js').WheelState} WheelState */
+/** @typedef {import('../contracts/traffic.js').TrafficParams} TrafficParams */
+
+/**
+ * Recorded ego pose of one tick.
+ * @typedef {object} EgoTrackPoint
+ * @property {{x: number, z: number}} pos Centre.
+ * @property {number} heading Heading.
+ * @property {number} speed Signed speed along the heading.
+ */
 
 /**
  * Keyframe of a piecewise-linear script value; held constant before the first and after the last.
@@ -57,11 +72,14 @@ import { clockAt, createActorState, createRouteState, stepActors, stepRoute, tra
  * @property {GameMap} map Map.
  * @property {VehicleInfo} vehicle Vehicle.
  * @property {Vec2[]} [path] Driven polyline; defaults to the centreline of `laneId`.
+ * @property {EgoTrackPoint[]} [egoTrack] Ego pose per tick, in place of `path`, `startS`, `speed`
+ *   and `offset`; frames stop at its end.
  * @property {string} [laneId] Lane whose centreline is driven when `path` is not given.
  * @property {number} [startS] Start distance along the path, default 0.
  * @property {number} [durationS] Frames to emit, as seconds; default until the path end is reached
  *   at standstill, the run ends, or the map time limit passes.
- * @property {number | Keyframe[]} speed Speed in m/s, constant or keyframed.
+ * @property {number | Keyframe[]} [speed] Speed in m/s, constant or keyframed; needed without
+ *   `egoTrack`.
  * @property {Keyframe[]} [offset] Lateral offset from the path in metres, positive left.
  * @property {ControlChange[]} [controls] Control changes.
  * @property {ForcedEvent[]} [events] Injected events (collisions, falls, resets).
@@ -71,6 +89,9 @@ import { clockAt, createActorState, createRouteState, stepActors, stepRoute, tra
  *   agents do. Poses should use the shared `ACTOR_LIGHTS` entries and frozen `violations` lists.
  * @property {(t: number) => FrameEvent[]} [extraEvents] Events at time `t`, appended after the
  *   `events` entries of that tick (for injected collisions with those poses).
+ * @property {{params: TrafficParams, runSeed: number}} [traffic] Runs the map's traffic block with
+ *   these parameters and run seed; traffic poses follow the scripted ones. Not combinable with
+ *   `extraActors`.
  */
 
 /**
@@ -145,9 +166,13 @@ function derivedRpm(gear, speed) {
  */
 export function buildFrames(options) {
   const { map, vehicle } = options;
-  const path = options.path ?? (options.laneId ? laneCenterline(map, options.laneId) : null);
-  if (!path || path.length < 2) throw new Error('buildFrames needs a path or a laneId');
-  const pathLength = polylineLength(path);
+  const track = options.egoTrack ?? null;
+  if (track !== null && track.length === 0) throw new Error('buildFrames needs a non-empty egoTrack');
+  const path = track !== null ? null : (options.path ?? (options.laneId ? laneCenterline(map, options.laneId) : null));
+  if (track === null && (!path || path.length < 2)) throw new Error('buildFrames needs a path, a laneId or an egoTrack');
+  if (track === null && options.speed === undefined) throw new Error('buildFrames needs a speed without an egoTrack');
+  if (options.traffic && options.extraActors) throw new Error('buildFrames takes traffic or extraActors, not both');
+  const pathLength = path ? polylineLength(path) : 0;
   const stopAtRunEnd = options.stopAtRunEnd ?? true;
   const controls = [...(options.controls ?? [])].sort((a, b) => a.t - b.t);
   /** @type {Map<number, FrameEvent[]>} */
@@ -156,10 +181,10 @@ export function buildFrames(options) {
     const tick = Math.round(f.t / DT);
     forced.set(tick, [...(forced.get(tick) ?? []), f.event]);
   }
-  const maxTicks =
-    options.durationS !== undefined
-      ? Math.round(options.durationS / DT)
-      : Math.ceil(map.route.timeLimitS / DT) + 1;
+  const maxTicks = Math.min(
+    track !== null ? track.length : Infinity,
+    options.durationS !== undefined ? Math.round(options.durationS / DT) : Math.ceil(map.route.timeLimitS / DT) + 1,
+  );
 
   /**
    * Pose at distance `s` and time `t`.
@@ -168,7 +193,7 @@ export function buildFrames(options) {
    * @returns {{x: number, z: number, tangent: number}} Position and path heading.
    */
   const poseAt = (s, t) => {
-    const at = pointAtDistance(path, s);
+    const at = pointAtDistance(/** @type {Vec2[]} */ (path), s);
     const [lx, lz] = leftVector(at.heading);
     const off = scriptValue(options.offset, t);
     return { x: at.point[0] + lx * off, z: at.point[1] + lz * off, tangent: at.heading };
@@ -176,6 +201,11 @@ export function buildFrames(options) {
 
   let s = Math.max(0, Math.min(pathLength, options.startS ?? 0));
   let actorState = createActorState(map);
+  let worldState = options.traffic
+    ? createWorld(map, { traffic: 'map', params: options.traffic.params, runSeed: options.traffic.runSeed })
+    : null;
+  /** @type {string[]} */
+  let contacts = [];
   let routeState = createRouteState();
   let prevHeading = /** @type {number | null} */ (null);
   let prevSpeed = 0;
@@ -187,6 +217,8 @@ export function buildFrames(options) {
 
   for (let tick = 0; tick < maxTicks; tick += 1) {
     const t = tick * DT;
+    // The indicator state the step starts from, before this tick's changes (the sim's electrics).
+    const preIndicators = held.indicators;
     while (nextControl < controls.length && controls[nextControl].t <= t + 1e-9) {
       const ch = controls[nextControl];
       if (ch.indicators !== undefined) held.indicators = ch.indicators;
@@ -197,18 +229,28 @@ export function buildFrames(options) {
       nextControl += 1;
     }
 
-    const atEnd = s >= pathLength - 1e-9;
-    const speed = atEnd ? 0 : Math.max(0, scriptValue(options.speed, t));
-    const here = poseAt(s, t);
-    const sNext = Math.min(pathLength, s + speed * DT);
-    const ahead = poseAt(sNext, t + DT);
-    const moved = Math.hypot(ahead.x - here.x, ahead.z - here.z);
-    const heading = moved > 1e-6 ? headingOf(ahead.x - here.x, ahead.z - here.z) : here.tangent;
+    const point = track !== null ? track[tick] : null;
+    const atEnd = point === null && s >= pathLength - 1e-9;
+    const speed = point !== null ? point.speed : atEnd ? 0 : Math.max(0, scriptValue(options.speed, t));
+    let here;
+    let heading;
+    let sNext = s;
+    if (point !== null) {
+      here = { x: point.pos.x, z: point.pos.z };
+      heading = point.heading;
+    } else {
+      const on = poseAt(s, t);
+      here = { x: on.x, z: on.z };
+      sNext = Math.min(pathLength, s + speed * DT);
+      const ahead = poseAt(sNext, t + DT);
+      const moved = Math.hypot(ahead.x - here.x, ahead.z - here.z);
+      heading = moved > 1e-6 ? headingOf(ahead.x - here.x, ahead.z - here.z) : on.tangent;
+    }
     const yawRate = prevHeading === null ? 0 : angleDiff(prevHeading, heading) / DT;
     const accel = tick === 0 ? 0 : (speed - prevSpeed) / DT;
     const [fx, fz] = headingVector(heading);
     const fp = footprint({ x: here.x, z: here.z }, heading, vehicle.lengthM, vehicle.widthM);
-    const gear = held.gear ?? derivedGear(vehicle, speed);
+    const gear = held.gear ?? derivedGear(vehicle, Math.abs(speed));
     const steer = Math.max(-1, Math.min(1, -yawRate / 0.8));
     const braking = Math.max(0, Math.min(1, -accel / 8));
     /** @type {ControlInput} */
@@ -232,17 +274,35 @@ export function buildFrames(options) {
       compression: 0,
     }));
 
-    const extra = options.extraActors ? options.extraActors(t) : [];
-    const blockers = [fp, ...extra.map((a) => footprint(a.pos, a.heading, a.lengthM, a.widthM))];
-    const actors = stepActors(actorState, map, blockers, speed, DT);
-    actorState = actors.state;
-    const route = stepRoute(routeState, map, { x: here.x, z: here.z }, t);
-    routeState = route.state;
-
     /** @type {FrameEvent[]} */
     const events = [];
     if (tick === 0) events.push({ type: 'run-start' });
-    events.push(...(forced.get(tick) ?? []), ...(options.extraEvents ? options.extraEvents(t) : []), ...route.events);
+    events.push(...(forced.get(tick) ?? []), ...(options.extraEvents ? options.extraEvents(t) : []));
+
+    const lights = trafficLightStates(map, t);
+    /** @type {ActorPose[]} */
+    let actorPoses;
+    if (worldState !== null) {
+      const ws = stepWorld(worldState, {
+        ego: { pos: here, heading, speed, lengthM: vehicle.lengthM, widthM: vehicle.widthM, indicators: preIndicators },
+        egoReset: events.some((e) => e.type === 'reset'),
+        lights,
+        egoContacts: contacts,
+        t,
+      });
+      worldState = ws.worldState;
+      actorPoses = [...ws.scriptedPoses, ...ws.trafficPoses];
+    } else {
+      const extra = options.extraActors ? options.extraActors(t) : [];
+      const blockers = [fp, ...extra.map((a) => footprint(a.pos, a.heading, a.lengthM, a.widthM))];
+      const actors = stepActors(actorState, map, blockers, Math.abs(speed), DT);
+      actorState = actors.state;
+      actorPoses = extra.length > 0 ? [...actors.poses, ...extra] : actors.poses;
+    }
+    contacts = events.flatMap((e) => (e.type === 'collision' && typeof e.otherId === 'string' ? [e.otherId] : []));
+    const route = stepRoute(routeState, map, { x: here.x, z: here.z }, t);
+    routeState = route.state;
+    events.push(...route.events);
 
     frames.push({
       tick,
@@ -264,8 +324,8 @@ export function buildFrames(options) {
         wheels,
         footprint: fp,
       },
-      actors: extra.length > 0 ? [...actors.poses, ...extra] : actors.poses,
-      trafficLights: trafficLightStates(map, t),
+      actors: actorPoses,
+      trafficLights: lights,
       route: route.nav,
       env: { clockMin: clockAt(map.environment, t), weather: map.environment.weather },
       events,
@@ -275,7 +335,7 @@ export function buildFrames(options) {
     prevSpeed = speed;
     s = sNext;
     if (stopAtRunEnd && route.events.some((e) => e.type === 'finish' || e.type === 'timeout')) break;
-    if (options.durationS === undefined && atEnd && speed === 0 && scriptValue(options.speed, t) > 0) break;
+    if (point === null && options.durationS === undefined && atEnd && speed === 0 && scriptValue(options.speed, t) > 0) break;
   }
   return frames;
 }

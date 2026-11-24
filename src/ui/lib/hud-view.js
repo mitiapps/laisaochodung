@@ -71,3 +71,25 @@ export function pedalBars(controls, isCar) {
 export function steerPosition(steer) {
   return unit(((Number.isFinite(steer) ? steer : 0) + 1) / 2);
 }
+
+/**
+ * @typedef {object} NoticeItem
+ * @property {string} key Stable key: the contact tick, plus a counter for contacts on the same tick.
+ * @property {import('../../contracts/score.js').Notice} notice Notice.
+ */
+
+/**
+ * Keys the HUD notices for a keyed list. Notices of one contact tick arrive and leave together, so
+ * the counter stays stable while they are shown.
+ * @param {readonly import('../../contracts/score.js').Notice[]} notices Notices, newest last.
+ * @returns {NoticeItem[]} Items in the same order.
+ */
+export function noticeItems(notices) {
+  /** @type {Map<number, number>} */
+  const perTick = new Map();
+  return notices.map((notice) => {
+    const n = perTick.get(notice.tick) ?? 0;
+    perTick.set(notice.tick, n + 1);
+    return { key: `${notice.tick}#${n}`, notice };
+  });
+}

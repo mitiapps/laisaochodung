@@ -3,12 +3,14 @@
  * Everything that touches `fetch`, the DOM or WebGL lives here, so `session.js` stays testable.
  */
 
-import { ID_PATTERN } from './session.js';
+import { ID_PATTERN, checkRunOptions } from './session.js';
 
 /** @typedef {import('../contracts/map.js').GameMap} GameMap */
 /** @typedef {import('../contracts/rule.js').RulesBundle} RulesBundle */
 /** @typedef {import('../contracts/vehicle.js').VehicleInfo} VehicleInfo */
 /** @typedef {import('./session.js').View} View */
+/** @typedef {import('./session.js').RunOptions} RunOptions */
+/** @typedef {import('../contracts/traffic.js').TrafficParams} TrafficParams */
 
 /**
  * Loads `maps/<id>.json` from the site root.
@@ -44,6 +46,49 @@ export function loadRules() {
     },
   );
   return rulesPromise;
+}
+
+/** @type {Promise<TrafficParams> | null} */
+let trafficParamsPromise = null;
+
+/**
+ * Loads the traffic parameters built by `npm run build:traffic` (validated at build time), once.
+ * @returns {Promise<TrafficParams>} Parameters.
+ */
+export function loadTrafficParams() {
+  trafficParamsPromise ??= import('../generated/traffic-params.json').then(
+    (m) => /** @type {TrafficParams} */ (/** @type {unknown} */ (m.default)),
+    (err) => {
+      trafficParamsPromise = null;
+      throw err;
+    },
+  );
+  return trafficParamsPromise;
+}
+
+/**
+ * Reads the dev-only run options from the query of a hash such as
+ * `#/play?map=osm-pasteur&vehicle=car-sedan&seed=42&traffic=off`. Only `traffic=off` and a
+ * decimal `seed` are understood; any other value of those keys is an error, not a silent default.
+ * @param {string} hash `location.hash`.
+ * @returns {RunOptions} Options.
+ */
+export function parseDevRunQuery(hash) {
+  const query = hash.split('?')[1] ?? '';
+  const params = new URLSearchParams(query);
+  /** @type {RunOptions} */
+  const options = {};
+  const traffic = params.get('traffic');
+  if (traffic !== null) {
+    if (traffic !== 'off' && traffic !== 'map') throw new RangeError(`Dev hash query: traffic must be off or map, got "${traffic}"`);
+    options.traffic = traffic;
+  }
+  const seed = params.get('seed');
+  if (seed !== null) {
+    if (!/^\d{1,10}$/u.test(seed)) throw new RangeError(`Dev hash query: seed must be a decimal integer, got "${seed}"`);
+    options.seed = Number(seed);
+  }
+  return checkRunOptions(options, 'Dev hash query');
 }
 
 /** @type {Promise<unknown> | null} */

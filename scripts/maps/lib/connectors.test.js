@@ -32,7 +32,8 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const MAPS = path.join(ROOT, 'data/maps');
 const SHIPPED = ['osm-pasteur', 'tutorial-01-co-ban', 'tutorial-02-nga-tu', 'tutorial-03-ban-dem'];
-const TRAFFIC_MAPS = ['osm-pasteur', 'tutorial-02-nga-tu', 'tutorial-03-ban-dem'];
+const TRAFFIC_MAPS = ['osm-pasteur', 'tutorial-02-nga-tu'];
+const NO_TRAFFIC_MAPS = ['tutorial-01-co-ban', 'tutorial-03-ban-dem'];
 
 /**
  * The hand-written junction fixture without its lane graph.
@@ -195,8 +196,8 @@ describe('traffic source parsing', () => {
 });
 
 describe('lane graph of the shipped maps', () => {
-  it('adds only the lane graph to tutorial 01, which has no traffic', () => {
-    const { spec, json } = /** @type {NonNullable<ReturnType<typeof built.get>>} */ (built.get('tutorial-01-co-ban'));
+  it.each(NO_TRAFFIC_MAPS)('%s adds only the lane graph, as it has no traffic', (id) => {
+    const { spec, json } = /** @type {NonNullable<ReturnType<typeof built.get>>} */ (built.get(id));
     const map = JSON.parse(json);
     expect(map.traffic).toBeUndefined();
     expect(map.connectors.length).toBeGreaterThan(0);
@@ -272,9 +273,6 @@ describe('lane graph of the shipped maps', () => {
     expect(map.laneJoins).toEqual(g.joins);
     expect(g.starts.get('rong-f0')).toEqual({ kind: 'taper' });
     expect(g.ends.get('rong-b0')).toEqual({ kind: 'taper' });
-    const t = /** @type {import('../../../src/contracts/map.js').TrafficConfig} */ (map.traffic);
-    expect(t.sources.map((x) => x.laneId)).not.toContain('rong-f0');
-    expect(t.sinks).not.toContain('rong-b0');
   });
 
   it('keeps traffic off the closed road on tutorial 02', () => {

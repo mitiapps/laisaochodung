@@ -9,8 +9,10 @@
  * strip the ego moves into (from the line to one ego width past it), so a motorbike riding along
  * the far side of a wide kerb lane does not block a lawful merge. A vehicle below
  * `stoppedSpeedMps` (a wreck always) is too close under `gapAheadM` ahead or `gapBehindM` behind.
- * A moving one is too close when the follower's time gap after the change is under `gapTimeS`:
- * the ego's speed for a vehicle ahead, the vehicle's own speed for one behind.
+ * A moving one is too close under a floor, or when the follower's time gap after the change is
+ * under `gapTimeS` (the ego's speed for a vehicle ahead, the vehicle's own speed for one behind),
+ * whichever is larger. The floor is `gapMotorbikeMinM` for a motorbike, so a merge into dense
+ * motorbike traffic stays possible, and `gapAheadM` or `gapBehindM` for a car.
  * Lines between opposite-direction lanes belong to `against-lane-dir`.
  */
 
@@ -26,6 +28,7 @@ import { actorsAround, lawfulCross, VEHICLE_KINDS } from './common.js';
  * @property {number} gapAheadM Smallest safe gap to a car ahead in the target lane.
  * @property {number} gapBehindM Smallest safe gap to a car behind in the target lane.
  * @property {number} gapTimeS Smallest safe time gap to a moving vehicle.
+ * @property {number} gapMotorbikeMinM Smallest safe gap to a moving motorbike, ahead or behind.
  * @property {number} stoppedSpeedMps Below this speed a vehicle counts as stopped for the gap test.
  */
 
@@ -41,7 +44,8 @@ function tooClose(a, egoLength, egoSpeed, params) {
   const gap = Math.abs(a.along) - (egoLength + a.lengthM) / 2;
   const ahead = a.along >= 0;
   if (a.speed < params.stoppedSpeedMps) return gap < (ahead ? params.gapAheadM : params.gapBehindM);
-  return gap < params.gapTimeS * (ahead ? egoSpeed : a.speed);
+  const floor = a.pose.kind === 'motorbike' ? params.gapMotorbikeMinM : ahead ? params.gapAheadM : params.gapBehindM;
+  return gap < Math.max(floor, params.gapTimeS * (ahead ? egoSpeed : a.speed));
 }
 
 /** @returns {State} Fresh state. */

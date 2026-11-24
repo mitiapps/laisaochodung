@@ -1,9 +1,10 @@
 <script>
   import BreachToast from './breach-toast.svelte';
   import NavArrow from './nav-arrow.svelte';
+  import NoticeToast from './notice-toast.svelte';
   import SpeedLimitSign from './speed-limit-sign.svelte';
   import { formatGear, formatScore, formatSpeed } from '../lib/format.js';
-  import { indicatorLamps, pedalBars, rpmFraction, steerPosition } from '../lib/hud-view.js';
+  import { indicatorLamps, noticeItems, pedalBars, rpmFraction, steerPosition } from '../lib/hud-view.js';
 
   /**
    * @type {{
@@ -20,6 +21,7 @@
   const isCar = $derived(vehicle.legalClass === 'car');
   const paused = $derived(state.runStatus === 'paused');
   const pedals = $derived(pedalBars(state.controls, isCar));
+  const notices = $derived(noticeItems(state.notices));
 </script>
 
 <div class="pointer-events-none absolute inset-0 flex flex-col justify-between p-4 text-stone-900" data-testid="hud">
@@ -126,6 +128,14 @@
       </li>
     </ul>
   </div>
+
+  {#if notices.length > 0}
+    <div class="absolute left-4 top-24 flex flex-col gap-2" data-testid="notice-stack">
+      {#each notices as item (item.key)}
+        <NoticeToast notice={item.notice} />
+      {/each}
+    </div>
+  {/if}
 
   {#if toasts.length > 0}
     <div class="absolute bottom-28 right-4 top-20 flex flex-col gap-2 overflow-hidden" data-testid="toast-stack">

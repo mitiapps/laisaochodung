@@ -4,11 +4,13 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { assertFrame } from '../contracts/assert-frame.js';
 import { assertMap } from '../contracts/assert-map.js';
 import { createScorer, scoreRun } from '../scoring/index.js';
-import { createSim } from '../sim/index.js';
+import { DT } from '../contracts/units.js';
+import { createSim, sanitizeInput } from '../sim/index.js';
 import { buildFrames } from '../testing/index.js';
+import { parseDevRunQuery } from './browser.js';
 import { createInput } from './input.js';
 import { createLoop } from './loop.js';
-import { createSession } from './session.js';
+import { REPLAY_CHECKPOINT_S, createSession } from './session.js';
 
 /** @typedef {import('../contracts/index.js').GameMap} GameMap */
 /** @typedef {import('../contracts/index.js').VehicleInfo} VehicleInfo */
@@ -26,6 +28,12 @@ const MAP = /** @type {GameMap} */ (json('tests/fixtures/map-minimal.json'));
 const VEHICLES = /** @type {VehicleInfo[]} */ (json('data/vehicles/vehicles.json'));
 const BUNDLE = /** @type {RulesBundle} */ (json('src/generated/rules.json'));
 const CAR = /** @type {VehicleInfo} */ (VEHICLES.find((v) => v.id === 'car-sedan'));
+const TUTORIAL_02 = /** @type {GameMap} */ (json('public/maps/tutorial-02-nga-tu.json'));
+const PASTEUR = /** @type {GameMap} */ (json('public/maps/osm-pasteur.json'));
+/** The signal on Pasteur itself, on the route, controlling the route's travel heading. */
+const PASTEUR_SIGNAL = 'sig-w678315474-f';
+const PARAMS = /** @type {import('../contracts/index.js').TrafficParams} */ (json('src/generated/traffic-params.json'));
+const CHECKPOINT_TICKS = Math.round(REPLAY_CHECKPOINT_S / DT);
 
 beforeAll(async () => {
   await RAPIER.init();
@@ -246,5 +254,393 @@ describe('session with the real sim (dev build checks)', () => {
     expect(info.replayCheck?.equal).toBe(true);
     expect(info.replayCheck?.frames).toBeGreaterThan(150);
     expect(h.errors).toEqual([]);
+  });
+});
+
+/**
+ * Input that follows a script by step count, in place of the keyboard.
+ * @param {(k: number) => Partial<import('../contracts/index.js').ControlInput>} script Input of step `k`.
+ * @returns {import('./session.js').SessionDeps['createInput']} Input factory.
+ */
+function scriptedInput(script) {
+  return () => {
+    let k = 0;
+    return {
+      sample: () => sanitizeInput(script(k++)),
+      setEnabled() {},
+      setDriving() {},
+      dispose() {},
+    };
+  };
+}
+
+/**
+ * Real sim that appends a contact by a lawful NPC car from behind to the frame of step `atTick`.
+ * @param {number} atTick Step of the contact.
+ * @returns {import('../contracts/index.js').CreateSim} Sim factory.
+ */
+function simWithContactAt(atTick) {
+  return (rapier, map, vehicle, options) => {
+    const sim = createSim(rapier, map, vehicle, options);
+    return {
+      ...sim,
+      step(input) {
+        const f = sim.step(input);
+        if (f.tick !== atTick) return f;
+        /** @type {import('../contracts/index.js').CollisionEvent} */
+        const hit = {
+          type: 'collision',
+          otherKind: 'car',
+          otherId: 'npc-test',
+          impulse: 400,
+          egoSpeed: Math.abs(f.ego.speed),
+          relSpeed: 2,
+          sameLaneAhead: false,
+          otherModel: 'car',
+          striker: 'other',
+          otherFromBehind: true,
+          otherViolations: [],
+        };
+        return { ...f, events: [...f.events, hit] };
+      },
+    };
+  };
+}
+
+/**
+ * Real sim that records every frame it returns.
+ * @param {Frame[]} out Recorded frames.
+ * @returns {import('../contracts/index.js').CreateSim} Sim factory.
+ */
+function recordingSim(out) {
+  return (rapier, map, vehicle, options) => {
+    const sim = createSim(rapier, map, vehicle, options);
+    return {
+      ...sim,
+      step(input) {
+        const f = sim.step(input);
+        out.push(f);
+        return f;
+      },
+    };
+  };
+}
+
+/**
+ * Nearest traffic agent ahead of the ego, inside a cone of half-width `along / 2`.
+ * @param {Frame} f Frame.
+ * @param {number} scripted Scripted actors on the map, listed before the traffic agents.
+ * @param {number} rangeM Search range.
+ * @returns {{d: number, lat: number, along: number} | null} Distance, lateral offset (+ to the
+ *   right, the sign of `steer`) and distance along the ego heading.
+ */
+function agentAhead(f, scripted, rangeM) {
+  const e = f.ego;
+  const fx = Math.cos(e.heading);
+  const fz = -Math.sin(e.heading);
+  /** @type {{d: number, lat: number, along: number} | null} */
+  let best = null;
+  for (const a of f.actors.slice(scripted)) {
+    const dx = a.pos.x - e.pos.x;
+    const dz = a.pos.z - e.pos.z;
+    const along = dx * fx + dz * fz;
+    const lat = dz * fx - dx * fz;
+    const d = Math.hypot(dx, dz);
+    if (along > 2 && d < rangeM && Math.abs(lat) < along / 2 && (!best || d < best.d)) best = { d, lat, along };
+  }
+  return best;
+}
+
+/**
+ * Steering toward a point `along` ahead and `lat` to the side.
+ * @param {number} lat Lateral offset, + to the right.
+ * @param {number} along Distance ahead.
+ * @returns {number} Steer in −1..1.
+ */
+const steerTo = (lat, along) => Math.max(-1, Math.min(1, (2 * lat) / Math.max(along, 1)));
+
+/**
+ * Input that steers the ego at the nearest traffic agent ahead with steady throttle, so it runs
+ * into the back of it.
+ * @param {Frame[]} frames Frames recorded so far.
+ * @param {number} scripted Scripted actors on the map.
+ * @returns {import('./session.js').SessionDeps['createInput']} Input factory.
+ */
+function pursuitInput(frames, scripted) {
+  return scriptedInput((k) => {
+    const f = frames.at(-1);
+    if (k === 0 || !f) return { gearCmd: 'up' };
+    const best = agentAhead(f, scripted, 80);
+    return { throttle: 0.6, steer: best ? steerTo(best.lat, best.along) : 0 };
+  });
+}
+
+/**
+ * Input that drives the ego toward a point at a gentle speed, braking for agents close ahead,
+ * and holds it there.
+ * @param {Frame[]} frames Frames recorded so far.
+ * @param {number} scripted Scripted actors on the map.
+ * @param {import('../contracts/index.js').Pos2} target Point to drive to.
+ * @returns {import('./session.js').SessionDeps['createInput']} Input factory.
+ */
+function approachInput(frames, scripted, target) {
+  return scriptedInput((k) => {
+    const f = frames.at(-1);
+    if (k === 0 || !f) return { gearCmd: 'up' };
+    const e = f.ego;
+    const fx = Math.cos(e.heading);
+    const fz = -Math.sin(e.heading);
+    const dx = target.x - e.pos.x;
+    const dz = target.z - e.pos.z;
+    const along = dx * fx + dz * fz;
+    const lat = dz * fx - dx * fz;
+    const ahead = agentAhead(f, scripted, 15);
+    const blocked = ahead !== null && Math.abs(ahead.lat) < 1.2;
+    if (along < 5 || blocked) return { brakeFront: 0.8, brakeRear: 0.8 };
+    return { throttle: e.speed < 8 ? 0.4 : 0, steer: steerTo(lat, along) };
+  });
+}
+
+/**
+ * Where an agent stands against a signal's stop line.
+ * @param {GameMap['stopLines'][number]} line Stop line.
+ * @param {number} heading Travel heading the signal controls.
+ * @param {import('../contracts/index.js').Pos2} pos Agent position.
+ * @returns {{d: number, onSpan: boolean}} Signed distance past the line along the travel
+ *   heading, and whether the position lies across the line's span (1 m margin).
+ */
+function againstLine(line, heading, pos) {
+  const [[ax, az], [bx, bz]] = line.segment;
+  const mx = (ax + bx) / 2;
+  const mz = (az + bz) / 2;
+  const fx = Math.cos(heading);
+  const fz = -Math.sin(heading);
+  const half = Math.hypot(bx - ax, bz - az) / 2;
+  const d = (pos.x - mx) * fx + (pos.z - mz) * fz;
+  const lat = (pos.z - mz) * fx - (pos.x - mx) * fz;
+  return { d, onSpan: Math.abs(lat) <= half + 1 };
+}
+
+/**
+ * How traffic agents met the map's signals over recorded frames.
+ * @param {GameMap} map Map.
+ * @param {Frame[]} frames Frames in tick order.
+ * @returns {{stoppedAt: Set<string>, redRuns: string[]}} Signals that held a stopped agent within
+ *   15 m before their stop line while red, and every agent that crossed a stop line on red, as
+ *   `agent@tick:signal`.
+ */
+function signalBehaviour(map, frames) {
+  const scripted = map.actors.length;
+  /** @type {Set<string>} */
+  const stoppedAt = new Set();
+  /** @type {string[]} */
+  const redRuns = [];
+  for (const signal of map.signals) {
+    for (const line of map.stopLines.filter((l) => signal.stopLineIds.includes(l.id))) {
+      /** @type {Map<string, number>} */
+      const lastD = new Map();
+      for (const f of frames) {
+        const red = f.trafficLights[signal.id] === 'red';
+        for (const a of f.actors.slice(scripted)) {
+          // Only agents travelling the way the signal controls.
+          if (Math.cos(a.heading - signal.heading) < 0.7) {
+            lastD.delete(a.id);
+            continue;
+          }
+          const { d, onSpan } = againstLine(line, signal.heading, a.pos);
+          const prev = lastD.get(a.id);
+          if (red && onSpan && prev !== undefined && prev < 0 && d >= 0) redRuns.push(`${a.id}@${f.tick}:${signal.id}`);
+          if (red && onSpan && d < 0 && d > -15 && a.speed < 0.3) stoppedAt.add(signal.id);
+          lastD.set(a.id, d);
+        }
+      }
+    }
+  }
+  return { stoppedAt, redRuns };
+}
+
+describe('session with traffic (dev build checks)', () => {
+  /**
+   * Dev harness on tutorial 02 with the real sim and traffic params.
+   * @param {Partial<import('./session.js').SessionDeps>} [over] Overrides.
+   * @returns {ReturnType<typeof harness>} Harness.
+   */
+  const trafficHarness = (over = {}) =>
+    harness({
+      loadMap: async () => structuredClone(TUTORIAL_02),
+      loadTrafficParams: async () => PARAMS,
+      createSim,
+      dev: true,
+      assertFrame,
+      assertMap,
+      scoreRun,
+      ...over,
+    });
+
+  it('keeps the windowed replay equal over two minutes, with a notice before the first checkpoint', { timeout: 120_000 }, async () => {
+    const contactTick = 180;
+    const h = trafficHarness({
+      createSim: simWithContactAt(contactTick),
+      // Drive off, then brake to a stop and wait while the traffic runs.
+      createInput: scriptedInput((k) => ({ gearCmd: k === 0 ? 'up' : null, throttle: k < 240 ? 0.4 : 0, brakeFront: k >= 240 ? 0.8 : 0 })),
+    });
+    await h.game.start('tutorial-02-nga-tu', 'car-sedan', { seed: 4242 });
+    expect(h.game.debugInfo().runSeed).toBe(4242);
+    expect(h.game.debugInfo().traffic).toBe('map');
+    const maxAgents = /** @type {NonNullable<GameMap['traffic']>} */ (TUTORIAL_02.traffic).maxAgents;
+    let maxKept = 0;
+    let agentsSeen = 0;
+    h.frames.tick(0);
+    while (h.game.debugInfo().tick < 120 / DT) {
+      h.frames.tick(1000 / 60);
+      const info = h.game.debugInfo();
+      maxKept = Math.max(maxKept, info.keptFrames);
+      agentsSeen = Math.max(agentsSeen, info.agents);
+      expect(info.agents).toBeLessThanOrEqual(maxAgents);
+      expect(info.mirrored).toBeLessThanOrEqual(Math.min(info.agents, PARAMS.maxMirrored));
+    }
+    expect(agentsSeen).toBeGreaterThan(0);
+    expect(h.states.some((s) => s.notices.some((n) => n.tick === contactTick))).toBe(true);
+    const live = h.game.debugInfo();
+    expect(live.agents).toBeGreaterThan(0);
+    expect(live.simStepMs).not.toBeNull();
+    h.game.quit();
+    const info = h.game.debugInfo();
+    expect(maxKept).toBeLessThanOrEqual(2 * CHECKPOINT_TICKS);
+    expect(maxKept).toBeGreaterThan(CHECKPOINT_TICKS);
+    expect(info.replayCheck?.windowed).toBe(true);
+    expect(info.replayCheck?.frames).toBeLessThanOrEqual(2 * CHECKPOINT_TICKS);
+    expect(info.replayCheck?.equal).toBe(true);
+    const report = h.states.at(-1)?.report;
+    expect(report?.notices.map((n) => n.tick)).toContain(contactTick);
+    expect(h.errors).toEqual([]);
+  });
+
+  /**
+   * Runs a started session until `seconds` of sim time, checking the agent cap on each frame.
+   * @param {ReturnType<typeof harness>} h Harness.
+   * @param {number} seconds Sim time.
+   */
+  const runFor = (h, seconds) => {
+    const maxAgents = /** @type {NonNullable<GameMap['traffic']>} */ (PASTEUR.traffic).maxAgents;
+    h.frames.tick(0);
+    while (h.game.debugInfo().tick < seconds / DT && h.game.debugInfo().status === 'running') {
+      h.frames.tick(1000 / 60);
+      expect(h.game.debugInfo().agents).toBeLessThanOrEqual(maxAgents);
+    }
+    expect(h.game.debugInfo().tick).toBeGreaterThanOrEqual(seconds / DT);
+    expect(h.game.debugInfo().agents).toBeGreaterThan(0);
+  };
+
+  it('drives osm-pasteur up to the Pasteur signal, where traffic stops on red and none runs it', { timeout: 120_000 }, async () => {
+    const signal = /** @type {GameMap['signals'][number]} */ (PASTEUR.signals.find((s) => s.id === PASTEUR_SIGNAL));
+    const line = /** @type {GameMap['stopLines'][number]} */ (PASTEUR.stopLines.find((l) => l.id === signal.stopLineIds[0]));
+    // Hold 40 m before the stop line, inside the traffic ring around the ego.
+    const [[ax, az], [bx, bz]] = line.segment;
+    const target = { x: (ax + bx) / 2 - 40 * Math.cos(signal.heading), z: (az + bz) / 2 + 40 * Math.sin(signal.heading) };
+    /** @type {Frame[]} */
+    const recorded = [];
+    const h = trafficHarness({
+      loadMap: async () => structuredClone(PASTEUR),
+      createSim: recordingSim(recorded),
+      createInput: approachInput(recorded, PASTEUR.actors.length, target),
+    });
+    await h.game.start('osm-pasteur', 'car-sedan', { seed: 4242 });
+    expect(h.game.debugInfo()).toMatchObject({ traffic: 'map', runSeed: 4242 });
+    // The signal is red from 30 s to 60 s of each cycle.
+    runFor(h, 60);
+    const ego = recorded.at(-1)?.ego.pos;
+    expect(Math.hypot((ego?.x ?? 0) - target.x, (ego?.z ?? 0) - target.z)).toBeLessThan(30);
+    const { stoppedAt, redRuns } = signalBehaviour(PASTEUR, recorded);
+    expect(stoppedAt.has(PASTEUR_SIGNAL)).toBe(true);
+    expect(redRuns.filter((r) => r.endsWith(`:${PASTEUR_SIGNAL}`))).toEqual([]);
+    h.game.quit();
+    expect(h.game.debugInfo().replayCheck).toMatchObject({ windowed: true, equal: true });
+    expect(h.errors).toEqual([]);
+  });
+
+  it('charges a rear-end by the ego on osm-pasteur with traffic, and keeps the replay equal', { timeout: 120_000 }, async () => {
+    /** @type {Frame[]} */
+    const recorded = [];
+    const h = trafficHarness({
+      loadMap: async () => structuredClone(PASTEUR),
+      createSim: recordingSim(recorded),
+      createInput: pursuitInput(recorded, PASTEUR.actors.length),
+    });
+    await h.game.start('osm-pasteur', 'car-sedan', { seed: 4242 });
+    runFor(h, 20);
+    const egoHit = recorded.flatMap((f) => f.events).find((ev) => ev.type === 'collision' && ev.striker === 'ego' && ev.sameLaneAhead);
+    expect(egoHit).toBeDefined();
+    h.game.quit();
+    const report = h.states.at(-1)?.report;
+    expect(report?.breaches.map((b) => b.ruleId)).toContain('crash');
+    expect(report?.score).toBeLessThan(10);
+    expect(report?.notices).toEqual([]);
+    const info = h.game.debugInfo();
+    expect(info.replayCheck).toMatchObject({ windowed: true, equal: true });
+    expect(info.replayCheck?.frames).toBeLessThanOrEqual(2 * CHECKPOINT_TICKS);
+    expect(h.errors).toEqual([]);
+  });
+
+  it('draws a fresh seed per run unless one is fixed, and lets the start option win over the dev query', async () => {
+    const h = trafficHarness();
+    await h.game.start('tutorial-02-nga-tu', 'car-sedan');
+    const a = h.game.debugInfo().runSeed;
+    await h.game.start('tutorial-02-nga-tu', 'car-sedan');
+    const b = h.game.debugInfo().runSeed;
+    h.game.quit();
+    expect(Number.isInteger(a) && Number.isInteger(b)).toBe(true);
+    expect(a).not.toBe(b);
+
+    const q = trafficHarness({ devRunOptions: () => parseDevRunQuery('#/play?map=tutorial-02-nga-tu&vehicle=car-sedan&seed=77') });
+    await q.game.start('tutorial-02-nga-tu', 'car-sedan');
+    expect(q.game.debugInfo().runSeed).toBe(77);
+    await q.game.start('tutorial-02-nga-tu', 'car-sedan', { seed: 5 });
+    expect(q.game.debugInfo().runSeed).toBe(5);
+    q.game.quit();
+
+    const release = trafficHarness({ dev: false, devRunOptions: () => ({ seed: 77, traffic: 'off' }) });
+    await release.game.start('tutorial-02-nga-tu', 'car-sedan');
+    expect(release.game.debugInfo().runSeed).not.toBe(77);
+    expect(release.game.debugInfo().traffic).toBe('map');
+    release.game.quit();
+
+    await expect(h.game.start('tutorial-02-nga-tu', 'car-sedan', { seed: -1 })).rejects.toThrow(RangeError);
+  });
+
+  it('runs the scripted actors only with traffic off, keeping the whole run for the replay', async () => {
+    const h = trafficHarness({ devRunOptions: () => parseDevRunQuery('#/play?traffic=off') });
+    await h.game.start('tutorial-02-nga-tu', 'car-sedan');
+    h.frames.tick(0);
+    for (let i = 0; i < CHECKPOINT_TICKS + 60; i += 1) h.frames.tick(1000 / 60);
+    const live = h.game.debugInfo();
+    expect(live.traffic).toBe('off');
+    expect(live.agents).toBe(0);
+    expect(live.actors.map((a) => a.id)).toEqual(TUTORIAL_02.actors.map((a) => a.id));
+    expect(live.keptFrames).toBeGreaterThan(CHECKPOINT_TICKS);
+    h.game.quit();
+    expect(h.game.debugInfo().replayCheck).toMatchObject({ equal: true, windowed: false });
+    expect(h.errors).toEqual([]);
+  });
+
+  it('runs traffic off in a session built without a traffic params loader', async () => {
+    const h = trafficHarness({ loadTrafficParams: undefined });
+    await h.game.start('tutorial-02-nga-tu', 'car-sedan');
+    h.frames.tick(0);
+    for (let i = 0; i < 120; i += 1) h.frames.tick(1000 / 60);
+    expect(h.game.debugInfo()).toMatchObject({ traffic: 'off', agents: 0 });
+    h.game.quit();
+    await expect(h.game.start('tutorial-02-nga-tu', 'car-sedan', { traffic: 'map' })).rejects.toThrow(/loadTrafficParams/);
+  });
+});
+
+describe('parseDevRunQuery', () => {
+  it('reads traffic and seed from the play hash and rejects anything else', () => {
+    expect(parseDevRunQuery('#/play?map=a&vehicle=b')).toEqual({});
+    expect(parseDevRunQuery('#/play?map=a&vehicle=b&seed=42&traffic=off')).toEqual({ seed: 42, traffic: 'off' });
+    expect(parseDevRunQuery('')).toEqual({});
+    expect(() => parseDevRunQuery('#/play?seed=abc')).toThrow(RangeError);
+    expect(() => parseDevRunQuery('#/play?seed=4294967296')).toThrow(RangeError);
+    expect(() => parseDevRunQuery('#/play?traffic=on')).toThrow(RangeError);
   });
 });

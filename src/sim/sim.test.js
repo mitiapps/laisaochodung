@@ -5,6 +5,8 @@ import { assertFrame } from '../contracts/assert-frame.js';
 import { DT, kmhToMps } from '../contracts/units.js';
 import { createSim, sanitizeInput } from './index.js';
 import { parseAssists } from './sim.js';
+import { footprint, polygonsIntersect } from '../geometry/index.js';
+import { createDriver } from '../../tests/scenarios/physics/driver.js';
 
 /** @typedef {import('../contracts/index.js').GameMap} GameMap */
 /** @typedef {import('../contracts/index.js').Frame} Frame */
@@ -382,5 +384,238 @@ describe('createSim assists option', () => {
     expect(() => parseAssists({ signalAutoCancel: { turnMinDeg: 45 } })).toThrow(RangeError);
     expect(() => createSim(RAPIER, MAP, CAR, /** @type {never} */ (null))).toThrow(TypeError);
     expect(() => createSim(RAPIER, MAP, CAR, { assists: /** @type {never} */ ({ autoGearbox: 1 }) })).toThrow(TypeError);
+  });
+});
+
+describe('createSim traffic option', () => {
+  /** @type {GameMap} */
+  const JUNCTION = JSON.parse(readFileSync(new URL('../../tests/fixtures/map-junction.json', import.meta.url), 'utf8'));
+  /** @type {import('../contracts/traffic.js').TrafficParams} */
+  const PARAMS = JSON.parse(readFileSync(new URL('../generated/traffic-params.json', import.meta.url), 'utf8'));
+  /** @type {GameMap[]} */
+  const SHIPPED = JSON.parse(readFileSync(new URL('../../public/maps/index.json', import.meta.url), 'utf8')).map(
+    (/** @type {{id: string}} */ m) => JSON.parse(readFileSync(new URL(`../../public/maps/${m.id}.json`, import.meta.url), 'utf8')),
+  );
+  const TRAFFIC = /** @type {const} */ ({ traffic: 'map', params: PARAMS, runSeed: 7 });
+  /** map-junction with the start mid-way along rw-e1, so traffic from the lane's source runs up behind the ego. */
+  const MID_LANE = structuredClone(JUNCTION);
+  MID_LANE.route.start = { pos: { x: -60, z: 1.75 }, heading: 0 };
+
+  /**
+   * Same policy as the assists block: every control in use.
+   * @param {Frame | null} _prev Last frame.
+   * @param {number} k Step.
+   * @returns {Partial<ControlInput>} Input.
+   */
+  const busy = (_prev, k) => ({
+    throttle: k < 300 ? 0.7 : 0,
+    brakeFront: k >= 400 ? 0.5 : 0,
+    steer: Math.sin(k / 50) * 0.3,
+    gearCmd: k === 0 || k === 120 ? 'up' : null,
+    signalCmd: k === 10 ? 'left' : k === 200 ? 'right' : null,
+    lightsCmd: k === 5 ? 'cycle' : null,
+    horn: k % 97 === 0,
+  });
+
+  /**
+   * Holds the lane centre of map-junction's rw-e0 heading east.
+   * @param {Frame | null} f Last frame.
+   * @returns {number} Steer.
+   */
+  const holdLane = (f) => (f ? Math.max(-1, Math.min(1, -0.3 * (1.75 - f.ego.pos.z) + 2 * f.ego.heading)) : 0);
+
+  /**
+   * Whether a traffic pose overlaps the ego footprint of a frame.
+   * @param {Frame} f Frame.
+   * @returns {boolean} Some agent overlaps the ego.
+   */
+  const agentOverlapsEgo = (f) =>
+    f.actors.some((a) => a.id.startsWith('npc-') && polygonsIntersect(footprint(a.pos, a.heading, a.lengthM, a.widthM), f.ego.footprint));
+
+  it('gives the frames of a sim without traffic when off, absent, or the map has no traffic block', () => {
+    for (const map of [...SHIPPED, JUNCTION]) {
+      const noTraffic = { ...structuredClone(map) };
+      delete noTraffic.traffic;
+      for (const veh of [CAR, SCOOTER]) {
+        const base = createSim(RAPIER, map, veh);
+        const fBase = run(base, 600, busy);
+        base.dispose();
+        for (const [m, options] of /** @type {const} */ ([
+          [map, { traffic: 'off' }],
+          [map, { traffic: 'off', params: PARAMS, runSeed: 3 }],
+          [noTraffic, TRAFFIC],
+        ])) {
+          const sim = createSim(RAPIER, m, veh, options);
+          const f = run(sim, 600, busy);
+          sim.dispose();
+          expect(JSON.stringify(f), `${map.id} ${veh.id} ${options.traffic}`).toBe(JSON.stringify(fBase));
+        }
+      }
+    }
+  });
+
+  it('validates the traffic options', () => {
+    expect(() => createSim(RAPIER, JUNCTION, CAR, { traffic: /** @type {never} */ ('on') })).toThrow(RangeError);
+    expect(() => createSim(RAPIER, JUNCTION, CAR, { traffic: 'map', params: PARAMS, runSeed: -1 })).toThrow(RangeError);
+    expect(() => createSim(RAPIER, JUNCTION, CAR, { traffic: 'map', params: PARAMS, runSeed: 1.5 })).toThrow(RangeError);
+    expect(() => createSim(RAPIER, JUNCTION, CAR, { traffic: 'map' })).toThrow(/params/);
+    expect(() => createSim(RAPIER, JUNCTION, CAR, { traffic: 'map', params: /** @type {never} */ ({ ...PARAMS, maxMirrored: 2.5 }) })).toThrow(/maxMirrored/);
+  });
+
+  it('steps traffic after the scripted actors and gives equal frames for the same seed and input', () => {
+    const map = structuredClone(JUNCTION);
+    map.actors = [{ id: 'ped-x', kind: 'pedestrian', model: 'pedestrian', lengthM: 0.5, widthM: 0.5, path: [[-60, 12], [-60, 14]], trigger: { atS: 1e6 }, loop: false, speed: 1 }];
+    /** @type {(prev: Frame | null, k: number) => Partial<ControlInput>} */
+    const drive = (prev, k) => ({ gearCmd: k === 0 ? 'up' : null, throttle: k < 900 ? 0.35 : 0, brakeFront: k >= 900 ? 1 : 0, steer: holdLane(prev) });
+    const a = createSim(RAPIER, map, CAR, TRAFFIC);
+    const b = createSim(RAPIER, map, CAR, TRAFFIC);
+    const fa = run(a, 3600, drive);
+    const fb = run(b, 3600, drive);
+    a.dispose();
+    b.dispose();
+    expect(JSON.stringify(fb)).toBe(JSON.stringify(fa));
+    for (const f of fa.filter((_, i) => i % 60 === 0)) assertFrame(f);
+    expect(fa[0].actors[0].id).toBe('ped-x');
+    expect(fa[0].actors.length).toBeGreaterThan(5);
+    for (const f of fa) {
+      expect(f.actors[0].id).toBe('ped-x');
+      const npc = f.actors.slice(1).map((p) => Number(p.id.slice(4)));
+      expect(npc).toEqual([...npc].sort((x, y) => x - y));
+    }
+    // Another seed gives other traffic.
+    const c = createSim(RAPIER, map, CAR, { ...TRAFFIC, runSeed: 8 });
+    const fc = run(c, 60, drive);
+    c.dispose();
+    expect(JSON.stringify(fc[59].actors)).not.toBe(JSON.stringify(fa[59].actors));
+  });
+
+  it('wrecks the agent the reversing ego backs into, with the ego as striker', () => {
+    const sim = createSim(RAPIER, MID_LANE, CAR, { ...TRAFFIC, assists: { autoGearbox: true, signalAutoCancel: null } });
+    // Wait braked in rw-e1 until an agent stands close behind.
+    /** @type {Frame} */
+    let f = sim.step({ brakeFront: 1 });
+    let behind = null;
+    for (let k = 0; k < 60 * 60 && behind === null; k += 1) {
+      f = sim.step({ brakeFront: 1 });
+      behind =
+        f.actors.find(
+          (a) => a.id.startsWith('npc-') && a.state === 'stopped' && Math.abs(a.pos.z - 1.75) < 1 && a.pos.x < f.ego.pos.x && f.ego.pos.x - a.pos.x < 2.25 + a.lengthM / 2 + 4,
+        ) ?? null;
+    }
+    expect(behind).not.toBeNull();
+    const target = /** @type {import('../contracts/index.js').ActorPose} */ (behind).id;
+    sim.step({ gearCmd: 'down' });
+    sim.step({ gearCmd: 'down' });
+    /** @type {import('../contracts/index.js').CollisionEvent | null} */
+    let hit = null;
+    for (let k = 0; k < 600 && hit === null; k += 1) {
+      f = sim.step({ throttle: 0.3, steer: 0 });
+      hit = /** @type {import('../contracts/index.js').CollisionEvent | undefined} */ (f.events.find((e) => e.type === 'collision')) ?? null;
+    }
+    const next = sim.step({ brakeFront: 1 });
+    sim.dispose();
+    expect(f.ego.gear).toBe('R');
+    expect(hit).toMatchObject({ otherId: target, striker: 'ego', otherFromBehind: false, otherViolations: [] });
+    expect(/** @type {import('../contracts/index.js').CollisionEvent} */ (hit).otherModel).toBe(next.actors.find((a) => a.id === target)?.model);
+    const wreck = next.actors.find((a) => a.id === target);
+    expect(wreck?.speed).toBe(0);
+    expect(['crashed', 'fallen']).toContain(wreck?.state);
+  });
+
+  it('resets the ego onto a following agent without a contact burst or an overlap', () => {
+    const sim = createSim(RAPIER, MID_LANE, CAR, TRAFFIC);
+    const start = MID_LANE.route.start;
+    const startFp = footprint(start.pos, start.heading, CAR.lengthM, CAR.widthM);
+    /** @type {Frame | null} */
+    let f = null;
+    let reset = false;
+    // Creep ahead short of the first checkpoint (x −40), stop, and let the queue behind close up
+    // over the start; reset as soon as an agent covers the start pose.
+    for (let k = 0; k < 60 * 90 && !reset; k += 1) {
+      const go = f === null || f.ego.pos.x < -50;
+      f = sim.step({ gearCmd: k === 0 ? 'up' : null, throttle: go ? 0.3 : 0, brakeFront: go ? 0 : 1, steer: holdLane(f) });
+      if (f.ego.pos.x > -55 && f.actors.some((a) => a.id.startsWith('npc-') && polygonsIntersect(footprint(a.pos, a.heading, a.lengthM, a.widthM), startFp))) {
+        sim.reset();
+        reset = true;
+      }
+    }
+    expect(reset).toBe(true);
+    const after = run(sim, 120, () => ({ brakeFront: 1 }));
+    sim.dispose();
+    expect(after[0].events).toContainEqual({ type: 'reset' });
+    expect(after.some(agentOverlapsEgo)).toBe(false);
+    expect(collisions(after)).toEqual([]);
+    for (const x of after) {
+      expect(Math.abs(x.ego.pos.x - start.pos.x)).toBeLessThan(0.3);
+      expect(Math.abs(x.ego.speed)).toBeLessThan(0.5);
+    }
+  });
+
+  it('gives a static collision with a solid tree and none with a non-solid prop', () => {
+    for (const solid of [true, false]) {
+      const map = mapWith({ props: [{ id: 'p-tree-x', kind: 'tree', pos: { x: 45, z: 1.75 }, heading: 0, solid }] });
+      const sim = createSim(RAPIER, map, CAR);
+      const frames = run(sim, 600, cruise(kmhToMps(25)));
+      sim.dispose();
+      const hits = collisions(frames);
+      if (solid) {
+        expect(hits).toHaveLength(1);
+        expect(hits[0]).toMatchObject({ otherKind: 'static', otherId: 'p-tree-x', sameLaneAhead: false });
+        expect(hits[0]).not.toHaveProperty('striker');
+      } else {
+        expect(hits).toEqual([]);
+      }
+    }
+  });
+
+  it('makes the ego the striker against a static with traffic on', () => {
+    const map = structuredClone(MID_LANE);
+    map.obstacles.push({ id: 'ob-x', kind: 'barrier', footprint: [[-45, 0.2], [-44, 0.2], [-44, 3.3], [-45, 3.3]], height: 1 });
+    const sim = createSim(RAPIER, map, CAR, TRAFFIC);
+    const frames = run(sim, 600, (prev, k) => ({ gearCmd: k === 0 ? 'up' : null, throttle: 0.5, steer: holdLane(prev) }));
+    sim.dispose();
+    const hits = collisions(frames).filter((e) => e.otherId === 'ob-x');
+    expect(hits).toHaveLength(1);
+    expect(hits[0]).toMatchObject({ otherKind: 'static', striker: 'ego', otherModel: null, otherFromBehind: false, otherViolations: [] });
+  });
+
+  it('keeps the auto-shift and indicator auto-cancel assists with traffic on', () => {
+    // Left at j1 into the northbound lane with the scenario driver, which signals before the
+    // junction; its own indicator commands are dropped after the exit so the cancel is the assist's.
+    /** @type {import('../contracts/index.js').Vec2[]} */
+    const path = [[-150, 1.75], [-7, 1.75]];
+    for (let k = 1; k <= 40; k += 1) {
+      const p = ((Math.PI / 2) * k) / 40;
+      path.push([-7 + 8.75 * Math.sin(p), -7 + 8.75 * Math.cos(p)]);
+    }
+    path.push([1.75, -120]);
+    // The driver does not see traffic, so traffic runs only in the parallel lane rw-e0 (straight on
+    // or right at j1), clear of the ego's lane and its left turn.
+    const map = structuredClone(JUNCTION);
+    const block = /** @type {NonNullable<GameMap['traffic']>} */ (map.traffic);
+    block.sources = [{ laneId: 'rw-e0', ratePerH: 900 }];
+    block.densityPerKm = { rw: 0, re: 0, rn: 0, rs: 0 };
+    const driver = createDriver(map, 'car-sedan', { path, maxS: 230 });
+    const sim = createSim(RAPIER, map, CAR, { ...TRAFFIC, assists: { autoGearbox: true, signalAutoCancel: { turnMinDeg: 45, clearM: 30 } } });
+    /** @type {Frame[]} */
+    const frames = [];
+    /** @type {Frame | null} */
+    let f = null;
+    let exited = false;
+    for (let k = 0; k < 60 * 60 && !(f && f.ego.pos.z < -60); k += 1) {
+      let input = driver.next(f);
+      if (exited) input = { ...input, signalCmd: null };
+      f = sim.step(input);
+      frames.push(f);
+      if (f.ego.pos.z < -7.5) exited = true;
+    }
+    sim.dispose();
+    expect(/** @type {Frame} */ (f).ego.pos.z).toBeLessThan(-60);
+    expect(frames.some((x) => x.actors.some((a) => a.id.startsWith('npc-') && Math.hypot(a.pos.x - x.ego.pos.x, a.pos.z - x.ego.pos.z) < 20))).toBe(true);
+    expect(collisions(frames)).toEqual([]);
+    expect(new Set(frames.map((x) => x.ego.gear))).toEqual(new Set(['D']));
+    const cancel = frames.findIndex((x, i) => i > 0 && frames[i - 1].ego.indicators === 'left' && x.ego.indicators === 'off' && x.ego.input.signalCmd === null);
+    expect(cancel).toBeGreaterThan(0);
+    expect(frames[cancel].ego.pos.z).toBeLessThan(-7);
   });
 });

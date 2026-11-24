@@ -1,7 +1,8 @@
 /**
  * Kinematic bodies that mirror the scripted actors of `src/world/actors.js` (no motion logic
- * here). Each step the sim passes this step's poses; the bodies move to them during the next
- * `world.step`, so Rapier sees their real velocity in contacts.
+ * here); traffic agents have their own pool in `traffic-mirror.js`. Each step the sim passes this
+ * step's poses; the bodies move to them during the next `world.step`, so Rapier sees their real
+ * velocity in contacts.
  */
 
 import { GROUP, interactionGroups } from '../physics/collision-groups.js';
@@ -15,15 +16,26 @@ import { headingVector, pointAtDistance } from '../geometry/index.js';
 /** @typedef {import('../contracts/telemetry.js').ActorPose} ActorPose */
 /** @typedef {import('./world-colliders.js').BodyTag} BodyTag */
 
-/** Body heights in metres by actor kind. */
-export const ACTOR_HEIGHT_M = Object.freeze({ pedestrian: 1.7, car: 1.5 });
+/** Body heights in metres by actor kind (design; a motorbike includes its rider). */
+export const ACTOR_HEIGHT_M = Object.freeze({ pedestrian: 1.7, car: 1.5, motorbike: 1.4 });
 
 /**
  * @typedef {object} ActorBodies
- * @property {(poses: ActorPose[]) => void} update Set the next kinematic poses.
- * @property {(handle: number) => {pos: {x: number, z: number}, velocity: {x: number, z: number}} | null} motionOf
- *   Centre and velocity of the actor that owns a collider, or null.
+ * @property {(poses: ActorPose[]) => void} update Set the next kinematic poses of the scripted
+ *   actors, in map order.
+ * @property {(handle: number) => import('./world-colliders.js').ActorMotion | null} motionOf
+ *   Centre, true velocity and pose of the actor that owns a collider, or null.
  */
+
+/**
+ * Centre, true velocity and pose of an actor.
+ * @param {ActorPose} p Pose.
+ * @returns {import('./world-colliders.js').ActorMotion} Motion.
+ */
+export function motionOfPose(p) {
+  const [fx, fz] = headingVector(p.heading);
+  return { pos: p.pos, velocity: { x: fx * p.speed, z: fz * p.speed }, pose: p };
+}
 
 /**
  * Creates one kinematic body per map actor at the start of its path.
@@ -74,9 +86,7 @@ export function createActorBodies(R, world, map, tags) {
       const i = indexByHandle.get(handle);
       if (i === undefined) return null;
       const p = current[i];
-      if (!p) return null;
-      const [fx, fz] = headingVector(p.heading);
-      return { pos: p.pos, velocity: { x: fx * p.speed, z: fz * p.speed } };
+      return p ? motionOfPose(p) : null;
     },
   };
 }

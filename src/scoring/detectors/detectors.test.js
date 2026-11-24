@@ -804,6 +804,33 @@ describe('detectors in motorbike traffic', () => {
     it('fires with a stopped car within gapAheadM in the target lane', async () => {
       expect(await merge(() => [pose('npc-1', 'car', -118, 5.25, { speed: 0, state: 'stopped' })])).toEqual(['lane-change:1:D6.2.a']);
     });
+
+    // The ego crosses the line at about (-125, 3.5), heading along (0.944, 0.330), at t 2.5 s.
+    // Vehicles appear just before the crossing so nothing else sees them on the approach.
+    const CROSS = { x: -125, z: 3.5, fx: 0.944, fz: 0.33 };
+    /**
+     * A point behind the crossing ego, measured along its heading and to its right.
+     * @param {number} behind Distance behind the ego centre.
+     * @param {number} right Distance to the right of the ego centre.
+     * @returns {[number, number]} X and z.
+     */
+    const behindEgo = (behind, right) => [CROSS.x - behind * CROSS.fx - right * CROSS.fz, CROSS.z - behind * CROSS.fz + right * CROSS.fx];
+    const EGO_HALF = 4.5 / 2;
+    const BIKE_HALF = 1.9 / 2;
+
+    it('keeps gapBehindM as the floor for a slowly moving car behind in the target lane', async () => {
+      // Bumper gap about 3 m; the time gap alone would ask for only 0.3 m at 0.6 m/s.
+      expect(await merge((t) => (t >= 2.3 ? [pose('npc-1', 'car', -133.5, 5.25, { speed: 0.6 })] : []))).toEqual(['lane-change:1:D6.2.a']);
+    });
+
+    it('uses the gapMotorbikeMinM floor for a moving motorbike behind in the strip', async () => {
+      const bikeAt = (/** @type {number} */ gap) => {
+        const [x, z] = behindEgo(gap + EGO_HALF + BIKE_HALF, 0.9);
+        return (/** @type {number} */ t) => (t >= 2.3 ? [pose('npc-1', 'motorbike', x, z, { speed: 3 })] : []);
+      };
+      expect(await merge(bikeAt(3))).toEqual([]);
+      expect(await merge(bikeAt(1))).toEqual(['lane-change:1:D6.2.a']);
+    });
   });
 
   describe('wrecks', () => {

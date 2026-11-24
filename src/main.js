@@ -6,7 +6,7 @@ import { assertMap } from './contracts/assert-map.js';
 import { createLoop } from './game/loop.js';
 import { createInput } from './game/input.js';
 import { createSession } from './game/session.js';
-import { createCanvasView, loadMap, loadRapier, loadRules } from './game/browser.js';
+import { createCanvasView, loadMap, loadRapier, loadRules, loadTrafficParams, parseDevRunQuery } from './game/browser.js';
 import { createRenderer } from './render/index.js';
 import { createSim } from './sim/index.js';
 import { createScorer, scoreRun } from './scoring/index.js';
@@ -24,6 +24,9 @@ const game = createSession({
   loadMap: (mapId) => loadMap(mapId),
   loadRules,
   loadRapier,
+  loadTrafficParams,
+  // Dev builds only: `?traffic=off` and `?seed=<n>` in the play hash; release builds ignore both.
+  ...(import.meta.env.DEV ? { devRunOptions: () => parseDevRunQuery(location.hash) } : {}),
   createSim,
   createScorer,
   createView: (map, vehicle) => createCanvasView(canvasHost, createRenderer, map, vehicle),

@@ -175,7 +175,7 @@ describe('row 2: a contributing ego episode', () => {
     expect(report.notices).toEqual([]);
   });
 
-  it('charges a speeding ego struck by a red-light runner and names both sides (D-O4)', async () => {
+  it('charges a speeding ego struck by a red-light runner and names both sides', async () => {
     const { report } = await drive([{ t: 3, event: hit({ otherKind: 'motorbike', otherModel: 'motorbike', otherViolations: ['red-light'], egoSpeed: FAST }) }], {
       speed: FAST,
       durationS: 5,

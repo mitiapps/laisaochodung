@@ -35,7 +35,7 @@ export const SOURCE_FREE_SPEED_KMH = 25;
 export const RING_SAMPLE_STEP_M = 10;
 /**
  * Mean speed of a legal driver along a route in traffic, km/h (`paramBasis: design`; inner-city
- * HCMC peak traffic, to be confirmed by the phase 9 autopilot).
+ * HCMC peak traffic, to be confirmed by the scenario autopilot).
  */
 export const TRAFFIC_MEAN_SPEED_KMH = 15;
 /** Wait added per unsignalled junction on the route, s (`paramBasis: design`). */
@@ -185,7 +185,7 @@ function routeSamples(map, step) {
 }
 
 /**
- * Most agents the ring spawner can hold at once (K5): over ego positions along the route, the
+ * Most agents the ring spawner can hold at once: over ego positions along the route, the
  * largest sum of `densityPerKm(road) × lane length within the outer ring radius`, rounded up.
  * @param {GameMap} map Map.
  * @param {Record<string, number>} densityPerKm Density per road id.
@@ -330,7 +330,7 @@ export function routeThroughGraph(map, graph) {
 }
 
 /**
- * Time limit of a map with traffic (K5, `paramBasis: design`), never below the authored one:
+ * Time limit of a map with traffic (`paramBasis: design`), never below the authored one:
  *
  *   T = ⌈ TIME_MARGIN · (L / v + Σ signalled cycle + n_unsignalled · UNSIGNALLED_WAIT_S) ⌉₁₀
  *

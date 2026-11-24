@@ -6,12 +6,19 @@
  * One `step(input)`:
  * 1. Sanitise the input; on the first step emit `run-start`; apply a pending reset (fall or
  *    `reset()`) by placing the ego at the last passed checkpoint, or the start, and emit `reset`.
- * 2. `stepActors` with the ego footprint before the step; mirror the poses onto kinematic bodies.
+ * 2. `stepWorld` with the pre-step ego pose and indicators, the reset flag, the light states at
+ *    `t` and last step's actor contacts: scripted actors, then traffic when it runs. Scripted
+ *    poses go to their kinematic bodies; traffic agents near the ego to the mirror pool
+ *    (`traffic-mirror.js`).
  * 3. With the auto-cancel assist, `stepSignalCancel` on the pre-step pose, which may switch the
  *    indicator off; then electrics, `vehicle.prepare` (gearbox, steering, wheels, `updateVehicle`), `world.step`.
- * 4. Drain contact forces into `collision` events; read the ego; a scripted fall emits `fall`
- *    and schedules the reset for the next step.
- * 5. `stepRoute`, `trafficLightStates` and `clockAt` at `t = tick · DT`; build the frame.
+ * 4. Drain contact forces into `collision` events and the touched actors fed to traffic next
+ *    step; read the ego; a scripted fall emits `fall` and schedules the reset for the next step.
+ * 5. `stepRoute` and `clockAt` at `t = tick · DT`; build the frame with the scripted poses, then
+ *    the traffic poses.
+ *
+ * With `traffic: 'off'` (the default) or a map without a traffic block, no mirror pool exists and
+ * collision events carry no attribution fields, so frames are those of a sim without traffic.
  *
  * `ego.pos.y` is the body height above its settled ride height: about 0 at rest, the suspension
  * movement otherwise, matching the frame builder's 0 on flat ground.
@@ -21,13 +28,16 @@ import { DT } from '../contracts/units.js';
 import { neutralInput } from '../contracts/controls.js';
 import { assertMap } from '../contracts/assert-map.js';
 import { footprint } from '../geometry/index.js';
-import { clockAt, createActorState, createRouteState, stepActors, stepRoute, trafficLightStates } from '../world/index.js';
+import { checkTrafficParams } from '../contracts/traffic.js';
+import { clockAt, createRouteState, stepRoute, trafficLightStates } from '../world/index.js';
+import { createWorld, stepWorld } from '../world/traffic/index.js';
 import { createVehicle } from '../physics/vehicle.js';
 import { vehicleTuning } from '../physics/vehicles/index.js';
 import { cancelIndicators, createElectrics, stepElectrics } from './electrics.js';
 import { createSignalCancel, stepSignalCancel } from './signal-cancel.js';
 import { buildWorldColliders, drainCollisions } from './world-colliders.js';
 import { createActorBodies } from './actors.js';
+import { createTrafficMirror } from './traffic-mirror.js';
 
 /** @typedef {typeof import('@dimforge/rapier3d-compat').default} Rapier */
 /** @typedef {import('../contracts/map.js').GameMap} GameMap */
@@ -38,6 +48,7 @@ import { createActorBodies } from './actors.js';
 /** @typedef {import('../contracts/modules.js').Sim} Sim */
 /** @typedef {import('../contracts/modules.js').SimOptions} SimOptions */
 /** @typedef {import('../contracts/controls.js').ControlAssists} ControlAssists */
+/** @typedef {import('../contracts/traffic.js').TrafficParams} TrafficParams */
 
 /** Physics steps run at creation and after each reset so the ego rests on its suspension. */
 export const SETTLE_STEPS = 30;
@@ -101,11 +112,31 @@ export function parseAssists(raw) {
 }
 
 /**
+ * Validates the traffic options; traffic runs only with `traffic: 'map'` on a map with a traffic
+ * block.
+ * @param {SimOptions} options Options.
+ * @param {GameMap} map Map.
+ * @returns {{traffic: 'map' | 'off', runSeed: number, params: TrafficParams | null}} Traffic options.
+ */
+export function parseTraffic(options, map) {
+  const traffic = options.traffic ?? 'off';
+  if (traffic !== 'map' && traffic !== 'off') throw new RangeError(`options.traffic must be 'map' or 'off', got ${String(traffic)}`);
+  const runSeed = options.runSeed ?? 0;
+  if (!Number.isInteger(runSeed) || runSeed < 0 || runSeed > 0xffffffff) {
+    throw new RangeError(`options.runSeed must be a 32-bit unsigned integer, got ${String(runSeed)}`);
+  }
+  if (traffic === 'off' || !map.traffic) return { traffic, runSeed, params: null };
+  const problems = checkTrafficParams(options.params);
+  if (problems.length > 0) throw new TypeError(`options.params are invalid traffic parameters: ${problems.slice(0, 5).join('; ')}`);
+  return { traffic, runSeed, params: /** @type {TrafficParams} */ (options.params) };
+}
+
+/**
  * Creates the simulation.
  * @param {unknown} rapier Initialised `@dimforge/rapier3d-compat` module.
  * @param {GameMap} map Map.
  * @param {VehicleInfo} vehicleInfo Vehicle.
- * @param {SimOptions} [options] Options; only `assists` is read here.
+ * @param {SimOptions} [options] Traffic and assist options.
  * @returns {Sim} Simulation.
  */
 export function createSim(rapier, map, vehicleInfo, options = {}) {
@@ -123,6 +154,8 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
   if (options === null || typeof options !== 'object') throw new TypeError('createSim options must be an object');
   const assists = parseAssists(options.assists);
   const cancelCfg = assists.signalAutoCancel;
+  const trafficOpts = parseTraffic(options, map);
+  const params = trafficOpts.params;
 
   const world = new R.World({ x: 0, y: -9.81, z: 0 });
   world.timestep = DT;
@@ -134,6 +167,24 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
     autoGearbox: assists.autoGearbox,
   });
   const egoHandle = vehicle.collider.handle;
+  // The pool exists only while traffic runs, so a sim without traffic keeps today's bodies.
+  const mirror =
+    params === null
+      ? null
+      : createTrafficMirror(R, world, tags, {
+          maxMirrored: params.maxMirrored,
+          mirrorRadiusM: params.mirrorRadiusM,
+          egoMassKg: tuning.massKg,
+          egoSize: { lengthM: 2 * tuning.chassis.halfLength, widthM: 2 * tuning.chassis.halfWidth },
+          massOf: (model) => {
+            const m = params.models[model];
+            if (!m) throw new Error(`Traffic pose names unknown model ${model}`);
+            return m.massKg;
+          },
+          dt: DT,
+        });
+  /** @type {(handle: number) => import('./world-colliders.js').ActorMotion | null} */
+  const motionOf = mirror === null ? actorBodies.motionOf : (h) => actorBodies.motionOf(h) ?? mirror.motionOf(h);
 
   const settle = () => {
     const idle = neutralInput();
@@ -149,7 +200,7 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
   const rideHeight = vehicle.body.translation().y;
 
   let tick = 0;
-  let actorState = createActorState(map);
+  let worldState = createWorld(map, params === null ? {} : { traffic: 'map', params, runSeed: trafficOpts.runSeed });
   let routeState = createRouteState();
   let electrics = createElectrics();
   let signalCancel = createSignalCancel();
@@ -157,6 +208,8 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
   let disposed = false;
   /** @type {import('./world-colliders.js').ContactMemory} */
   const contacts = new Map();
+  /** @type {string[]} */
+  let touched = [];
 
   /** @returns {{pos: {x: number, z: number}, heading: number}} Last passed checkpoint or the start. */
   const resetPose = () => (routeState.next > 0 ? map.route.checkpoints[routeState.next - 1] : start);
@@ -169,8 +222,11 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
       /** @type {FrameEvent[]} */
       const events = [];
       if (tick === 0) events.push({ type: 'run-start' });
+      const egoReset = pendingReset;
       if (pendingReset) {
         const p = resetPose();
+        // Mirror bodies go before the settle steps, so an ego placed inside an agent meets no body.
+        mirror?.parkAll();
         vehicle.place(p.pos, p.heading);
         settle();
         contacts.clear();
@@ -180,10 +236,24 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
       }
 
       const pre = vehicle.pose();
-      const preFootprint = footprint(pre.pos, pre.heading, vehicleInfo.lengthM, vehicleInfo.widthM);
-      const actors = stepActors(actorState, map, [preFootprint], Math.abs(pre.speed), DT);
-      actorState = actors.state;
-      actorBodies.update(actors.poses);
+      const lights = trafficLightStates(map, t);
+      const ws = stepWorld(worldState, {
+        ego: {
+          pos: pre.pos,
+          heading: pre.heading,
+          speed: pre.speed,
+          lengthM: vehicleInfo.lengthM,
+          widthM: vehicleInfo.widthM,
+          indicators: electrics.indicators,
+        },
+        egoReset,
+        lights,
+        egoContacts: touched,
+        t,
+      });
+      worldState = ws.worldState;
+      actorBodies.update(ws.scriptedPoses);
+      mirror?.update(ws.trafficPoses, pre);
 
       if (cancelCfg !== null) {
         const sc = stepSignalCancel(signalCancel, map, pre, electrics.indicators, cancelCfg, DT);
@@ -196,16 +266,17 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
 
       vehicle.prepare(input);
       world.step(queue);
-      events.push(
-        ...drainCollisions(queue, contacts, {
-          tick,
-          egoHandle,
-          ego: pre,
-          tags,
-          motionOf: actorBodies.motionOf,
-          map,
-        }),
-      );
+      const drained = drainCollisions(queue, contacts, {
+        tick,
+        egoHandle,
+        ego: pre,
+        tags,
+        motionOf,
+        map,
+        strikerShare: params === null ? null : params.strikerShare,
+      });
+      events.push(...drained.events);
+      touched = drained.touchedIds;
 
       const ego = vehicle.read();
       if (ego.fell) {
@@ -237,8 +308,8 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
           wheels: ego.wheels,
           footprint: footprint(ego.pos, ego.heading, vehicleInfo.lengthM, vehicleInfo.widthM),
         },
-        actors: actors.poses,
-        trafficLights: trafficLightStates(map, t),
+        actors: mirror === null ? ws.scriptedPoses : [...ws.scriptedPoses, ...ws.trafficPoses],
+        trafficLights: lights,
         route: route.nav,
         env: { clockMin: clockAt(map.environment, t), weather: map.environment.weather },
         events,

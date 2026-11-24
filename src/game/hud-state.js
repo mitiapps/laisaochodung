@@ -9,9 +9,33 @@ import { mpsToKmh } from '../contracts/units.js';
 /** @typedef {import('../contracts/score.js').ScoreContext} ScoreContext */
 /** @typedef {import('../contracts/score.js').Breach} Breach */
 /** @typedef {import('../contracts/score.js').ScoreReport} ScoreReport */
+/** @typedef {import('../contracts/score.js').Notice} Notice */
 
 /** Most recent breaches resent with every HUD state; the toast stack drops ones already shown. */
 export const HUD_TOAST_WINDOW = 8;
+/** A notice stays in the HUD state this long after its contact, in seconds of run time. */
+export const HUD_NOTICE_S = 6;
+/** Most notices sent at once. */
+export const HUD_NOTICE_MAX = 3;
+
+/**
+ * Notices to show at run time `t`: those raised within the last `HUD_NOTICE_S`, newest last. Run
+ * time, not the breach list, decides when one goes, so later breaches never clear it early.
+ * @param {readonly Notice[]} notices Notices of the run so far, oldest first.
+ * @param {number} t Run time of the latest frame.
+ * @returns {Notice[]} Notices to show.
+ */
+export function visibleNotices(notices, t) {
+  /** @type {Notice[]} */
+  const shown = [];
+  for (let i = notices.length - 1; i >= 0 && shown.length < HUD_NOTICE_MAX; i -= 1) {
+    const age = t - notices[i].t;
+    if (age < 0) continue;
+    if (age >= HUD_NOTICE_S) break;
+    shown.push(notices[i]);
+  }
+  return shown.reverse();
+}
 
 /**
  * @param {object} args Inputs.
@@ -19,11 +43,12 @@ export const HUD_TOAST_WINDOW = 8;
  * @param {ScoreContext} args.context Latest scorer context.
  * @param {number} args.score Running score.
  * @param {Breach[]} args.breaches Breaches of the run so far, oldest first.
+ * @param {readonly Notice[]} [args.notices] Notices of the run so far, oldest first.
  * @param {HudState['runStatus']} args.runStatus Run status.
  * @param {ScoreReport} [args.report] Final report, once finished.
  * @returns {HudState} HUD state.
  */
-export function hudStateOf({ frame, context, score, breaches, runStatus, report }) {
+export function hudStateOf({ frame, context, score, breaches, notices = [], runStatus, report }) {
   const { ego } = frame;
   /** @type {HudState} */
   const state = {
@@ -47,8 +72,8 @@ export function hudStateOf({ frame, context, score, breaches, runStatus, report 
     headingRad: ego.heading,
     nav: { distanceM: frame.route.distanceM, bearingRad: frame.route.bearingRad },
     toasts: breaches.slice(-HUD_TOAST_WINDOW),
-    // Filled once the scorer raises notices and the session applies a preset.
-    notices: [],
+    notices: visibleNotices(notices, frame.t),
+    // Set once the session applies a preset.
     controlPreset: 'real',
     runStatus,
   };

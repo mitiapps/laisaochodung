@@ -10,11 +10,20 @@
  * `timeout` event, on `runEnded: 'crash'` from the scorer, or on `quit()`; the report then comes
  * from `scorer.report(state, {quit})`. A `fall` needs nothing here: the sim resets itself.
  *
- * In dev builds every map is checked with `assertMap`, every frame with `assertFrame`, and every
- * frame of the run is kept; at the end `scoreRun` over the kept frames must equal the live report.
+ * Traffic: the session runs the map's traffic block (`traffic: 'map'`) with a fresh 32-bit run seed
+ * per run, unless a start option or, in dev builds, the `?traffic=off` / `?seed=<n>` hash query says
+ * otherwise. Notices the scorer raises reach the HUD beside the breach toasts.
+ *
+ * In dev builds every map is checked with `assertMap` and every frame with `assertFrame`, and frames
+ * are kept for a replay check: at the end `scoreRun` over the kept frames, folded from the kept
+ * scorer state, must equal the live report. Without traffic the whole run is kept. With traffic,
+ * tumbling checkpoints every `REPLAY_CHECKPOINT_S` bound the memory: each checkpoint keeps a
+ * reference to the live scorer state (plain immutable JSON) and drops the frames before the
+ * previous checkpoint, so at most two intervals of frames and two states are held.
  */
 
 import { neutralInput } from '../contracts/controls.js';
+import { DT } from '../contracts/units.js';
 import { hudStateOf } from './hud-state.js';
 
 /** @typedef {import('../contracts/hud.js').GameApi} GameApi */
@@ -29,6 +38,8 @@ import { hudStateOf } from './hud-state.js';
 /** @typedef {import('../contracts/modules.js').Sim} Sim */
 /** @typedef {import('../contracts/modules.js').Scorer} Scorer */
 /** @typedef {import('../contracts/modules.js').Renderer} Renderer */
+/** @typedef {import('../contracts/score.js').Notice} Notice */
+/** @typedef {import('../contracts/traffic.js').TrafficParams} TrafficParams */
 /** @typedef {import('./loop.js').Loop} Loop */
 /** @typedef {import('./loop.js').LoopDeps} LoopDeps */
 /** @typedef {import('./input.js').Input} Input */
@@ -40,6 +51,63 @@ export const HUD_HZ = 15;
 export const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
 /** Dev builds keep this many frame work times for `debugInfo().frameWorkMs`. */
 const FRAME_TIME_SAMPLES = 600;
+/** Dev builds keep this many sim step times for `debugInfo().simStepMs`. */
+const SIM_STEP_SAMPLES = 600;
+/** Interval of the replay checkpoints on maps with traffic, in seconds of run time. */
+export const REPLAY_CHECKPOINT_S = 10;
+/** The same interval in fixed steps. */
+const CHECKPOINT_TICKS = Math.round(REPLAY_CHECKPOINT_S / DT);
+/** Largest run seed: seeds are 32-bit unsigned integers. */
+const MAX_SEED = 0xffffffff;
+
+/**
+ * Run options beyond the `GameApi` start options. Session-level only (tests and dev tools); the UI
+ * passes none, and release builds never read the dev hash query.
+ * @typedef {object} RunOptions
+ * @property {'map' | 'off'} [traffic] `map` (default) runs the map's traffic block, `off` runs the
+ *   scripted actors only.
+ * @property {number} [seed] Fixed 32-bit unsigned run seed; a fresh random one by default.
+ */
+
+/**
+ * @typedef {import('../contracts/hud.js').StartOptions & RunOptions} SessionStartOptions
+ */
+
+/**
+ * Checks run options from a caller or the dev hash query.
+ * @param {RunOptions} options Options.
+ * @param {string} source Where they came from, for the error message.
+ * @returns {RunOptions} The same options.
+ */
+export function checkRunOptions(options, source) {
+  if (options.traffic !== undefined && options.traffic !== 'map' && options.traffic !== 'off') {
+    throw new RangeError(`${source}: traffic must be 'map' or 'off', got ${String(options.traffic)}`);
+  }
+  if (options.seed !== undefined && (!Number.isInteger(options.seed) || options.seed < 0 || options.seed > MAX_SEED)) {
+    throw new RangeError(`${source}: seed must be an integer in 0..${MAX_SEED}, got ${String(options.seed)}`);
+  }
+  return options;
+}
+
+/**
+ * A fresh 32-bit unsigned run seed from the platform's cryptographic random source.
+ * @returns {number} Seed.
+ */
+function randomSeed() {
+  return globalThis.crypto.getRandomValues(new Uint32Array(1))[0];
+}
+
+/**
+ * Mean and 95th percentile of samples.
+ * @param {readonly number[]} samples Samples.
+ * @returns {{mean: number, p95: number} | null} Statistics, null without samples.
+ */
+function meanAndP95(samples) {
+  if (samples.length === 0) return null;
+  const sorted = [...samples].sort((a, b) => a - b);
+  const sum = sorted.reduce((a, b) => a + b, 0);
+  return { mean: sum / sorted.length, p95: sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)] };
+}
 
 /**
  * A drawing surface for one run: a renderer plus whatever it lives on.
@@ -54,6 +122,11 @@ const FRAME_TIME_SAMPLES = 600;
  * @property {(mapId: string) => Promise<GameMap>} loadMap Loads a built map.
  * @property {() => Promise<RulesBundle>} loadRules Loads the rules bundle.
  * @property {() => Promise<unknown>} loadRapier Initialised Rapier module.
+ * @property {() => Promise<TrafficParams>} [loadTrafficParams] Compiled traffic parameters. Traffic
+ *   needs them: a session built without this loader runs every map with traffic off (headless
+ *   harnesses that drive scripted actors only).
+ * @property {() => RunOptions} [devRunOptions] Dev builds only: run options from the dev hash query
+ *   (`?traffic=off`, `?seed=<n>`); start options win over them.
  * @property {import('../contracts/modules.js').CreateSim} createSim Sim factory.
  * @property {import('../contracts/modules.js').CreateScorer} createScorer Scorer factory.
  * @property {(map: GameMap, vehicle: VehicleInfo) => View} createView View factory.
@@ -75,6 +148,7 @@ const FRAME_TIME_SAMPLES = 600;
  * @typedef {object} ReplayCheck
  * @property {number} frames Frames replayed.
  * @property {boolean} equal `scoreRun` over the kept frames equals the live report.
+ * @property {boolean} windowed The kept frames were folded from a checkpoint state.
  */
 
 /**
@@ -83,8 +157,17 @@ const FRAME_TIME_SAMPLES = 600;
  * @property {number} tick Tick of the latest frame, −1 before the first.
  * @property {{x: number, z: number, heading: number, speed: number} | null} ego Latest ego pose,
  *   for browser automation.
- * @property {Array<{id: string, kind: 'pedestrian' | 'car', x: number, z: number, speed: number, active: boolean}>} actors
- *   Latest actor poses, so browser automation can yield to them.
+ * @property {Array<{id: string, kind: 'pedestrian' | 'car' | 'motorbike', x: number, z: number, speed: number, active: boolean}>} actors
+ *   Latest actor poses (scripted, then traffic), so browser automation can yield to them.
+ * @property {'map' | 'off' | null} traffic Whether traffic runs in the current run: `off` also on a
+ *   map without a traffic block.
+ * @property {number | null} runSeed Run seed of the current run.
+ * @property {number} agents Traffic agents in the latest frame.
+ * @property {number} mirrored Traffic agents in the latest frame within `mirrorRadiusM` of the ego,
+ *   capped at `maxMirrored`: the candidates the sim's mirror pool takes. Derived from the frame,
+ *   since the sim does not report its pool.
+ * @property {{mean: number, p95: number} | null} simStepMs Wall time of recent `sim.step` calls
+ *   (physics, scripted actors and traffic together), rolling (dev builds).
  * @property {number} keptFrames Frames kept (dev builds).
  * @property {ReplayCheck | null} replayCheck Result of the last finished run (dev builds).
  * @property {number[]} frameWorkMs Step-and-render time of recent animation frames (dev builds).
@@ -107,7 +190,14 @@ const FRAME_TIME_SAMPLES = 600;
  * @property {Frame | null} prev Previous frame.
  * @property {Frame | null} curr Latest frame.
  * @property {Breach[]} breaches Breaches so far.
- * @property {Frame[]} frames Kept frames (dev).
+ * @property {Notice[]} notices Notices so far, oldest first.
+ * @property {'map' | 'off'} traffic Traffic actually running (`off` on a map without traffic).
+ * @property {number} runSeed Run seed.
+ * @property {TrafficParams | null} trafficParams Traffic parameters while traffic runs.
+ * @property {Frame[]} frames Kept frames (dev): every frame after the state `replayBase`.
+ * @property {unknown} replayBase Scorer state the kept frames fold from (dev).
+ * @property {{state: unknown, keepFrom: number} | null} checkpoint Newest checkpoint (dev, with
+ *   traffic): the scorer state then and the index in `frames` of the first frame after it.
  * @property {boolean} endPending The last step ended the run.
  * @property {boolean} publishNow A breach is waiting to be published.
  * @property {number} lastHudMs Time of the last HUD publish.
@@ -128,12 +218,14 @@ export function createSession(deps) {
   let seq = 0;
   /** @type {Run | null} */
   let run = null;
-  /** @type {{mapId: string, vehicleId: string} | null} */
+  /** @type {{mapId: string, vehicleId: string, options: SessionStartOptions} | null} */
   let lastStart = null;
   /** @type {ReplayCheck | null} */
   let replayCheck = null;
   /** @type {number[]} */
   const frameWorkMs = [];
+  /** @type {number[]} */
+  const simStepMs = [];
 
   /** @param {HudState} state State. */
   const emit = (state) => {
@@ -157,7 +249,7 @@ export function createSession(deps) {
     const score = report ? report.score : r.scorer.report(r.scorerState, { quit: false }).score;
     r.lastHudMs = deps.now();
     r.publishNow = false;
-    emit(hudStateOf({ frame: r.curr, context: r.context, score, breaches: r.breaches, runStatus, report }));
+    emit(hudStateOf({ frame: r.curr, context: r.context, score, breaches: r.breaches, notices: r.notices, runStatus, report }));
   };
 
   /**
@@ -190,6 +282,19 @@ export function createSession(deps) {
   };
 
   /**
+   * Takes a replay checkpoint after the frame just scored: the frames before the previous
+   * checkpoint go, and the previous checkpoint's state becomes the state they fold from.
+   * @param {Run} r Run.
+   */
+  const checkpoint = (r) => {
+    if (r.checkpoint) {
+      r.frames = r.frames.slice(r.checkpoint.keepFrom);
+      r.replayBase = r.checkpoint.state;
+    }
+    r.checkpoint = { state: r.scorerState, keepFrom: r.frames.length };
+  };
+
+  /**
    * One fixed step.
    * @param {Run} r Running run.
    * @returns {boolean} Whether the run goes on.
@@ -198,8 +303,11 @@ export function createSession(deps) {
     const sim = /** @type {Sim} */ (r.sim);
     const scorer = /** @type {Scorer} */ (r.scorer);
     const input = r.input ? r.input.sample() : neutralInput();
+    const t0 = dev ? deps.now() : 0;
     const frame = sim.step(input);
     if (dev) {
+      simStepMs.push(deps.now() - t0);
+      if (simStepMs.length > SIM_STEP_SAMPLES) simStepMs.shift();
       deps.assertFrame?.(frame);
       r.frames.push(frame);
     }
@@ -212,6 +320,11 @@ export function createSession(deps) {
       r.breaches.push(...res.breaches);
       r.publishNow = true;
     }
+    if (res.notices.length > 0) {
+      r.notices.push(...res.notices);
+      r.publishNow = true;
+    }
+    if (dev && r.traffic === 'map' && (frame.tick + 1) % CHECKPOINT_TICKS === 0) checkpoint(r);
     const ended = res.runEnded === 'crash' || frame.events.some((e) => e.type === 'finish' || e.type === 'timeout');
     if (ended) r.endPending = true;
     return !ended;
@@ -230,8 +343,9 @@ export function createSession(deps) {
     const scorer = /** @type {Scorer} */ (r.scorer);
     const report = scorer.report(r.scorerState, { quit });
     if (dev && deps.scoreRun && r.map && r.bundle) {
-      const replay = deps.scoreRun(r.bundle, r.map, r.vehicle, r.frames, { quit });
-      replayCheck = { frames: r.frames.length, equal: JSON.stringify(replay) === JSON.stringify(report) };
+      const windowed = r.replayBase !== scorer.initial;
+      const replay = deps.scoreRun(r.bundle, r.map, r.vehicle, r.frames, windowed ? { quit, initialState: r.replayBase } : { quit });
+      replayCheck = { frames: r.frames.length, equal: JSON.stringify(replay) === JSON.stringify(report), windowed };
       if (!replayCheck.equal) logError('Replay check failed: scoreRun over the kept frames differs from the live report', { replay, report });
     }
     // Physics is no longer needed; the view keeps the last frame under the result screen.
@@ -306,12 +420,14 @@ export function createSession(deps) {
   const api = {
     /**
      * Starts a run. The `GameApi` start options (`controlPreset`) are accepted and not applied yet:
-     * every run uses the controls without assists.
+     * every run uses the controls without assists. The session-level `traffic` and `seed` options
+     * win over the dev hash query.
      * @param {string} mapId Map id.
      * @param {string} vehicleId Vehicle id.
+     * @param {SessionStartOptions} [options] Start options.
      * @returns {Promise<void>} Resolves once running, or when a newer start or a quit supersedes it.
      */
-    async start(mapId, vehicleId) {
+    async start(mapId, vehicleId, options = {}) {
       teardown();
       seq += 1;
       const id = seq;
@@ -319,7 +435,12 @@ export function createSession(deps) {
       if (typeof mapId !== 'string' || !ID_PATTERN.test(mapId)) throw new Error(`Invalid map id "${String(mapId)}"`);
       const vehicle = deps.vehicles.find((v) => v.id === vehicleId);
       if (!vehicle) throw new Error(`Unknown vehicle "${String(vehicleId)}"`);
-      lastStart = { mapId, vehicleId };
+      checkRunOptions(options, 'Start option');
+      const query = dev && deps.devRunOptions ? checkRunOptions(deps.devRunOptions(), 'Dev hash query') : {};
+      const trafficOption = options.traffic ?? query.traffic ?? 'map';
+      if ((options.traffic ?? query.traffic) === 'map' && !deps.loadTrafficParams) throw new Error('Traffic was asked for, but the session has no loadTrafficParams');
+      const runSeed = options.seed ?? query.seed ?? randomSeed();
+      lastStart = { mapId, vehicleId, options };
       /** @type {Run} */
       const r = {
         id,
@@ -337,30 +458,47 @@ export function createSession(deps) {
         prev: null,
         curr: null,
         breaches: [],
+        notices: [],
+        traffic: 'off',
+        runSeed,
+        trafficParams: null,
         frames: [],
+        replayBase: null,
+        checkpoint: null,
         endPending: false,
         publishNow: false,
         lastHudMs: 0,
       };
       run = r;
-      /** @type {[GameMap, RulesBundle, unknown]} */
+      /** @type {[GameMap, RulesBundle, unknown, TrafficParams | null]} */
       let loaded;
+      const wantsParams = trafficOption === 'map' && deps.loadTrafficParams !== undefined;
       try {
-        loaded = await Promise.all([deps.loadMap(mapId), deps.loadRules(), deps.loadRapier()]);
+        loaded = await Promise.all([
+          deps.loadMap(mapId),
+          deps.loadRules(),
+          deps.loadRapier(),
+          wantsParams ? /** @type {() => Promise<TrafficParams>} */ (deps.loadTrafficParams)() : Promise.resolve(null),
+        ]);
       } catch (err) {
         if (run !== r) return;
         run = null;
         throw err;
       }
       if (run !== r) return;
-      const [map, bundle, rapier] = loaded;
+      const [map, bundle, rapier, params] = loaded;
       try {
         if (dev) deps.assertMap?.(map);
         r.map = map;
         r.bundle = bundle;
-        r.sim = deps.createSim(rapier, map, vehicle);
+        if (params && map.traffic) {
+          r.traffic = 'map';
+          r.trafficParams = params;
+        }
+        r.sim = deps.createSim(rapier, map, vehicle, params ? { traffic: 'map', runSeed, params } : { traffic: 'off', runSeed });
         r.scorer = deps.createScorer(bundle, map, vehicle);
         r.scorerState = r.scorer.initial;
+        r.replayBase = r.scorer.initial;
         r.view = deps.createView(map, vehicle);
         r.input = deps.createInput({
           legalClass: vehicle.legalClass,
@@ -420,9 +558,9 @@ export function createSession(deps) {
 
     restart() {
       if (!lastStart) return;
-      const { mapId, vehicleId } = lastStart;
+      const { mapId, vehicleId, options } = lastStart;
       const before = last;
-      api.start(mapId, vehicleId).catch((err) => {
+      api.start(mapId, vehicleId, options).catch((err) => {
         logError('Failed to restart the run', err);
         endWithoutReport(before);
       });
@@ -470,11 +608,21 @@ export function createSession(deps) {
 
     /** @returns {DebugInfo} Dev diagnostics. */
     debugInfo() {
+      const curr = run?.curr ?? null;
+      const scripted = run?.map ? run.map.actors.length : 0;
+      const agents = curr && run?.traffic === 'map' ? curr.actors.slice(scripted) : [];
+      const params = run?.trafficParams ?? null;
+      const near = curr && params ? agents.filter((a) => Math.hypot(a.pos.x - curr.ego.pos.x, a.pos.z - curr.ego.pos.z) <= params.mirrorRadiusM).length : 0;
       return {
         status: run ? run.status : null,
-        tick: run?.curr ? run.curr.tick : -1,
-        ego: run?.curr ? { x: run.curr.ego.pos.x, z: run.curr.ego.pos.z, heading: run.curr.ego.heading, speed: run.curr.ego.speed } : null,
-        actors: run?.curr ? run.curr.actors.map((a) => ({ id: a.id, kind: a.kind, x: a.pos.x, z: a.pos.z, speed: a.speed, active: a.active })) : [],
+        tick: curr ? curr.tick : -1,
+        ego: curr ? { x: curr.ego.pos.x, z: curr.ego.pos.z, heading: curr.ego.heading, speed: curr.ego.speed } : null,
+        actors: curr ? curr.actors.map((a) => ({ id: a.id, kind: a.kind, x: a.pos.x, z: a.pos.z, speed: a.speed, active: a.active })) : [],
+        traffic: run && run.status !== 'loading' ? run.traffic : null,
+        runSeed: run ? run.runSeed : null,
+        agents: agents.length,
+        mirrored: params ? Math.min(params.maxMirrored, near) : 0,
+        simStepMs: meanAndP95(simStepMs),
         keptFrames: run ? run.frames.length : 0,
         replayCheck,
         frameWorkMs: [...frameWorkMs],

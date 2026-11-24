@@ -82,16 +82,5 @@ actors:
         - { way: rong, dir: backward, index: 0, fromS: 300, toS: 0 }
     trigger: { atS: 12 }
 
-# NPC traffic, light density (agents per lane-km, design); maxAgents and the traffic time limit
-# are derived by the build. Not inherited from a layout.
-traffic:
-  densityPerKm: 10
-  spawnRingM: [60, 150]
-  # Vietnamese mix (design, inside the user's 70–80% motorbikes): taxis, buses and small trucks
-  # are cars by law.
-  mix:
-    - { model: motorbike, share: 0.75 }
-    - { model: car, share: 0.12 }
-    - { model: taxi, share: 0.06 }
-    - { model: bus, share: 0.02 }
-    - { model: truck, share: 0.05 }
+# No NPC traffic yet: it returns once agents can follow the lane join, keep off the barrier and
+# merge out of the taper lanes.

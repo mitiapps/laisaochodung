@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RPM_BAR_MAX, indicatorLamps, pedalBars, rpmFraction, steerPosition } from './hud-view.js';
+import { RPM_BAR_MAX, indicatorLamps, noticeItems, pedalBars, rpmFraction, steerPosition } from './hud-view.js';
 
 describe('HUD view helpers', () => {
   it('clamps the rpm bar to 0..1', () => {
@@ -34,5 +34,14 @@ describe('HUD view helpers', () => {
     expect(steerPosition(0.5)).toBe(0.75);
     expect(steerPosition(3)).toBe(1);
     expect(steerPosition(Number.NaN)).toBe(0.5);
+  });
+
+  it('keys notices by contact tick, counting contacts on the same tick', () => {
+    const at = (/** @type {number} */ tick) =>
+      /** @type {import('../../contracts/score.js').Notice} */ (/** @type {unknown} */ ({ tick, text: { vi: 'x' } }));
+    const items = noticeItems([at(100), at(160), at(160)]);
+    expect(items.map((i) => i.key)).toEqual(['100#0', '160#0', '160#1']);
+    expect(noticeItems([at(160), at(160)]).map((i) => i.key)).toEqual(['160#0', '160#1']);
+    expect(noticeItems([])).toEqual([]);
   });
 });
