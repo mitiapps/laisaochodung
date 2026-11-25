@@ -2,7 +2,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { DirectionalLight, InstancedMesh, Mesh, MeshLambertMaterial, MeshStandardMaterial, Texture } from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildFrames } from '../testing/index.js';
-import { LOW_QUALITY_PIXEL_RATIO, buildWorld, pixelRatioFor, softwareRenderer } from './renderer.js';
+import { LOW_QUALITY_PIXEL_RATIO, buildWorld, detectRenderQuality, farFor, pixelRatioFor, softwareRenderer } from './renderer.js';
+import { FAR_M, LOW_FAR_M } from './scene.js';
 
 /** @typedef {import('../contracts/map.js').GameMap} GameMap */
 /** @typedef {import('../contracts/vehicle.js').VehicleInfo} VehicleInfo */
@@ -87,22 +88,45 @@ describe('the full scene of every shipped map', () => {
 
 describe('software rasteriser detection', () => {
   /**
-   * A renderer stand-in whose context reports `name` as its unmasked renderer.
+   * A WebGL context stand-in that reports `name` as its unmasked renderer.
    * @param {string | null} name Renderer name, or null without the debug extension.
-   * @returns {import('three').WebGLRenderer} Stand-in.
+   * @param {() => void} [lose] Called when the context is released.
+   * @returns {WebGLRenderingContext} Stand-in.
    */
-  const glNamed = (name) =>
-    /** @type {import('three').WebGLRenderer} */ (
+  const ctxNamed = (name, lose = () => {}) =>
+    /** @type {WebGLRenderingContext} */ (
       /** @type {unknown} */ ({
-        getContext: () => ({ getExtension: () => (name === null ? null : { UNMASKED_RENDERER_WEBGL: 0x9246 }), getParameter: () => name }),
+        getExtension: (/** @type {string} */ ext) => {
+          if (ext === 'WEBGL_lose_context') return { loseContext: lose };
+          return name === null ? null : { UNMASKED_RENDERER_WEBGL: 0x9246 };
+        },
+        getParameter: () => name,
       })
     );
 
+  /**
+   * A document stand-in whose canvases return `ctx` for WebGL, or nothing.
+   * @param {WebGLRenderingContext | null} ctx Context.
+   * @returns {Document} Stand-in.
+   */
+  const docWith = (ctx) =>
+    /** @type {Document} */ (/** @type {unknown} */ ({ createElement: () => ({ getContext: () => ctx }) }));
+
   it('treats SwiftShader and llvmpipe as software and a GPU or an unknown name as hardware', () => {
-    expect(softwareRenderer(glNamed('ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)'))).toBe(true);
-    expect(softwareRenderer(glNamed('llvmpipe (LLVM 19.1.1, 256 bits)'))).toBe(true);
-    expect(softwareRenderer(glNamed('ANGLE (AMD, AMD Radeon 780M (radeonsi, gfx1103), OpenGL 4.6)'))).toBe(false);
-    expect(softwareRenderer(glNamed(null))).toBe(false);
+    expect(softwareRenderer(ctxNamed('ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)'))).toBe(true);
+    expect(softwareRenderer(ctxNamed('llvmpipe (LLVM 19.1.1, 256 bits)'))).toBe(true);
+    expect(softwareRenderer(ctxNamed('ANGLE (AMD, AMD Radeon 780M (radeonsi, gfx1103), OpenGL 4.6)'))).toBe(false);
+    expect(softwareRenderer(ctxNamed(null))).toBe(false);
+  });
+
+  it('picks the quality from a probe context and releases it', () => {
+    const lose = vi.fn();
+    expect(detectRenderQuality(docWith(ctxNamed('llvmpipe (LLVM 19.1.1, 256 bits)', lose)))).toBe('low');
+    expect(lose).toHaveBeenCalledTimes(1);
+    const loseGpu = vi.fn();
+    expect(detectRenderQuality(docWith(ctxNamed('ANGLE (AMD, AMD Radeon 780M (radeonsi, gfx1103), OpenGL 4.6)', loseGpu)))).toBe('high');
+    expect(loseGpu).toHaveBeenCalledTimes(1);
+    expect(detectRenderQuality(docWith(null))).toBe('high');
   });
 });
 
@@ -136,6 +160,7 @@ describe('render quality', () => {
     expect(pixelRatioFor('high', 1.5)).toBe(1.5);
     expect(pixelRatioFor('high', 3)).toBe(2);
     expect(pixelRatioFor('high', undefined)).toBe(1);
+    expect(farFor('high')).toBe(FAR_M);
   });
 
   it('draws the scenery with Lambert materials and a reduced pixel ratio on the low-cost path', () => {
@@ -152,5 +177,7 @@ describe('render quality', () => {
     expect(pixelRatioFor('low', 2)).toBe(LOW_QUALITY_PIXEL_RATIO);
     expect(LOW_QUALITY_PIXEL_RATIO).toBeGreaterThan(0);
     expect(LOW_QUALITY_PIXEL_RATIO).toBeLessThan(1);
+    expect(farFor('low')).toBe(LOW_FAR_M);
+    expect(LOW_FAR_M).toBeLessThan(FAR_M);
   });
 });

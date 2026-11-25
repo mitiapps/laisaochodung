@@ -16,7 +16,7 @@ import { interpolateEgo, isDiscontinuity } from './interpolate.js';
 import { leanAngle, wheelOffsets } from './math.js';
 import { buildRoadMeshes } from './road-mesh.js';
 import { buildRouteMarkers } from './route-markers.js';
-import { createChaseCamera, createEnvironment } from './scene.js';
+import { FAR_M, LOW_FAR_M, createChaseCamera, createEnvironment } from './scene.js';
 import { buildScenery } from './scenery/index.js';
 import { SCENERY_KIT } from './scenery/kit.js';
 import { buildSigns } from './signs.js';
@@ -52,20 +52,37 @@ import { vehicleModel } from './vehicles/index.js';
 const nowS = () => performance.now() / 1000;
 
 /**
- * Whether the WebGL context runs on a software rasteriser, by its unmasked renderer name.
- * @param {WebGLRenderer} gl Renderer.
+ * Whether a WebGL context runs on a software rasteriser, by its unmasked renderer name.
+ * @param {Pick<WebGLRenderingContext, 'getExtension' | 'getParameter'>} ctx WebGL context.
  * @returns {boolean} Software.
  */
-export function softwareRenderer(gl) {
-  const ctx = gl.getContext();
+export function softwareRenderer(ctx) {
   const ext = ctx.getExtension('WEBGL_debug_renderer_info');
   const name = ext ? String(ctx.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : '';
   return /swiftshader|llvmpipe|softpipe|software/iu.test(name);
 }
 
 /**
+ * The render quality of this browser, read from a throwaway WebGL context before the real one
+ * is made: antialiasing is a context attribute, so it must be chosen at creation. The probe
+ * context is released at once. Without WebGL the answer is `high`, and the real renderer then
+ * reports the failure.
+ * @param {Document} doc Document to create the probe canvas in.
+ * @returns {RenderQuality} Quality.
+ */
+export function detectRenderQuality(doc) {
+  const probe = doc.createElement('canvas');
+  const ctx = probe.getContext('webgl2') ?? probe.getContext('webgl');
+  if (!ctx) return 'high';
+  const quality = softwareRenderer(ctx) ? 'low' : 'high';
+  ctx.getExtension('WEBGL_lose_context')?.loseContext();
+  return quality;
+}
+
+/**
  * How much the renderer spends per frame. `low` serves software rasterisers (SwiftShader,
- * llvmpipe): fewer drawing-buffer pixels and cheaper scenery materials.
+ * llvmpipe): no antialiasing, fewer drawing-buffer pixels, cheaper scenery materials and a
+ * shorter view range.
  * @typedef {'high' | 'low'} RenderQuality
  */
 
@@ -82,6 +99,15 @@ export const LOW_QUALITY_PIXEL_RATIO = 0.5;
 export function pixelRatioFor(quality, devicePixelRatio) {
   if (quality === 'low') return LOW_QUALITY_PIXEL_RATIO;
   return Math.min(devicePixelRatio || 1, 2);
+}
+
+/**
+ * Camera far plane for a quality.
+ * @param {RenderQuality} quality Quality.
+ * @returns {number} Metres.
+ */
+export function farFor(quality) {
+  return quality === 'low' ? LOW_FAR_M : FAR_M;
 }
 
 /**
@@ -106,7 +132,7 @@ export function buildWorld(map, vehicleInfo, { quality = 'high' } = {}) {
   scene.add(markers.group);
   const actors = buildActors(map);
   scene.add(actors.group);
-  const environment = createEnvironment(scene, road.asphalt);
+  const environment = createEnvironment(scene, road.asphalt, { farM: farFor(quality) });
 
   const config = vehicleModel(vehicleInfo.id, vehicleInfo.legalClass);
   const ego = createVehicleView({ config, lengthM: vehicleInfo.lengthM, widthM: vehicleInfo.widthM, lamps: true });
@@ -149,11 +175,11 @@ export function buildWorld(map, vehicleInfo, { quality = 'high' } = {}) {
  * @returns {Renderer} Renderer.
  */
 export function createRenderer(canvas, map, vehicleInfo) {
-  const gl = new WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   // A software rasteriser runs far below playable at full size (about 14 fps on tutorial 01 at
-  // 1280 × 720 in SwiftShader), mostly for fill, so it takes the low-cost path.
-  /** @type {RenderQuality} */
-  const quality = softwareRenderer(gl) ? 'low' : 'high';
+  // 1280 × 720 in SwiftShader), mostly for fill, so it takes the low-cost path. Multisampling
+  // alone halves its frame rate, so the low path also draws without it.
+  const quality = detectRenderQuality(canvas.ownerDocument);
+  const gl = new WebGLRenderer({ canvas, antialias: quality === 'high', powerPreference: 'high-performance' });
   gl.setPixelRatio(pixelRatioFor(quality, globalThis.devicePixelRatio));
   gl.outputColorSpace = SRGBColorSpace;
   gl.toneMapping = ACESFilmicToneMapping;
@@ -167,7 +193,7 @@ export function createRenderer(canvas, map, vehicleInfo) {
   const offsets = wheelOffsets(vehicleInfo.legalClass, vehicleInfo.lengthM, vehicleInfo.widthM);
   const shake = createShake();
 
-  const chase = createChaseCamera(canvas.clientWidth / Math.max(1, canvas.clientHeight) || 16 / 9, vehicleInfo.legalClass);
+  const chase = createChaseCamera(canvas.clientWidth / Math.max(1, canvas.clientHeight) || 16 / 9, vehicleInfo.legalClass, farFor(quality));
   const focus = new Vector3();
 
   /** @type {number[]} */

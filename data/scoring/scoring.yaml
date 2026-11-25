@@ -19,5 +19,7 @@ crashCauseWindowS: 3
 # is about 7 times the scooter). The game's own line ("ngưỡng của trò chơi").
 accidentRelSpeed: 4.2
 # Below this ego speed (m/s) a contact is never a breach and never ends the run. It never blocks
-# a notice: a stopped player who is struck still sees one.
+# a notice: a stopped player who is struck still sees one. The fault table also counts another
+# vehicle below this speed at the contact as standing (collision-policy.yaml,
+# rightOfWayViolations).
 contactMinEgoSpeed: 0.5

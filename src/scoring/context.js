@@ -34,6 +34,16 @@ export const ACTOR_RANGE_MARGIN_M = 20;
 const WRECK_STATES = Object.freeze(['crashed', 'fallen']);
 
 /**
+ * Speed of an actor as other road users see it: 0 for a wreck (`crashed`, `fallen`), which stands
+ * still whatever its pose speed says (a car wreck still slides), else the pose speed magnitude.
+ * @param {import('../contracts/index.js').ActorPose} pose Pose.
+ * @returns {number} Speed in m/s.
+ */
+export function poseSpeed(pose) {
+  return WRECK_STATES.includes(pose.state) ? 0 : Math.abs(pose.speed);
+}
+
+/**
  * Radius around the ego inside which actors enter the per-step actor list: the largest distance
  * parameter of any rule (a detection parameter whose name ends in `M`, metres by convention; today
  * the high-beam `rangeM`) plus `ACTOR_RANGE_MARGIN_M`.
@@ -179,7 +189,7 @@ function nearActors(env, frame) {
       lateral: dx * lx + dz * lz,
       lengthM,
       widthM,
-      speed: WRECK_STATES.includes(pose.state) ? 0 : Math.abs(pose.speed),
+      speed: poseSpeed(pose),
     });
   }
   return out;

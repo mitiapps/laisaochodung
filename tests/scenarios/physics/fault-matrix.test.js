@@ -14,6 +14,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { breachesOf, loadShippedMap, straightLine } from '../kinematic/drive.js';
 import { drivePhysics, initRapier } from './driver.js';
 import { PARAMS } from './traffic-harness.js';
+import { realBundle } from '../../../scripts/rules/lib/test-support.js';
+import { scoreRun } from '../../../src/scoring/index.js';
 
 /** @typedef {import('../../../src/contracts/index.js').GameMap} GameMap */
 /** @typedef {import('../../../src/contracts/index.js').MapActor} MapActor */
@@ -103,10 +105,20 @@ describe('fault table end to end on tutorial 02', () => {
   }, 120_000);
 
   it('a car driving head-on in the ego lane carries wrong-way, and striking it is a notice', async () => {
-    const run = await driveEast(stage([{ id: 'head-on', path: [[-90, LANE_Z], [-215, LANE_Z]], speed: 4 }]), 6);
+    // The car sets off once the ego has reached its cruise, so its wrong-way flag first shows while
+    // the ego already drives at the speed it strikes with: the ego did not speed up into it.
+    const run = await driveEast(stage([{ id: 'head-on', path: [[-90, LANE_Z], [-215, LANE_Z]], speed: 4, trigger: { atS: 4 } }]), 6);
     expectReplayEqual(run);
     const hit = firstCarContact(run);
     expect(hit.e.otherViolations).toContain('wrong-way');
+    const bundle = await realBundle();
+    const flagged = /** @type {import('../../../src/contracts/index.js').Frame} */ (
+      run.frames.find((f) => f.actors.some((a) => a.id === 'head-on' && a.violations.includes('wrong-way')))
+    );
+    const at = /** @type {import('../../../src/contracts/index.js').Frame} */ (run.frames.find((f) => f.tick === hit.tick));
+    expect(hit.e.egoSpeed - flagged.ego.speed).toBeLessThanOrEqual(/** @type {number} */ (bundle.collisionPolicy.excuseMaxSpeedGainMps));
+    // A hard contact: the frame's speed after the impact is far below the speed the ego struck with.
+    expect(at.ego.speed).toBeLessThan(hit.e.egoSpeed / 2);
     expect(breachesOf(run.live, 'crash')).toEqual([]);
     expect(run.live.notices.length).toBeGreaterThan(0);
     expect(run.live.notices[0].violations).toContain('wrong-way');
@@ -122,6 +134,56 @@ describe('fault table end to end on tutorial 02', () => {
     const crash = breachesOf(run.live, 'crash').find((b) => b.tick === hit.tick);
     expect(crash?.cause).toBe('speeding');
     expect(run.live.notices).toEqual([]);
+  }, 120_000);
+
+  it('pulling away on green into a red-light runner crossing from the left is a notice', async () => {
+    // The signal phases are swapped so the ego has green from t 0; it starts from rest 13 m before
+    // its stop line. The only traffic is a stream down the northern approach whose drivers all run
+    // the red. Seed 12 gives a glancing contact with a rider: the ego gains several m/s between the
+    // rider's red-light flag first showing and the contact, and keeps most of its speed after it.
+    const map = stage([]);
+    const traffic = /** @type {NonNullable<GameMap['traffic']>} */ (map.traffic);
+    traffic.sources = traffic.sources.map((s) => ({ ...s, ratePerH: s.laneId === 'bac-b0' ? 1800 : 0 }));
+    for (const sig of map.signals) sig.cycle = { ...sig.cycle, offset: sig.cycle.offset === 30 ? 0 : 30 };
+    const startX = -30;
+    map.route.start = { ...map.route.start, pos: { x: startX, z: LANE_Z } };
+    const params = structuredClone(PARAMS);
+    for (const p of Object.values(params.personalities)) p.violations.redLight = 1;
+    params.violations.carScale = 1;
+    const run = await drivePhysics(map, 'car-sedan', {
+      sim: { traffic: 'map', runSeed: 12, params },
+      aware: false,
+      cruiseMps: 12,
+      path: straightLine(startX, 15, LANE_Z),
+      maxS: 15 - startX,
+    });
+    expectReplayEqual(run);
+    const contacts = run.frames.flatMap((f) => f.events.flatMap((e) => (e.type === 'collision' && e.otherKind !== 'static' ? [{ f, e }] : [])));
+    expect(contacts.length).toBeGreaterThan(0);
+    const { f: at, e: hit } = contacts[0];
+    expect(hit.otherKind).toBe('motorbike');
+    expect(hit.otherViolations).toContain('red-light');
+    expect(hit.sameLaneAhead).toBe(false);
+    expect(hit.striker).toBe('ego');
+    const flagged = run.frames.find((f) => f.actors.some((a) => a.id === hit.otherId && a.violations.includes('red-light')));
+    // Fast enough to be charged but for the excuse, and well faster at contact than when the flag
+    // first showed, by the frame speed and by the speed the ego struck with.
+    expect(at.ego.speed).toBeGreaterThan(0.5);
+    expect(at.ego.speed - /** @type {NonNullable<typeof flagged>} */ (flagged).ego.speed).toBeGreaterThan(1);
+    expect(hit.egoSpeed - /** @type {NonNullable<typeof flagged>} */ (flagged).ego.speed).toBeGreaterThan(1);
+    // The rider is still crossing at the contact, so its red-light run keeps excusing the ego.
+    const rider = at.actors.find((a) => a.id === hit.otherId);
+    expect(rider?.state).toBe('moving');
+    expect(rider?.speed).toBeGreaterThan((await realBundle()).scoring.contactMinEgoSpeed);
+    expect(breachesOf(run.live, 'crash').some((b) => b.tick === at.tick)).toBe(false);
+    expect(run.live.notices.find((n) => n.tick === at.tick)?.violations).toEqual(['red-light']);
+    expect(run.live.breaches.filter((b) => b.tick <= at.tick)).toEqual([]);
+    // The right-of-way exception is what makes it a notice: without it the same run is charged.
+    const bundle = structuredClone(await realBundle());
+    delete bundle.collisionPolicy.rightOfWayViolations;
+    const without = scoreRun(bundle, map, run.vehicle, run.frames, { quit: false });
+    expect(breachesOf(without, 'crash').some((b) => b.tick === at.tick)).toBe(true);
+    expect(without.notices.some((n) => n.tick === at.tick)).toBe(false);
   }, 120_000);
 
   it('the legal driver keeps its distance behind a car that stops dead, with no contact', async () => {

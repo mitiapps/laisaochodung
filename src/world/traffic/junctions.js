@@ -43,6 +43,10 @@
  * - **Keep-clear at a red exit.** While the light at the end of a short exit lane is not green,
  *   the exit room ends at its stop line, so a vehicle that does not fit before it waits before the
  *   junction instead of stopping in it.
+ * - **Keep-clear behind a wreck.** A connector has no exit room while a wreck stands on it, or on
+ *   a connector merging with it with its body in or past the merge zone: agents wait at the hold
+ *   point until the wreck is cleared instead of stopping in the box behind it. One already holding
+ *   the claim gives it back while it can still stop at the hold point.
  *
  * Claims are requested in the compute phase and granted in the apply phase, nearest the hold point
  * first, each grant re-checked against the claims granted before it, so two agents never take
@@ -201,10 +205,41 @@ export function zoneClaimed(st, conn, cf, self) {
 }
 
 /**
+ * Whether a wreck stands where an agent taking connector `conn` would have to stop inside the
+ * junction: on `conn` itself, or on a connector merging with it with its front in or past the
+ * merge zone.
+ * @param {TrafficState} st State.
+ * @param {number} conn Connector edge.
+ * @returns {boolean} A wreck in the way.
+ */
+export function wreckInWay(st, conn) {
+  if (wreckFrom(st, conn, -Infinity)) return true;
+  for (const cf of st.graph.edges[conn].conflicts) if (cf.merge && wreckFrom(st, cf.other, cf.otherFromS)) return true;
+  return false;
+}
+
+/**
+ * Whether a wreck on `edge` has its front at `fromS` or beyond.
+ * @param {TrafficState} st State.
+ * @param {number} edge Edge.
+ * @param {number} fromS Distance along the edge.
+ * @returns {boolean} Such a wreck.
+ */
+function wreckFrom(st, edge, fromS) {
+  const list = st.edgeAgents[edge];
+  for (let i = 0; i < st.edgeCount[edge]; i += 1) {
+    const k = list[i];
+    if (st.wreck[k] && st.s[k] + st.lengthM[k] / 2 >= fromS) return true;
+  }
+  return false;
+}
+
+/**
  * Room on the exit lane of a connector for one more agent: from the exit lane start to the rear of
  * its last agent (or the ego standing on it), and to its stop line while that light is not green,
  * less what agents already holding claims onto that lane will take. An empty lane with a green
- * light or none always admits one agent.
+ * light or none always admits one agent. None (−Infinity) while a wreck is in the way
+ * (`wreckInWay`).
  * @param {TrafficState} st State.
  * @param {number} conn Connector edge.
  * @param {number} self Slot asking.
@@ -214,6 +249,7 @@ export function zoneClaimed(st, conn, cf, self) {
  * @returns {number} Room, metres.
  */
 export function exitRoom(st, conn, self, reserved, ego, lights) {
+  if (wreckInWay(st, conn)) return -Infinity;
   const exit = st.graph.edges[st.graph.edges[conn].toEdge];
   const n = st.edgeCount[exit.index];
   let room = Infinity;

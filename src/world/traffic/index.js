@@ -40,10 +40,10 @@ import { trafficLightStates } from '../signals.js';
 import { idmAcceleration, integrate } from './idm.js';
 import { corridorObstacle } from './perception.js';
 import { reachesBeforeRed, redRemaining, signalDecision, yellowRemaining, yellowStopProbability } from './signals.js';
-import { HELD_BLOCKED, HELD_EXIT, breaksDeadlock, checkConflicts, claimBlocking, defersToWaiter, exitRoom, laneLight, mergesAhead, toExit, zoneClaimed, zonesOccupied } from './junctions.js';
+import { HELD_BLOCKED, HELD_EXIT, breaksDeadlock, checkConflicts, claimBlocking, defersToWaiter, exitRoom, laneLight, mergesAhead, toExit, wreckInWay, zoneClaimed, zonesOccupied } from './junctions.js';
 import { FLAG, draw, latch, raise, rateOf, violationsOf } from './violations.js';
 import { distracted, perceiveLeader, resetPerception } from './human-factors.js';
-import { chooseSlot, inTurnBand, moveTouches, overlapsAt, pathBlocked } from './moto-slots.js';
+import { GO_ROUND_AFTER_S, GO_ROUND_LOOK_M, chooseSlot, goRoundEgo, inTurnBand, moveTouches, overlapsAt, pathBlocked } from './moto-slots.js';
 import { stepMobil } from './mobil.js';
 import { detectContacts, makeWreck } from './contacts.js';
 import { STOPPED_MPS, createSpawner, inViewCone, runSpawner } from './spawner.js';
@@ -968,9 +968,11 @@ function computePhase(st, input, egoObs, scriptedObs, sc) {
     // no further: no claim, so a held-up agent never blocks the junction.
     const blockedAhead = v < STOPPED_MPS && accGo <= 0;
     if (st.claim[k] === next) {
-      // Already claimed: give it back for a signal the agent can still stop for, or while it stands
-      // blocked before the hold point.
-      if (!signalGo || blockedAhead) {
+      // Already claimed: give it back for a signal the agent can still stop for, while it stands
+      // blocked before the hold point, or for a wreck in its way while it can still stop before
+      // the junction.
+      const wreckAhead = front <= e.holdS + 0.01 && (v * v) / (2 * b) <= dHold && wreckInWay(st, next);
+      if (!signalGo || blockedAhead || wreckAhead) {
         sc.drops[k] = 1;
         sc.holds[k] = 1;
         sc.accHold[k] = holdAcc;
@@ -1369,6 +1371,33 @@ function applyPhase(st, input, sc, nReq) {
 }
 
 /**
+ * What a rider going round the ego must also keep clear of: the scripted actors and static
+ * obstacles of `perceived` (all but its first entry, the ego) and every other agent within
+ * `radius`, from the grid.
+ * @param {TrafficState} st State, with the grid built over the agents' current centres.
+ * @param {number} slot Rider.
+ * @param {readonly Obstacle[]} perceived The ego, then scripted actors and static obstacles.
+ * @param {number} radius Search radius, metres.
+ * @returns {Obstacle[]} Obstacles.
+ */
+function nearbyObstacles(st, slot, perceived, radius) {
+  const out = perceived.slice(1);
+  queryGrid(st.grid, st.x[slot], st.z[slot], radius, (k) => {
+    if (k === slot) return false;
+    out.push({
+      footprint: footprint({ x: st.x[k], z: st.z[k] }, st.heading[k], st.lengthM[k], st.widthM[k]),
+      x: st.x[k],
+      z: st.z[k],
+      radius: Math.hypot(st.lengthM[k], st.widthM[k]) / 2,
+      vx: st.v[k] * Math.cos(st.heading[k]),
+      vz: -st.v[k] * Math.sin(st.heading[k]),
+    });
+    return false;
+  });
+  return out;
+}
+
+/**
  * Positions of every slot in its edge list.
  * @param {TrafficState} st State.
  * @param {Int32Array} listPos Output.
@@ -1478,6 +1507,18 @@ export function stepTraffic(state, input) {
     if (edge.kind !== 'lane') continue;
     edgePoint(edge, Math.min(st.s[k], edge.length), LANE_POINT);
     chooseSlot(st, k, sc.listPos[k], LANE_POINT.heading, corridor, Math.hypot(st.x[k] - e.pos.x, st.z[k] - e.pos.z));
+  }
+  // A rider on a connector has no slot to choose, so one held by an ego that has stood in its way
+  // for a while goes round it (a car keeps waiting).
+  if (st.egoStillS >= GO_ROUND_AFTER_S) {
+    for (let i = 0; i < st.activeCount; i += 1) {
+      const k = st.active[i];
+      if (!st.isMoto[k] || st.wreck[k] || st.crossing[k] || distracted(st, k, input.t) || (st.tick + st.spawnIndex[k]) % slotPeriod !== 0) continue;
+      if (st.graph.edges[st.edge[k]].kind !== 'connector') continue;
+      const reach = GO_ROUND_LOOK_M + st.lengthM[k] + perceived[0].radius;
+      if (Math.hypot(st.x[k] - e.pos.x, st.z[k] - e.pos.z) > reach) continue;
+      goRoundEgo(st, k, perceived[0], nearbyObstacles(st, k, perceived, reach + GO_ROUND_LOOK_M));
+    }
   }
 
   /** @type {Obstacle[]} */

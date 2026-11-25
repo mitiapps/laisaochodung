@@ -57,11 +57,20 @@ rearEndContributingRules: [lane-change, turn-signal]
 # Only right-of-way violations of the other party excuse a player who strikes it; a merely
 # speeding or tailgating vehicle does not.
 excusingViolations: [red-light, wrong-way, no-yield, unsafe-lane-change]
-# Game design: an excusing violation excuses the player only if the player gained no more than
-# this speed (m/s) between the violation first showing on that party and the contact. Another
+# Game design: an excusing violation excuses the player only if the player's speed at the contact
+# (the collision event's egoSpeed) is no more than this (m/s) above its speed when the violation
+# first showed on that party. Another
 # party's violation does not lift the player's own duty to observe, slow down and keep a safe
 # distance (10.a); a player who speeds up into a rider it has seen cut in could have avoided it.
 excuseMaxSpeedGainMps: 0.5
+# Game design: these excusing violations keep excusing a player who gained speed, unless the other
+# vehicle was ahead in the player's lane or was standing at the contact (a wreck, or slower than
+# contactMinEgoSpeed in scoring.yaml). A party crossing the player's right of way (running the red,
+# or entering without yielding) stays at fault while the player accelerates lawfully, for example
+# away from a green light; one standing in the player's path is an obstacle every driver must slow
+# down and stop for (Luật 36 Điều 12 khoản 3). The player's own speeding or red-light episode still
+# charges the contact through the contributing row first.
+rightOfWayViolations: [red-light, no-yield]
 # Game design: seconds after a notice contact (rows 1 to 5) during which every further contact
 # with a vehicle, a static object or a kerb, and a fall, is a notice too (the shove). Row 0
 # notices do not restart the window.
@@ -73,6 +82,7 @@ paramBasis:
   excusingViolations: design
   aftermathWindowS: design
   excuseMaxSpeedGainMps: design
+  rightOfWayViolations: design
 # Notice texts, keyed by the other party's first violation, then `from-behind`, then `none`;
 # `aftermath` for contacts inside the aftermath window. A contact that is a notice only because
 # the player was below contactMinEgoSpeed takes `ego-slow` (a vehicle) or `pedestrian-slow`. `{vehicle}` is replaced by the other

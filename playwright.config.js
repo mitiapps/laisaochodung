@@ -8,8 +8,11 @@ const DEV_PORT = Number(process.env.E2E_DEV_PORT ?? 5180);
 const SERVERS = process.env.E2E_SERVERS ?? 'both';
 if (!['both', 'preview', 'dev'].includes(SERVERS)) throw new Error(`E2E_SERVERS must be both, preview or dev, got "${SERVERS}"`);
 
-/** Specs that read the dev-only `window.__laisaochodung.debugInfo()` run against the dev server. */
-const DEV_SPECS = /traffic-perf\.spec\.js$/u;
+/**
+ * Specs that need the dev server: the dev-only `window.__laisaochodung.debugInfo()` and the dev UI
+ * preview page (`dev/ui-preview.html`), which the production build leaves out.
+ */
+const DEV_SPECS = /(traffic-perf|hud-preview)\.spec\.js$/u;
 
 const previewServer = {
   command: `npm run build && npm run preview -- --port ${PORT} --strictPort`,

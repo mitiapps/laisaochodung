@@ -12,7 +12,7 @@ import { buildRouteMarkers, markedCheckpoint } from './route-markers.js';
 import { buildActors } from './actors.js';
 import { createVehicleView, fitToFootprint, lampState } from './vehicle-view.js';
 import { createShake, shakeAmplitude, skidSegments } from './effects.js';
-import { FAR_M, applyNight, environmentLook, chaseTarget, nightTargets } from './scene.js';
+import { FAR_M, LOW_FAR_M, applyNight, createEnvironment, environmentLook, chaseTarget, nightTargets } from './scene.js';
 import { SIGN_ART } from './sign-art.js';
 import { vehicleModel, actorModel } from './vehicles/index.js';
 import { wheelOffsets } from './math.js';
@@ -285,6 +285,28 @@ describe('lamps and effects', () => {
     expect(environmentLook({ clockMin: 720, weather: 'rain' }).fogDensity).toBeGreaterThan(
       environmentLook({ clockMin: 720, weather: 'clear' }).fogDensity,
     );
+  });
+
+  it('thickens the clear-day fog to hide the shorter far plane of the low-cost path, and only that', () => {
+    /**
+     * Fog density after one update.
+     * @param {number} farM Far plane.
+     * @param {import('../contracts/telemetry.js').FrameEnv} env Environment.
+     * @returns {number} Density.
+     */
+    const densityAt = (farM, env) => {
+      const scene = new Scene();
+      const environment = createEnvironment(scene, new MeshStandardMaterial(), { farM });
+      environment.update(env, new Vector3(), 0);
+      environment.dispose();
+      return /** @type {import('three').FogExp2} */ (scene.fog).density;
+    };
+    const day = { clockMin: 720, weather: /** @type {const} */ ('clear') };
+    const rain = { clockMin: 720, weather: /** @type {const} */ ('rain') };
+    const night = { clockMin: 0, weather: /** @type {const} */ ('clear') };
+    for (const farM of [FAR_M, LOW_FAR_M]) expect(Math.exp(-((densityAt(farM, day) * farM) ** 2))).toBeLessThan(0.02);
+    for (const env of [day, rain, night]) expect(densityAt(FAR_M, env)).toBe(environmentLook(env).fogDensity);
+    expect(densityAt(LOW_FAR_M, rain)).toBe(environmentLook(rain).fogDensity);
   });
 
   it('fogs out the 300 m far plane and drives night emissives', () => {

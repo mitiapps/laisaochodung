@@ -20,10 +20,13 @@
  * 5. Contacts are decided per event (`fault.js`) after every other rule's episodes of the step
  *    are applied: each collision or fall is either charged or a `Notice`. Notices open no
  *    episode, deduct nothing, are debounced per other party for `rearmS` and kept in the state.
- *    An other party's excusing violation stops excusing the player once the player has gained
- *    more than `excuseMaxSpeedGainMps` since it first showed (the state keeps the ego speed of
- *    that moment per actor). A vehicle contact charged but for the contact speed gate, and a
- *    pedestrian contact below the gate, are notices with their own texts.
+ *    An other party's excusing violation stops excusing the player once the player's speed at
+ *    contact (the event's `egoSpeed`) is more than `excuseMaxSpeedGainMps` above its speed when
+ *    the violation first showed (the state keeps the ego speed of that moment per actor). A
+ *    right-of-way violation outlasts that gain only while the other party is moving at contact
+ *    (not a wreck, at or above `contactMinEgoSpeed`) and not ahead in the player's lane. A
+ *    vehicle contact charged but for the contact speed gate, and a pedestrian contact below the
+ *    gate, are notices with their own texts.
  *    A notice from the fault table opens the aftermath window: for `aftermathWindowS` after it
  *    (from the next step on) every further contact is a notice, and the line-crossing and
  *    pavement detectors start over each step, as after a reset, without closing any episode.
@@ -35,7 +38,7 @@
  */
 
 import { decreeGroupOf } from '../contracts/vehicle.js';
-import { actorRangeOf, initialCore, stepCore } from './context.js';
+import { actorRangeOf, initialCore, poseSpeed, stepCore } from './context.js';
 import { DETECTORS } from './detectors/index.js';
 import { bothSidesNote, contactFields, decideFault, noticeText } from './fault.js';
 import { resolveBreach, resolveCrash } from './resolve.js';
@@ -120,7 +123,10 @@ function noticeKey(e) {
 
 /**
  * The ego speed at which each actor of the frame that shows an excusing violation first showed
- * one, carried over from `prev` (copied only when it changes).
+ * one, carried over from `prev` (copied only when it changes). The speed is a magnitude, like a
+ * collision event's `egoSpeed`. An actor first showing in a frame that also holds a contact with it
+ * takes that contact's `egoSpeed` (the speed before the impact, not the frame's speed after it),
+ * so the contact sees no gain.
  * @param {Record<string, number>} prev Speeds so far.
  * @param {Frame} frame Frame.
  * @param {readonly string[]} excusing Excusing violations.
@@ -138,7 +144,11 @@ function excuseSpeeds(prev, frame, excusing) {
   if (!added && kept === Object.keys(prev).length) return prev;
   /** @type {Record<string, number>} */
   const next = {};
-  for (const a of frame.actors) if (shows(a)) next[a.id] = prev[a.id] ?? frame.ego.speed;
+  for (const a of frame.actors) {
+    if (!shows(a)) continue;
+    const contact = frame.events.find((e) => e.type === 'collision' && e.otherId === a.id);
+    next[a.id] = prev[a.id] ?? (contact?.type === 'collision' ? contact.egoSpeed : Math.abs(frame.ego.speed));
+  }
   return next;
 }
 
@@ -244,6 +254,19 @@ export function createScorer(bundle, map, vehicleInfo) {
   const slowPedestrian = (e) => Boolean(policy.faultRows) && e.type === 'collision' && e.otherKind === 'pedestrian' && e.egoSpeed < contactMinEgoSpeed;
   const excusing = policy.excusingViolations ?? [];
   const excuseGain = policy.excuseMaxSpeedGainMps;
+  /**
+   * Whether the other party of a contact was moving in the contact frame: present, not a wreck,
+   * and at or above the contact speed gate. The frame's poses are those the contact was made
+   * against (a struck traffic agent turns into a wreck only on the next step). A party missing
+   * from the frame counts as standing.
+   * @param {Frame} frame Frame.
+   * @param {string | null} id Other party's id.
+   * @returns {boolean} Moving.
+   */
+  const isMoving = (frame, id) => {
+    const pose = id === null ? undefined : frame.actors.find((a) => a.id === id);
+    return pose !== undefined && poseSpeed(pose) >= contactMinEgoSpeed;
+  };
 
   /** @type {ScorerState} */
   const initial = {
@@ -428,8 +451,10 @@ export function createScorer(bundle, map, vehicleInfo) {
       let anchored = false;
       for (const e of contacts) {
         const seenAt = e.type === 'collision' && e.otherId !== null ? excuseSpeed[e.otherId] : undefined;
-        const egoSpedUp = excuseGain !== undefined && seenAt !== undefined && frame.ego.speed - seenAt > excuseGain;
-        const d = decideFault(policy, e, { aftermath: inAftermath, cause, anyCause, rearEndCause, egoSpedUp });
+        // The gain runs to the speed at contact: the frame's speed is the speed after the impact.
+        const egoSpedUp = excuseGain !== undefined && seenAt !== undefined && e.type === 'collision' && e.egoSpeed - seenAt > excuseGain;
+        const otherMoving = e.type === 'collision' && isMoving(frame, e.otherId);
+        const d = decideFault(policy, e, { aftermath: inAftermath, cause, anyCause, rearEndCause, egoSpedUp, otherMoving });
         if (d.result === 'deduction' && !belowGate(e) && !slowPedestrian(e)) {
           charged.push(e);
           chargedDecisions.push(d);

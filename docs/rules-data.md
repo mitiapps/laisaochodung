@@ -138,18 +138,25 @@ at fault (`src/scoring/fault.js`; first match wins):
 | `from-behind` | The other party came from behind and struck, unless a `rearEndContributingRules` episode (`lane-change`, `turn-signal`) put the player wrongly in front | notice |
 | `contributing` | An episode of any rule but `nonContributingRules` (`night-horn`) is active within `crashCauseWindowS` | deduction |
 | `same-lane-ahead` | The player runs into the vehicle ahead in its lane, which carries no excusing violation the player did not speed up into | deduction |
-| `ego-strikes` | The player struck a vehicle that carries no excusing violation the player did not speed up into | deduction |
+| `ego-strikes` | The player struck a vehicle that carries no excusing violation the player did not speed up into, other than a right-of-way violation of a vehicle still moving at the contact | deduction |
 | `otherwise` | Anything else | notice |
 
 The other party's violations are the flags traffic latched within `crashCauseWindowS`; a
 scripted actor carries `wrong-way` while it moves against the lane it is on. Only
 `excusingViolations` (`red-light`, `wrong-way`, `no-yield`, `unsafe-lane-change`) excuse a player
 who strikes; a merely speeding or tailgating vehicle does not. Nor does one the player closed in
-on: an excusing violation stops excusing once the player has gained more than
-`excuseMaxSpeedGainMps` (0.5 m/s, `design`) between the violation first showing on that vehicle
-and the contact. Another party's violation does not lift the player's own duty to observe, slow
+on: an excusing violation stops excusing once the player's speed at the contact (the collision
+event's `egoSpeed`, not the frame's speed after the impact) is more than `excuseMaxSpeedGainMps`
+(0.5 m/s, `design`) above its speed when the violation first showed on that vehicle. Another party's violation does not lift the player's own duty to observe, slow
 down and keep a safe distance (10.a), so chasing a rider that cut in is the player's crash, while
-a rider cutting in on a player who holds its speed is a notice. Traffic flags a rider's cut-in
+a rider cutting in on a player who holds its speed is a notice. The `rightOfWayViolations`
+(`red-light`, `no-yield`, `design`) are the exception: they keep excusing a player who gained
+speed, unless the other vehicle was ahead in the player's lane or was standing at the contact: a
+wreck, or a vehicle slower than `contactMinEgoSpeed` (0.5 m/s), such as a runner halted on the
+junction connector with its flag still latched. A party crossing the player's right of way stays
+at fault while the player accelerates lawfully, for example away from a green light; a standing
+one is an obstacle every driver must slow down and stop for; a player who was itself speeding or running the light is charged by the `contributing`
+row first. Each entry must also be in `excusingViolations`. Traffic flags a rider's cut-in
 only on the step its own sideways move takes it into the player's stopping corridor; a rider the
 corridor grows over as the player speeds up or steers is not cutting in. A notice carries the other
 party's flags and a text from `noticeTexts`; it never states a legal conclusion. Pedestrian
@@ -157,7 +164,7 @@ contacts never enter the table, and static objects, kerbs and falls match only `
 
 `paramBasis` of the collision policy gives the basis of each fault-table choice
 (`nonContributingRules`, `rearEndContributingRules`, `excusingViolations`, `aftermathWindowS`,
-`excuseMaxSpeedGainMps`); all are `design`, and every one the policy sets needs a basis. The rules
+`excuseMaxSpeedGainMps`, `rightOfWayViolations`); all are `design`, and every one the policy sets needs a basis. The rules
 validator rejects a policy with a fault table and no basis for one of them.
 
 ## Lane-change gaps

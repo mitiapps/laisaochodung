@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { KEY_BINDINGS } from '../../src/contracts/controls.js';
+import { TICK_HZ } from '../../src/contracts/units.js';
+import { MAX_STEPS_PER_FRAME } from '../../src/game/loop.js';
+import { HUD_HZ } from '../../src/game/session.js';
 import { CONTROL_PRESET_STORAGE_KEY } from '../../src/ui/lib/control-preset-store.js';
 
 /**
@@ -8,6 +11,13 @@ import { CONTROL_PRESET_STORAGE_KEY } from '../../src/ui/lib/control-preset-stor
  * DOM-only autopilot follows the navigation arrow to the finish. The car run signals its lane
  * change; the scooter run changes lane with no indicator, so a breach toast and a non-empty result
  * screen are checked against real data.
+ *
+ * Every control is proven with real key presses in `exerciseControls`, and the autopilot drives
+ * the throttle, brakes, gears and indicators with real keys too. Its steering corrections are the
+ * one exception: they are key events dispatched in the page, on the window the game listens to,
+ * so a correction lasts a fixed number of simulated steps. A real key held between two round
+ * trips stays down for as long as those round trips take, which on a loaded runner is most of a
+ * second, and the corrections then overshoot until the car leaves its lane.
  *
  * Tutorial 01 is a straight road east: checkpoints at x 160, 235, 290, 370 and 560 (the last three
  * in the kerb lane, past road works in the inner lane), the finish band at about x 615. While the
@@ -29,21 +39,55 @@ const PEDESTRIAN_WAIT_S = 12;
 const CRUISE_KMH = 20;
 
 /**
+ * Arrow angle, in degrees, inside which the autopilot leaves the wheel alone; near a checkpoint
+ * the band widens to the angle of `LATERAL_TOLERANCE_M` at that distance, so a small sideways
+ * offset close to a gate does not ask for a large correction.
+ */
+const DEAD_BAND_DEG = 2;
+/** Sideways offset from the checkpoint, metres, the autopilot accepts. */
+const LATERAL_TOLERANCE_M = 0.6;
+/** Within this distance of a checkpoint, metres, its bearing swings, so the wheel stays straight. */
+const GATE_M = 8;
+/**
+ * Beyond this arrow angle, in degrees, the autopilot steers with a double correction on every HUD
+ * update and lifts the throttle; between the dead band and this it steers with a single one on
+ * every other update. A correction is seen one loop period late, which on a loaded runner is a few
+ * hundred milliseconds, so small errors get little authority and a large one is corrected at a
+ * lower speed.
+ */
+const FULL_STEER_DEG = 6;
+/** Below this speed, km/h, the throttle stays on whatever the arrow says, so the car never stalls. */
+const MIN_ROLL_KMH = 8;
+/**
+ * The autopilot backs off after standing still with the throttle held for this many decisions in
+ * a row and at least `STUCK_MS` of wall time; from rest the car moves within a fraction of a
+ * simulated second, so only a vehicle held by a kerb or an obstacle stands that long.
+ */
+const STUCK_DECISIONS = 6;
+/** Wall milliseconds of the standstill before backing off; see `STUCK_DECISIONS`. */
+const STUCK_MS = 4000;
+/** Most metres the car reverses when it is stuck; it stops earlier once it points at the target. */
+const BACK_OFF_M = 4;
+
+/**
  * @typedef {object} HudReading
  * @property {number} rotationDeg Nav arrow rotation; positive when the target is to the right.
  * @property {number} distanceM Distance to the next checkpoint or the finish.
  * @property {number} speedKmh Speed.
+ * @property {number} steer Steering −1..1 as the HUD shows it.
  * @property {string} gear Gear readout.
  * @property {boolean} finished The result screen is shown.
  */
 
 /**
- * Reads the HUD in one round trip.
+ * Reads the HUD in one round trip, on the next rendered frame, so each decision sees a new frame
+ * and decisions never run faster than the game draws.
  * @param {import('@playwright/test').Page} page Page.
  * @returns {Promise<HudReading>} Reading.
  */
 function readHud(page) {
-  return page.evaluate(() => {
+  return page.evaluate(async () => {
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
     /**
      * @param {string} id Test id.
      * @returns {Element | null} Element.
@@ -58,6 +102,7 @@ function readHud(page) {
       rotationDeg: rot ? Number(rot[1]) : 0,
       distanceM: Number.isFinite(metres) ? metres : Number.NaN,
       speedKmh: Number(q('hud-speed')?.textContent ?? 'NaN'),
+      steer: Number(q('hud-steer')?.getAttribute('data-value') ?? 0),
       gear: (q('hud-gear')?.textContent ?? '').trim(),
       finished: q('result-screen') !== null,
     };
@@ -65,14 +110,51 @@ function readHud(page) {
 }
 
 /**
- * Holds a key for a while.
+ * Fixed steps of one small steering correction (design): a quarter of the way to full lock, then
+ * back to centre, a correction of a few degrees of heading at cruising speed.
+ */
+const STEER_PULSE_STEPS = 5;
+
+/**
+ * Holds a steering key for a number of simulated steps, then reads the HUD on the next frame, all
+ * in one round trip. The key events are dispatched in the page, on the window the game listens
+ * to, so the hold is counted in the game's own steps (from the frame times, at most
+ * `MAX_STEPS_PER_FRAME` each) and does not stretch with slow round trips to a loaded browser.
+ * @param {import('@playwright/test').Page} page Page.
+ * @param {string} code Key code.
+ * @param {number} steps Fixed steps to hold it for.
+ */
+async function steerPulse(page, code, steps) {
+  await page.evaluate(
+    async ([key, budget, maxPerFrame, hz]) => {
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      let last = /** @type {number} */ (await frame());
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: key, bubbles: true }));
+      try {
+        let held = 0;
+        while (held < budget) {
+          const t = /** @type {number} */ (await frame());
+          held += Math.min(maxPerFrame, Math.max(1, Math.round(((t - last) * hz) / 1000)));
+          last = t;
+        }
+      } finally {
+        window.dispatchEvent(new KeyboardEvent('keyup', { code: key, bubbles: true }));
+      }
+    },
+    /** @type {[string, number, number, number]} */ ([code, steps, MAX_STEPS_PER_FRAME, TICK_HZ]),
+  );
+}
+
+/**
+ * Presses a real key down across the next rendered frame, for a short brake. The key stays down
+ * for at least that frame and for as long as the round trips take, which on a loaded runner can be
+ * most of a second; that is harmless for the brake, so steering uses `steerPulse` instead.
  * @param {import('@playwright/test').Page} page Page.
  * @param {string} key Key code.
- * @param {number} ms Hold time.
  */
-async function hold(page, key, ms) {
+async function tap(page, key) {
   await page.keyboard.down(key);
-  await page.waitForTimeout(ms);
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve(undefined))));
   await page.keyboard.up(key);
 }
 
@@ -177,8 +259,13 @@ async function exerciseControls(page, isCar) {
 }
 
 /**
- * Follows the navigation arrow to the finish. Steering pulses scale with the arrow's angle; the
- * throttle holds the cruising speed; the car shifts between first and second. The autopilot stops
+ * Follows the navigation arrow to the finish, one decision per rendered frame. A steering
+ * correction is a one-frame tap toward the arrow, sized for a loop that may run most of a second
+ * behind the car (see `FULL_STEER_DEG`); the throttle holds the cruising speed and lifts while the
+ * arrow is far off; the car shifts between first and second. When the car stands still with the
+ * throttle held (against a kerb or the road works), it lets go and backs off (the car in reverse
+ * with the wheel turned away from the target; the scooter, which has none, only stops and lets the
+ * wheel centre) and drives on. The autopilot stops
  * for the pedestrian, measuring how fast simulated time runs against the wall clock on the way so
  * the wait is long enough in simulated seconds.
  * @param {import('@playwright/test').Page} page Page.
@@ -191,6 +278,9 @@ async function driveToFinish(page, { isCar, signalLaneChange, timeoutMs }) {
   let lastDistance = Number.NaN;
   let throttleDown = false;
   let halted = false;
+  let stuck = 0;
+  let stuckSinceMs = 0;
+  let lastPulseMs = 0;
   // Simulated metres covered against HUD speed integrated over wall time, for the wait.
   let wallMetres = 0;
   let startX = Number.NaN;
@@ -201,6 +291,47 @@ async function driveToFinish(page, { isCar, signalLaneChange, timeoutMs }) {
     if (want) await page.keyboard.down(KEY.throttle);
     else await page.keyboard.up(KEY.throttle);
     throttleDown = want;
+  };
+
+  /**
+   * Shifts until the HUD shows a gear.
+   * @param {string} key Shift key.
+   * @param {string} gear Wanted gear.
+   */
+  const shiftTo = async (key, gear) => {
+    for (let i = 0; i < 4; i += 1) {
+      const before = (await readHud(page)).gear;
+      if (before === gear) return;
+      await page.keyboard.press(key);
+      await expect.poll(async () => (await readHud(page)).gear).not.toBe(before);
+    }
+    await expect(page.getByTestId('hud-gear')).toHaveText(gear);
+  };
+
+  /** Gets a stuck vehicle moving again: release, straighten, back off, stop, drive on. */
+  const backOff = async () => {
+    await setThrottle(false);
+    await page.keyboard.down(KEY.brake);
+    await expect.poll(async () => (await readHud(page)).speedKmh, { timeout: 30_000 }).toBe(0);
+    await page.keyboard.up(KEY.brake);
+    if (!isCar) return;
+    await shiftTo(KEY.gearDown, 'R');
+    const start = await readHud(page);
+    // Reversing with the wheel turned away from the target swings the nose toward it.
+    const counter = start.rotationDeg < 0 ? KEY.steerRight : KEY.steerLeft;
+    await page.keyboard.down(counter);
+    await setThrottle(true);
+    const until = Date.now() + 20_000;
+    while (Date.now() < until) {
+      const r = await readHud(page);
+      if (r.distanceM >= start.distanceM + BACK_OFF_M || Math.abs(r.rotationDeg) <= DEAD_BAND_DEG) break;
+    }
+    await setThrottle(false);
+    await page.keyboard.up(counter);
+    await page.keyboard.down(KEY.brake);
+    await expect.poll(async () => (await readHud(page)).speedKmh, { timeout: 30_000 }).toBe(0);
+    await page.keyboard.up(KEY.brake);
+    await shiftTo(KEY.gearUp, '1');
   };
 
   while (Date.now() < deadline) {
@@ -228,10 +359,7 @@ async function driveToFinish(page, { isCar, signalLaneChange, timeoutMs }) {
         await expect.poll(async () => (await readHud(page)).speedKmh, { timeout: 30_000 }).toBe(0);
         // Simulated seconds per wall second, from the approach; at least 0.1 so a stall cannot hang.
         const simPerWall = Math.max(0.1, Math.min(1, (x - startX) / Math.max(1, wallMetres)));
-        if (isCar) {
-          await page.keyboard.press(KEY.gearDown);
-          await expect(page.getByTestId('hud-gear')).toHaveText('1');
-        }
+        if (isCar) await shiftTo(KEY.gearDown, '1');
         await page.waitForTimeout((PEDESTRIAN_WAIT_S / simPerWall) * 1000);
         await page.keyboard.up(KEY.brake);
         halted = true;
@@ -241,16 +369,36 @@ async function driveToFinish(page, { isCar, signalLaneChange, timeoutMs }) {
     }
     lastSampleMs = now;
 
-    if (isCar && s.gear === '1' && s.speedKmh > 15) await page.keyboard.press(KEY.gearUp);
-    await setThrottle(s.speedKmh < CRUISE_KMH);
-    if (s.speedKmh > CRUISE_KMH + 6) await hold(page, KEY.brake, 60);
-
-    // Near a checkpoint its bearing swings; hold the wheel straight through the gate.
-    if (s.distanceM > 6 && Math.abs(s.rotationDeg) > 1.5) {
-      const ms = Math.min(120, Math.max(20, Math.abs(s.rotationDeg) * 12));
-      await hold(page, s.rotationDeg > 0 ? KEY.steerRight : KEY.steerLeft, ms);
+    if (throttleDown && s.speedKmh === 0) {
+      if (stuck === 0) stuckSinceMs = now;
+      stuck += 1;
     } else {
-      await page.waitForTimeout(30);
+      stuck = 0;
+    }
+    if (stuck >= STUCK_DECISIONS && now - stuckSinceMs >= STUCK_MS) {
+      stuck = 0;
+      await backOff();
+      continue;
+    }
+
+    // The HUD publishes at `HUD_HZ`, slower than decisions, so a shift waits for the HUD to show
+    // it instead of being pressed again on a stale reading.
+    if (isCar && s.gear === '1' && s.speedKmh > 15) await shiftTo(KEY.gearUp, '2');
+    // Near a checkpoint its bearing swings; hold the wheel straight through the gate.
+    const off = s.distanceM > GATE_M ? Math.abs(s.rotationDeg) : 0;
+    const deadBand = Math.max(DEAD_BAND_DEG, (Math.atan(LATERAL_TOLERANCE_M / Math.max(1, s.distanceM)) * 180) / Math.PI);
+    await setThrottle(s.speedKmh < MIN_ROLL_KMH || (s.speedKmh < CRUISE_KMH && off <= FULL_STEER_DEG));
+    if (s.speedKmh > CRUISE_KMH + 6) await tap(page, KEY.brake);
+
+    // A correction toward the arrow, unless the wheel is still turned that way from the last one.
+    // At most one per HUD update, since a reading taken before the HUD caught up with the last
+    // correction would ask for it again; small errors get one per two updates.
+    const side = Math.sign(s.rotationDeg);
+    const big = off > FULL_STEER_DEG;
+    const gapMs = (big ? 1 : 2) * (1000 / HUD_HZ);
+    if ((big || off > deadBand) && s.steer * side <= 0 && Date.now() - lastPulseMs >= gapMs) {
+      await steerPulse(page, side > 0 ? KEY.steerRight : KEY.steerLeft, big ? 2 * STEER_PULSE_STEPS : STEER_PULSE_STEPS);
+      lastPulseMs = Date.now();
     }
   }
   await setThrottle(false);

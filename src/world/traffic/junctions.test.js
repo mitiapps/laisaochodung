@@ -159,6 +159,79 @@ describe('keep-clear', () => {
     // Exactly one agent got onto the exit lane, behind the wreck.
     expect(st.edgeCount[/** @type {number} */ (st.graph.edgeIndex.get('re-e0'))]).toBe(2);
   });
+
+  it('makes an agent that already holds its claim give it back and stop at the line when a wreck appears in its way', () => {
+    const map = junctionMap('signal');
+    const st = createTraffic(map, PARAMS, 11);
+    const k = place(st, 'rw-e1', 120, 9, 'car', 'c-rw-e1-re-e0');
+    const conn = /** @type {number} */ (st.graph.edgeIndex.get('c-rw-e1-re-e0'));
+    const lane = st.graph.edges[/** @type {number} */ (st.graph.edgeIndex.get('rw-e1'))];
+    let t = 0;
+    // West green: it claims the connector on its way to the line, still short of the hold point.
+    for (; st.claim[k] !== conn; t += DT) {
+      expect(t).toBeLessThan(5);
+      stepTraffic(st, { ego: EGO, egoReset: false, scripted: [], lights: trafficLightStates(map, t), egoContacts: [], t });
+    }
+    expect(st.s[k] + st.lengthM[k] / 2).toBeLessThan(lane.holdS);
+    const wreck = spawnAgent(st, conn, 0.6 * st.graph.edges[conn].length, 0, st.modelKeys.indexOf('car'));
+    st.wreck[wreck] = 1;
+    st.wreckT[wreck] = t;
+    let entered = false;
+    let stoppedInBox = false;
+    run(st, map, t, 10, () => {
+      entered ||= st.edge[k] === conn;
+      stoppedInBox ||= st.v[k] === 0 && pointInPolygon([st.x[k], st.z[k]], BOX);
+    });
+    expect(entered).toBe(false);
+    expect(stoppedInBox).toBe(false);
+    expect(st.v[k]).toBe(0);
+    expect(st.claim[k]).toBe(-1);
+  });
+
+  describe.each([
+    ['its own connector', 'c-rw-e1-re-e0'],
+    ['the connector merging with it', 'c-rw-e0-re-e0'],
+  ])('with a wrecked car on %s', (_name, wreckConn) => {
+    it('keeps the queues of both approaches out of the box until the wreck is cleared, then lets them go', () => {
+      const map = junctionMap('signal');
+      const st = createTraffic(map, PARAMS, 10);
+      const conn = /** @type {number} */ (st.graph.edgeIndex.get(wreckConn));
+      const wreck = spawnAgent(st, conn, 0.6 * st.graph.edges[conn].length, 0, st.modelKeys.indexOf('car'));
+      st.wreck[wreck] = 1;
+      st.wreckT[wreck] = 0;
+      // West green from 0 to 27, yellow to 30: queues on both approach lanes, all going into `re-e0`.
+      const queued = [
+        place(st, 'rw-e1', 140, 6, 'car', 'c-rw-e1-re-e0'),
+        place(st, 'rw-e1', 130, 6, 'motorbike', 'c-rw-e1-re-e0'),
+        place(st, 'rw-e1', 120, 6, 'car', 'c-rw-e1-re-e0'),
+        place(st, 'rw-e0', 138, 6, 'car', 'c-rw-e0-re-e0'),
+        place(st, 'rw-e0', 126, 6, 'taxi', 'c-rw-e0-re-e0'),
+      ];
+      const exitLane = /** @type {number} */ (st.graph.edgeIndex.get('re-e0'));
+      let overlapped = false;
+      let stoppedInBox = 0;
+      let wreckGoneAt = Infinity;
+      /** @type {Set<number>} */
+      const through = new Set();
+      // Through the green and the yellow that follows the clearing.
+      run(st, map, 0, 30, (poses, t) => {
+        overlapped ||= anyOverlap(poses);
+        for (const k of queued) if (st.alive[k] && st.edge[k] === exitLane) through.add(k);
+        if (!st.alive[wreck]) {
+          if (wreckGoneAt === Infinity) wreckGoneAt = t;
+          return;
+        }
+        expect(through.size, 'nobody passes the wreck').toBe(0);
+        for (const k of queued) if (st.v[k] === 0 && pointInPolygon([st.x[k], st.z[k]], BOX)) stoppedInBox += 1;
+      });
+      expect(overlapped).toBe(false);
+      expect(stoppedInBox).toBe(0);
+      expect(wreckGoneAt).toBeCloseTo(PARAMS.wreckClearS, 0);
+      // After the wreck is cleared both approaches discharge into the exit lane.
+      expect(queued.slice(0, 3).some((k) => through.has(k))).toBe(true);
+      expect(queued.slice(3).some((k) => through.has(k))).toBe(true);
+    });
+  });
 });
 
 describe('no gridlock from the ego', () => {

@@ -27,10 +27,18 @@ rules JSON (rules + clauses + collisionPolicy) ─► scorer
 - **Renderer loaded on demand.** `src/main.js` loads the renderer (three.js and `src/render/`) in
   its own chunk through `loadRenderer()` (`src/game/browser.js`), which the session awaits with
   the map, the rules and Rapier before it builds the view, so the home page never downloads it.
-- **Low-cost path on software GL.** When the WebGL context runs on a software rasteriser
-  (`softwareRenderer`: SwiftShader, llvmpipe), the renderer draws at half a drawing-buffer pixel
-  per CSS pixel, with Lambert scenery materials and no shadows. A hardware GPU keeps standard
-  materials, the device pixel ratio (at most 2) and shadows.
+- **Low-cost path on software GL.** Before it creates its WebGL context, the renderer reads the
+  rasteriser's name from a throwaway context (`detectRenderQuality`), since antialiasing is fixed
+  at context creation. On a software rasteriser (`softwareRenderer`: SwiftShader, llvmpipe) it
+  draws without antialiasing, at half a drawing-buffer pixel per CSS pixel, with Lambert scenery
+  materials, no shadows, and a 150 m far plane (`LOW_FAR_M`) with the clear-day fog thickened to
+  hide it. In SwiftShader at 1280 × 720, `osm-pasteur` runs at about 34 frames per second and
+  tutorial 01 at about 58. A hardware GPU keeps antialiasing, standard materials, the device pixel
+  ratio (at most 2), shadows and the 300 m far plane.
+- **Chunk budgets.** The production build fails when a chunk passes its budget (`chunkBudget` in
+  `vite.config.js`): 500 kB of minified code for every chunk, 900 kB for `render` (three.js and
+  the scene code) and 4600 kB for `rapier` (the compat build, wasm inlined). Both large chunks
+  load only when a run starts, so the home page downloads only the entry chunk.
 
 ## Traffic
 

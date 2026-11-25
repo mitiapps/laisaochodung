@@ -195,3 +195,38 @@ export function noticeItems(notices) {
     return { key: `${notice.tick}#${n}`, notice };
   });
 }
+
+/**
+ * @typedef {object} NewestToast
+ * @property {string | null} key Key of the newest item: `notice:<NoticeItem key>` or
+ *   `toast:<episodeId>`; null when the stack is empty.
+ * @property {number} more How many older items a short screen hides.
+ */
+
+/**
+ * The newest item of the toast stack, notices and breach toasts together, by simulated tick. A
+ * short screen (a landscape phone) shows only that item and a count of the others, since two
+ * toasts do not fit there above the speed arc; the result screen still lists everything. On a
+ * tie the breach toast wins, since it carries a penalty.
+ * @param {readonly NoticeItem[]} notices Notice items, newest last.
+ * @param {readonly {episodeId: string, breach: {tick: number}}[]} toasts Breach toasts, oldest first.
+ * @returns {NewestToast} Newest item and the hidden count.
+ */
+export function newestToast(notices, toasts) {
+  /** @type {string | null} */
+  let key = null;
+  let tick = -Infinity;
+  for (const item of notices) {
+    if (item.notice.tick >= tick) {
+      tick = item.notice.tick;
+      key = `notice:${item.key}`;
+    }
+  }
+  for (const toast of toasts) {
+    if (toast.breach.tick >= tick) {
+      tick = toast.breach.tick;
+      key = `toast:${toast.episodeId}`;
+    }
+  }
+  return { key, more: Math.max(0, notices.length + toasts.length - 1) };
+}

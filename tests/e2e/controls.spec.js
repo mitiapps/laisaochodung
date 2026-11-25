@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { KEY_BINDINGS } from '../../src/contracts/controls.js';
 import { CONTROL_PRESET_STORAGE_KEY } from '../../src/ui/lib/control-preset-store.js';
 import { badgeFor } from '../../src/ui/lib/key-label.js';
+import { readToastFit } from './toast-fit.js';
 
 /**
  * Control presets and the on-screen controls on the shipped build: Đơn giản is the default, every
@@ -298,6 +299,32 @@ for (const viewport of [
   });
 }
 
+/** Title of the speeding breach toast. */
+const SPEEDING_TITLE = 'Chạy quá tốc độ quy định';
+
+/**
+ * Makes the page release the throttle and pause the run as soon as a breach toast with the given
+ * title is added, from a DOM observer inside the page rather than from the test process.
+ * @param {import('@playwright/test').Page} page Page.
+ * @param {string} title Breach title to wait for.
+ * @returns {Promise<void>} Resolves once the observer is installed.
+ */
+function pauseOnBreach(page, title) {
+  return page.evaluate(
+    ([wanted, throttleKey, pauseKey]) => {
+      const observer = new MutationObserver(() => {
+        const titles = document.querySelectorAll('[data-testid="breach-toast"] [data-testid="breach-title"]');
+        if (![...titles].some((t) => t.textContent?.trim() === wanted)) return;
+        observer.disconnect();
+        window.dispatchEvent(new KeyboardEvent('keyup', { code: throttleKey }));
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: pauseKey }));
+      });
+      observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    },
+    [title, KEY.throttle, KEY.pause],
+  );
+}
+
 test.describe('toasts on a landscape phone', () => {
   test.use({ viewport: { width: 844, height: 390 } });
 
@@ -305,33 +332,27 @@ test.describe('toasts on a landscape phone', () => {
     test.setTimeout(120_000);
     const problems = watchProblems(page);
     await startRun(page, 'car-sedan');
-    // Full throttle down the straight start of tutorial 01 runs over the limit; the run is paused
-    // as soon as the toast shows, so the layout is read on a still frame.
+    // Full throttle down the straight start of tutorial 01 runs over the limit. The page itself
+    // releases the throttle and pauses in the same task that adds the speeding toast, before the
+    // next frame steps the sim, so the car cannot reach the crosswalk or crash however slowly the
+    // test process answers, and the layout is read on a still frame.
+    await pauseOnBreach(page, SPEEDING_TITLE);
     await page.keyboard.down(KEY.throttle);
-    const toast = page.getByTestId('breach-toast').filter({ hasText: 'Chạy quá tốc độ quy định' }).first();
-    await expect(toast).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('pause-overlay')).toBeVisible({ timeout: 60_000 });
     await page.keyboard.up(KEY.throttle);
-    await page.keyboard.press(KEY.pause);
-    await expect(toast.getByTestId('breach-penalty-short')).toBeVisible();
-    await expect(toast.getByTestId('breach-toast-details')).toBeHidden();
-    const fit = await page.evaluate(() => {
-      const stack = /** @type {Element} */ (document.querySelector('[data-testid="toast-stack"]'));
-      const arc = /** @type {Element} */ (document.querySelector('[data-testid="hud-speed-panel"]'));
-      const first = /** @type {Element} */ (stack.querySelector('[data-testid="breach-toast"]'));
-      return {
-        scroll: stack.scrollHeight,
-        client: stack.clientHeight,
-        toastBottom: first.getBoundingClientRect().bottom,
-        arcTop: arc.getBoundingClientRect().top,
-      };
-    });
+    const newest = page.getByTestId('toast-stack').locator('[data-testid="breach-toast"]:visible');
+    await expect(newest).toHaveCount(1);
+    await expect(newest.getByTestId('breach-title')).toHaveText(SPEEDING_TITLE);
+    await expect(newest.getByTestId('breach-penalty-short')).toBeVisible();
+    await expect(newest.getByTestId('breach-toast-details')).toBeHidden();
+    const fit = await readToastFit(page);
     expect(fit.scroll).toBeLessThanOrEqual(fit.client);
     expect(fit.toastBottom).toBeLessThanOrEqual(fit.arcTop);
     // A tap on the penalty line opens the details. The pause overlay covers the stack and toasts
     // expire on the wall clock, so the tap is dispatched on the button itself.
-    await toast.getByTestId('breach-penalty-short').dispatchEvent('click');
-    await expect(toast).toHaveAttribute('data-expanded', 'true');
-    await expect(toast.getByTestId('breach-toast-details')).toBeVisible();
+    await newest.getByTestId('breach-penalty-short').dispatchEvent('click');
+    await expect(newest).toHaveAttribute('data-expanded', 'true');
+    await expect(newest.getByTestId('breach-toast-details')).toBeVisible();
     expect(problems).toEqual([]);
   });
 });

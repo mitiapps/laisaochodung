@@ -138,8 +138,12 @@
  * @property {number} [aftermathWindowS] Seconds after a notice contact during which every further
  *   contact and a fall are notices too.
  * @property {number} [excuseMaxSpeedGainMps] An excusing violation excuses the player only if the
- *   player gained no more than this (m/s) between the violation first showing on that party and
- *   the contact; absent, no speed check.
+ *   player's speed at the contact (the event's `egoSpeed`) is no more than this (m/s) above its
+ *   speed when the violation first showed on that party; absent, no speed check.
+ * @property {import('./telemetry.js').NpcViolation[]} [rightOfWayViolations] Excusing violations
+ *   that keep excusing a player who gained speed when the other party was moving at the contact
+ *   (not a wreck, at or above `contactMinEgoSpeed`) and not ahead in the player's lane (it was
+ *   crossing the player's right of way); each must be in `excusingViolations`.
  * @property {Record<string, import('./vehicle.js').LocalText>} [noticeTexts] Notice templates keyed
  *   by the other party's first violation, or by `from-behind` and `none` when it has none, and by
  *   `aftermath` for a contact inside the aftermath window; `ego-slow` for a vehicle contact and
@@ -147,7 +151,7 @@
  *   `contactMinEgoSpeed`. `{vehicle}` in a template is replaced with the Vietnamese word for the
  *   other vehicle (capitalised at the start of the text).
  * @property {Partial<Record<'nonContributingRules' | 'rearEndContributingRules' | 'excusingViolations' |
- *   'aftermathWindowS' | 'excuseMaxSpeedGainMps', 'legal' | 'design'>>} [paramBasis] Basis of each
+ *   'aftermathWindowS' | 'excuseMaxSpeedGainMps' | 'rightOfWayViolations', 'legal' | 'design'>>} [paramBasis] Basis of each
  *   fault-table choice; required for every one of them the policy sets.
  */
 
@@ -158,7 +162,9 @@
  * - `contributing-episode`: an episode of a contributing rule is open within `crashCauseWindowS`;
  * - `same-lane-ahead`: `sameLaneAhead`, the striker is the ego or both, and the other party has no
  *   excusing violation (one the player sped up into does not count);
- * - `ego-strikes`: the striker is the ego and the other party has no excusing violation (likewise);
+ * - `ego-strikes`: the striker is the ego and the other party has no excusing violation (one the
+ *   player sped up into does not count, except a `rightOfWayViolations` one of a party moving at
+ *   the contact);
  * - `otherwise`: always matches.
  * @typedef {'aftermath' | 'from-behind' | 'contributing-episode' | 'same-lane-ahead' | 'ego-strikes'
  *   | 'otherwise'} FaultCondition

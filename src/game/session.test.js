@@ -13,6 +13,7 @@ import { createLoop } from './loop.js';
 import { REPLAY_CHECKPOINT_S, createSession } from './session.js';
 import { lawfulParams } from '../world/traffic/lawful-params.js';
 import { pointAtDistance, projectOntoPolyline } from '../geometry/index.js';
+import { createDriver } from '../../tests/scenarios/physics/driver.js';
 
 /** @typedef {import('../contracts/index.js').GameMap} GameMap */
 /** @typedef {import('../contracts/index.js').VehicleInfo} VehicleInfo */
@@ -411,30 +412,38 @@ function cruiseInput(frames, speed) {
   });
 }
 
+/** Braking command of a held ego. */
+const HOLD_BRAKE = Object.freeze({ throttle: 0, brakeFront: 0.8, brakeRear: 0.8 });
+
 /**
- * Input that drives the ego toward a point at a gentle speed, braking for agents close ahead,
- * and holds it there.
+ * Input that drives the ego along the route with the traffic-aware route autopilot, then brakes
+ * and holds once it is within its stopping distance (`v² / 6 + 2` m) of `target` along the
+ * autopilot's line. `holdTick()` gives the tick from which the ego stood still under the hold, or
+ * null before that.
  * @param {Frame[]} frames Frames recorded so far.
- * @param {number} scripted Scripted actors on the map.
- * @param {import('../contracts/index.js').Pos2} target Point to drive to.
- * @returns {import('./session.js').SessionDeps['createInput']} Input factory.
+ * @param {GameMap} map Map.
+ * @param {import('../contracts/index.js').Pos2} target Point to drive to, on the route.
+ * @returns {{createInput: import('./session.js').SessionDeps['createInput'], holdTick: () => number | null}}
+ *   Input factory and the hold start.
  */
-function approachInput(frames, scripted, target) {
-  return scriptedInput((k) => {
-    const f = frames.at(-1);
-    if (k === 0 || !f) return { gearCmd: 'up' };
-    const e = f.ego;
-    const fx = Math.cos(e.heading);
-    const fz = -Math.sin(e.heading);
-    const dx = target.x - e.pos.x;
-    const dz = target.z - e.pos.z;
-    const along = dx * fx + dz * fz;
-    const lat = dz * fx - dx * fz;
-    const ahead = agentAhead(f, scripted, 15);
-    const blocked = ahead !== null && Math.abs(ahead.lat) < 1.2;
-    if (along < 5 || blocked) return { brakeFront: 0.8, brakeRear: 0.8 };
-    return { throttle: e.speed < 8 ? 0.4 : 0, steer: steerTo(lat, along) };
-  });
+function routeApproachInput(frames, map, target) {
+  const driver = createDriver(map, 'car-sedan', { sim: { traffic: 'map' } });
+  const targetS = projectOntoPolyline([target.x, target.z], driver.line).s;
+  let holding = false;
+  /** @type {number | null} */
+  let heldFrom = null;
+  return {
+    holdTick: () => heldFrom,
+    createInput: scriptedInput((k) => {
+      const f = frames.at(-1);
+      if (k === 0 || !f) return driver.next(null);
+      const e = f.ego;
+      if (!holding && projectOntoPolyline([e.pos.x, e.pos.z], driver.line).s >= targetS - ((e.speed * e.speed) / 6 + 2)) holding = true;
+      if (!holding) return driver.next(f);
+      if (heldFrom === null && Math.abs(e.speed) < 0.2) heldFrom = f.tick;
+      return HOLD_BRAKE;
+    }),
+  };
 }
 
 /**
@@ -568,7 +577,10 @@ describe('session with traffic (dev build checks)', () => {
     expect(h.game.debugInfo().agents).toBeGreaterThan(0);
   };
 
-  it('drives osm-pasteur up to the Pasteur signal, where traffic stops on red and none runs it', { timeout: 120_000 }, async () => {
+  /** Seeds of the signal approach: two by default, more with TRAFFIC_LONG=1. */
+  const APPROACH_SEEDS = [4244, 1, ...(process.env.TRAFFIC_LONG ? Array.from({ length: 10 }, (_, i) => i + 2) : [])];
+
+  it.each(APPROACH_SEEDS)('drives osm-pasteur up to the Pasteur signal, where traffic stops on red and none runs it (seed %i)', { timeout: 120_000 }, async (seed) => {
     const signal = /** @type {GameMap['signals'][number]} */ (PASTEUR.signals.find((s) => s.id === PASTEUR_SIGNAL));
     const line = /** @type {GameMap['stopLines'][number]} */ (PASTEUR.stopLines.find((l) => l.id === signal.stopLineIds[0]));
     // Hold 40 m before the stop line, inside the traffic ring around the ego.
@@ -576,17 +588,32 @@ describe('session with traffic (dev build checks)', () => {
     const target = { x: (ax + bx) / 2 - 40 * Math.cos(signal.heading), z: (az + bz) / 2 + 40 * Math.sin(signal.heading) };
     /** @type {Frame[]} */
     const recorded = [];
+    const approach = routeApproachInput(recorded, PASTEUR, target);
     const h = trafficHarness({
       loadMap: async () => structuredClone(PASTEUR),
       // The lawful driver population: no one runs a red by choice.
       loadTrafficParams: async () => lawfulParams(PARAMS),
       createSim: recordingSim(recorded),
-      createInput: approachInput(recorded, PASTEUR.actors.length, target),
+      createInput: approach.createInput,
     });
-    await h.game.start('osm-pasteur', 'car-sedan', { seed: 4244 });
-    expect(h.game.debugInfo()).toMatchObject({ traffic: 'map', runSeed: 4244 });
-    // The signal is red from 30 s to 60 s of each cycle.
-    runFor(h, 60);
+    await h.game.start('osm-pasteur', 'car-sedan', { seed });
+    expect(h.game.debugInfo()).toMatchObject({ traffic: 'map', runSeed: seed });
+    // Drive there, then hold through one whole cycle of the signal (red from 30 s to 60 s of each
+    // cycle), within the map's time limit.
+    const cycleTicks = Math.round((signal.cycle.green + signal.cycle.yellow + signal.cycle.red) / DT);
+    const limitTicks = Math.round(PASTEUR.route.timeLimitS / DT);
+    const maxAgents = /** @type {NonNullable<GameMap['traffic']>} */ (PASTEUR.traffic).maxAgents;
+    const heldLongEnough = () => {
+      const from = approach.holdTick();
+      return from !== null && h.game.debugInfo().tick - from >= cycleTicks;
+    };
+    h.frames.tick(0);
+    while (!heldLongEnough() && h.game.debugInfo().tick < limitTicks && h.game.debugInfo().status === 'running') {
+      h.frames.tick(1000 / 60);
+      expect(h.game.debugInfo().agents).toBeLessThanOrEqual(maxAgents);
+    }
+    expect(heldLongEnough()).toBe(true);
+    expect(h.game.debugInfo().agents).toBeGreaterThan(0);
     const ego = recorded.at(-1)?.ego.pos;
     expect(Math.hypot((ego?.x ?? 0) - target.x, (ego?.z ?? 0) - target.z)).toBeLessThan(30);
     const { stoppedAt, redRuns } = signalBehaviour(PASTEUR, recorded);

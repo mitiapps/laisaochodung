@@ -18,7 +18,7 @@ const DECREE_GROUPS = Object.freeze(['D6', 'D7']);
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const BASES = Object.freeze(['legal', 'design']);
 /** Collision-policy keys that are game choices and carry a `paramBasis` entry. */
-const POLICY_BASIS_KEYS = Object.freeze(['nonContributingRules', 'rearEndContributingRules', 'excusingViolations', 'aftermathWindowS', 'excuseMaxSpeedGainMps']);
+const POLICY_BASIS_KEYS = Object.freeze(['nonContributingRules', 'rearEndContributingRules', 'excusingViolations', 'aftermathWindowS', 'excuseMaxSpeedGainMps', 'rightOfWayViolations']);
 const FAULT_CONDITIONS = Object.freeze(['aftermath', 'from-behind', 'contributing-episode', 'same-lane-ahead', 'ego-strikes', 'otherwise']);
 const FAULT_RESULTS = Object.freeze(['notice', 'deduction']);
 /** Notice text keys besides the violations. */
@@ -350,6 +350,15 @@ function checkFaultPolicy(p, policy, ruleIds) {
     else {
       for (const v of policy.excusingViolations) {
         if (!NPC_VIOLATIONS.includes(/** @type {never} */ (v))) p.add(`${path}.excusingViolations`, `unknown violation "${String(v)}"`);
+      }
+    }
+  }
+  if (policy.rightOfWayViolations !== undefined) {
+    const excusing = Array.isArray(policy.excusingViolations) ? policy.excusingViolations : [];
+    if (!Array.isArray(policy.rightOfWayViolations)) p.add(`${path}.rightOfWayViolations`, 'expected an array');
+    else {
+      for (const v of policy.rightOfWayViolations) {
+        if (!excusing.includes(/** @type {never} */ (v))) p.add(`${path}.rightOfWayViolations`, `"${String(v)}" is not an excusing violation`);
       }
     }
   }

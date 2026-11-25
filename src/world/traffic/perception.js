@@ -70,13 +70,14 @@ function routePoint(st, slot, ds) {
  * @param {number} halfW Half corridor width.
  * @param {number} iLeft Quad index of the left corner.
  * @param {number} iRight Quad index of the right corner.
+ * @param {number} lat Lateral offset the corridor is centred on.
  * @returns {void}
  */
-function corner(st, slot, ds, halfW, iLeft, iRight) {
+function corner(st, slot, ds, halfW, iLeft, iRight, lat) {
   routePoint(st, slot, ds);
   const [lx, lz] = leftVector(P.heading);
-  const cx = P.x + lx * st.lateral[slot];
-  const cz = P.z + lz * st.lateral[slot];
+  const cx = P.x + lx * lat;
+  const cz = P.z + lz * lat;
   QUAD[iLeft][0] = cx + lx * halfW;
   QUAD[iLeft][1] = cz + lz * halfW;
   QUAD[iRight][0] = cx - lx * halfW;
@@ -92,9 +93,10 @@ function corner(st, slot, ds, halfW, iLeft, iRight) {
  * @param {readonly Obstacle[]} obstacles Candidates.
  * @param {number} lookM Corridor length ahead of the front.
  * @param {Float64Array} out Output pair.
+ * @param {number} [lat] Lateral offset the corridor is centred on; default the slot's own.
  * @returns {void}
  */
-export function corridorObstacle(st, slot, obstacles, lookM, out) {
+export function corridorObstacle(st, slot, obstacles, lookM, out, lat = st.lateral[slot]) {
   out[0] = Infinity;
   out[1] = 0;
   const half = st.lengthM[slot] / 2;
@@ -114,15 +116,15 @@ export function corridorObstacle(st, slot, obstacles, lookM, out) {
     const along = dx * hx + dz * hz;
     if (along < -(half + o.radius)) continue;
     const side = Math.abs(dx * hz - dz * hx);
-    if (side > halfW + o.radius + Math.max(0, along) * BEND_SPREAD + 1) continue;
+    if (side > halfW + o.radius + Math.abs(lat - st.lateral[slot]) + Math.max(0, along) * BEND_SPREAD + 1) continue;
     CAND.push(o);
     ALONG[CAND.length - 1] = along;
   }
   if (CAND.length === 0) return;
-  corner(st, slot, half, halfW, 0, 1);
+  corner(st, slot, half, halfW, 0, 1, lat);
   for (let a = 0; a < lookM - 1e-9; a += CORRIDOR_PIECE_M) {
     const b = Math.min(lookM, a + CORRIDOR_PIECE_M);
-    corner(st, slot, half + b, halfW, 3, 2);
+    corner(st, slot, half + b, halfW, 3, 2, lat);
     for (let i = 0; i < CAND.length; i += 1) {
       const o = CAND[i];
       // Along the route a piece is never nearer than in a straight line.

@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test';
+import { DT } from '../../src/contracts/units.js';
+import { REPLAY_CHECKPOINT_S } from '../../src/game/session.js';
 
 /**
  * Traffic diagnostics on the vite dev server (the dev build exposes
@@ -12,8 +14,15 @@ import { expect, test } from '@playwright/test';
 const SEED = 20261124;
 /** Draw calls of one frame, shadow pass included. */
 const MAX_DRAW_CALLS = 160;
-/** Seconds the run is sampled for; longer than a replay checkpoint interval. */
-const SAMPLE_S = 20;
+/** Fewest one-second samples taken, whatever the simulated rate. */
+const MIN_SAMPLES = 20;
+/**
+ * Simulated tick the sampling runs to: two replay checkpoint intervals plus a margin of one
+ * second, so the run has passed its second checkpoint and the replay is windowed. Simulated time
+ * runs slower than the wall clock below 12 frames per second (the loop takes at most 5 steps per
+ * frame), so the test waits on ticks, not on wall seconds.
+ */
+const TARGET_TICK = Math.round((2 * REPLAY_CHECKPOINT_S + 1) / DT);
 
 /**
  * Dev diagnostics of the session.
@@ -28,6 +37,12 @@ function debugInfo(page) {
 
 test('osm-pasteur keeps agents within the cap, draw calls within budget, and replays equal', async ({ page, request }) => {
   test.setTimeout(180_000);
+  /** @type {string[]} */
+  const problems = [];
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') problems.push(`console: ${msg.text()}`);
+  });
+  page.on('pageerror', (err) => problems.push(`pageerror: ${err.message}`));
   const map = await (await request.get('/maps/osm-pasteur.json')).json();
   const maxAgents = map.traffic.maxAgents;
 
@@ -42,16 +57,20 @@ test('osm-pasteur keeps agents within the cap, draw calls within budget, and rep
   let peakAgents = 0;
   let minAgents = Infinity;
   let peakDrawCalls = 0;
-  for (let k = 0; k < SAMPLE_S; k += 1) {
+  let samples = 0;
+  let tick = first.tick;
+  while (samples < MIN_SAMPLES || tick < TARGET_TICK) {
     await page.waitForTimeout(1000);
     const info = await debugInfo(page);
+    samples += 1;
+    tick = info.tick;
     peakAgents = Math.max(peakAgents, info.agents);
     minAgents = Math.min(minAgents, info.agents);
     if (typeof info.drawCalls === 'number') peakDrawCalls = Math.max(peakDrawCalls, info.drawCalls);
   }
   const info = await debugInfo(page);
   console.log(
-    `agents ${minAgents}..${peakAgents} of ${maxAgents}; draw calls up to ${peakDrawCalls}; ` +
+    `${samples} samples to tick ${tick}; agents ${minAgents}..${peakAgents} of ${maxAgents}; draw calls up to ${peakDrawCalls}; ` +
       `sim step ${JSON.stringify(info.simStepMs)} ms; traffic step ${JSON.stringify(info.trafficStepMs)} ms`,
   );
   expect(minAgents).toBeGreaterThan(0);
@@ -64,6 +83,8 @@ test('osm-pasteur keeps agents within the cap, draw calls within budget, and rep
   await page.getByTestId('pause-quit').click();
   await expect.poll(async () => (await debugInfo(page)).replayCheck, { timeout: 60_000 }).not.toBeNull();
   const check = /** @type {NonNullable<import('../../src/game/session.js').DebugInfo['replayCheck']>} */ ((await debugInfo(page)).replayCheck);
+  console.log(`replay check ${JSON.stringify(check)}`);
+  expect(problems).toEqual([]);
   expect(check.windowed).toBe(true);
   expect(check.equal).toBe(true);
 });

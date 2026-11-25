@@ -21,6 +21,7 @@ import { idmAcceleration } from './idm.js';
 import { draw, rateOf } from './violations.js';
 import { SIDE_LEFT, SIDE_RIGHT } from './state.js';
 import { queryGrid } from './grid.js';
+import { corridorObstacle } from './perception.js';
 
 /** @typedef {import('./state.js').TrafficState} TrafficState */
 /** @typedef {import('../../contracts/telemetry.js').Vec2} Vec2 */
@@ -152,6 +153,13 @@ function blockedOn(st, slot, edge, shift, lo, hi) {
     // sideways (else a rider queued close behind pins the one ahead out of its turn band).
     const reach = (st.lengthM[k] + st.lengthM[slot]) / 2;
     if (ds < 0 ? -ds >= reach : ds >= reach + ALONGSIDE_M) continue;
+    // One whose move the rider's body holds (a car moving across into the rider's lane) cannot
+    // come any closer until the rider makes way, so its target offset does not count, and a move
+    // away from it never puts the rider in its way: else each holds the other for ever.
+    if (st.heldBy[k] === slot) {
+      const away = (st.lateral[k] + shift - st.lateral[slot]) * (lo + hi - 2 * st.lateral[slot]) <= 0;
+      if (away) continue;
+    }
     // A body turned by its lane change swings its ends out sideways.
     const yaw = Math.abs(normalizeAngle(st.heading[k] - st.heading[slot]));
     const need = lateralNeed(st, slot, k) + (st.lengthM[k] / 2) * Math.sin(Math.min(yaw, Math.PI / 2));
@@ -286,6 +294,59 @@ export function moveTouches(st, slot, lat) {
     const other = footprint({ x: st.x[k], z: st.z[k] }, st.heading[k], st.lengthM[k], st.widthM[k]);
     return polygonsIntersect(mine, other) && !polygonsIntersect(now, other);
   });
+}
+
+/**
+ * A rider on a connector whose corridor the ego has stood in for this long goes round it, seconds
+ * (design: long enough that an ego pausing in the box is waited for, short enough that a rider
+ * does not stand behind a stalled player, as a real rider would filter past within moments).
+ */
+export const GO_ROUND_AFTER_S = 3;
+/** The ego this close ahead in a rider's corridor is in its way, metres (design). */
+export const GO_ROUND_LOOK_M = 10;
+
+/** @typedef {import('./perception.js').Obstacle} Obstacle */
+
+/**
+ * Lets a rider on a connector go round an ego standing in its corridor: the smallest offset, in
+ * `SLOT_STEP_M` steps on either side (right first), whose corridor past the ego is clear of the
+ * ego and of every other obstacle, kept inside the exit lane so the rider ends the connector on
+ * it. Writes the offset to `lateralBase`; the rider moves there at the normal lateral rate, and
+ * its slot on the exit lane is chosen again as on any lane. A target already clear is kept, so
+ * the rider does not swap sides on the way.
+ * @param {TrafficState} st State.
+ * @param {number} slot Rider on a connector edge (not a wreck, not crossing).
+ * @param {Obstacle} ego The ego, standing.
+ * @param {readonly Obstacle[]} others Scripted actors, static obstacles and nearby agents.
+ * @returns {void}
+ */
+export function goRoundEgo(st, slot, ego, others) {
+  const EGO = [ego];
+  corridorObstacle(st, slot, EGO, GO_ROUND_LOOK_M, PAIR);
+  if (PAIR[0] === Infinity) return;
+  // Far enough to be past the ego, with the rider's own length.
+  const look = PAIR[0] + 2 * ego.radius + st.lengthM[slot];
+  const clearAt = (/** @type {number} */ c) => {
+    corridorObstacle(st, slot, EGO, look, PAIR, c);
+    if (PAIR[0] < Infinity) return false;
+    corridorObstacle(st, slot, others, look, PAIR, c);
+    return PAIR[0] === Infinity;
+  };
+  const base = st.lateralBase[slot];
+  if (base !== st.lateral[slot] && clearAt(base)) return;
+  const conn = st.graph.edges[st.edge[slot]];
+  const limit = st.halfWidth[conn.toEdge] - st.widthM[slot] / 2;
+  const from = st.lateral[slot];
+  for (let i = 1; i * SLOT_STEP_M <= 2 * limit + 1e-9; i += 1) {
+    for (const side of [-1, 1]) {
+      const c = from + side * i * SLOT_STEP_M;
+      if (Math.abs(c) > limit + 1e-9) continue;
+      if (clearAt(c)) {
+        st.lateralBase[slot] = c;
+        return;
+      }
+    }
+  }
 }
 
 /** A rider this far outside the band of its turn does not enter the junction yet, metres (design). */

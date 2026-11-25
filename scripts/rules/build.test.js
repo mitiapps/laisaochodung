@@ -140,6 +140,9 @@ describe('validateRules', () => {
     ['a negative aftermath window', (b) => { b.collisionPolicy.aftermathWindowS = -1; }, /aftermathWindowS: expected a number/],
     ['a negative excuse speed gain', (b) => { b.collisionPolicy.excuseMaxSpeedGainMps = -0.5; }, /excuseMaxSpeedGainMps: expected a number/],
     ['an excuse speed gain without a basis', (b) => { delete b.collisionPolicy.paramBasis?.excuseMaxSpeedGainMps; }, /excuseMaxSpeedGainMps: has no paramBasis/],
+    ['a right-of-way violation that does not excuse', (b) => { b.collisionPolicy.rightOfWayViolations?.push('speeding'); }, /rightOfWayViolations: "speeding" is not an excusing violation/],
+    ['a right-of-way list that is not a list', (b) => { b.collisionPolicy.rightOfWayViolations = /** @type {never} */ ('red-light'); }, /rightOfWayViolations: expected an array/],
+    ['a right-of-way list without a basis', (b) => { delete b.collisionPolicy.paramBasis?.rightOfWayViolations; }, /rightOfWayViolations: has no paramBasis/],
     ['a missing none notice', (b) => { delete b.collisionPolicy.noticeTexts?.none; }, /noticeTexts\.none: missing/],
     ['a missing slow-contact notice', (b) => { delete b.collisionPolicy.noticeTexts?.['ego-slow']; }, /noticeTexts\.ego-slow: missing/],
     ['an unknown notice key', (b) => { if (b.collisionPolicy.noticeTexts) b.collisionPolicy.noticeTexts.moon = { vi: 'x' }; }, /noticeTexts\.moon: not a violation/],
@@ -161,7 +164,7 @@ describe('validateRules', () => {
   it('accepts a policy without the fault keys (every contact charged)', async () => {
     const b = clone(await realBundle());
     const p = /** @type {Record<string, unknown>} */ (b.collisionPolicy);
-    for (const k of ['faultRows', 'nonContributingRules', 'rearEndContributingRules', 'excusingViolations', 'aftermathWindowS', 'noticeTexts', 'paramBasis']) delete p[k];
+    for (const k of ['faultRows', 'nonContributingRules', 'rearEndContributingRules', 'excusingViolations', 'rightOfWayViolations', 'aftermathWindowS', 'noticeTexts', 'paramBasis']) delete p[k];
     expect(validateRules(b)).toEqual([]);
   });
 

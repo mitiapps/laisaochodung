@@ -184,6 +184,12 @@ traffic (10 agents per lane-km, `maxAgents` 12 and 14); `osm-pasteur` runs 30 pe
 (`maxAgents` 85). Every map with traffic mixes 75% motorbikes, 12% cars, 6% taxis, 5% trucks and
 2% buses. On `tutorial-02-nga-tu` the closed road (P.101) has no source and no agents.
 
+On `osm-pasteur` about half of the traffic stands at any moment, and that is the signals, not a
+jam: every signal runs 27 s green, 3 s yellow and 30 s red, and the blocks between signals are
+61 to 109 m long, so a red holds a queue that fills much of its block. The signal on the 11 m link
+`w803279638-1` keeps its queue on `w803279638-2`, before the unsignalled junction between the two,
+so that junction stays clear; that queue is traffic standing on a lane with no signal of its own.
+
 ### `osm-pasteur` corridor choice
 
 The OSM corridor is at most 1.2 km and must hold one signalled junction, one marked crossing, one

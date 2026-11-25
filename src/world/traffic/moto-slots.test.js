@@ -5,6 +5,7 @@ import { footprint, polygonsIntersect } from '../../geometry/index.js';
 import { trafficLightStates } from '../signals.js';
 import { createTraffic, stepTraffic } from './index.js';
 import { lawfulParams } from './lawful-params.js';
+import { pathBlocked } from './moto-slots.js';
 import { spawnAgent } from './state.js';
 
 /** @typedef {import('../../contracts/map.js').GameMap} GameMap */
@@ -122,5 +123,115 @@ describe('motorbike slots', () => {
     // Side by side: their offsets spread across the lane.
     const lats = near.map((k) => st.lateral[k]).sort((a, b) => a - b);
     expect(lats[lats.length - 1] - lats[0]).toBeGreaterThan(0.8);
+  });
+});
+
+describe('a car moving across that the rider holds', () => {
+  /**
+   * A car moving across from the right into the rider's lane at a standstill, its left side
+   * already over the rider's line, and a rider stopped alongside it, its body in the car's way.
+   * @returns {{st: TrafficState, car: number, bike: number}} State and slots.
+   */
+  const alongside = () => {
+    const st = createTraffic(emptyMap(), LAWFUL, 24);
+    const car = place(st, 'rw-e1', 80, 0, 'car');
+    st.lateral[car] = -1.41;
+    st.lateralBase[car] = 0;
+    st.crossing[car] = 1;
+    const bike = place(st, 'rw-e1', 78.6, 0, 'motorbike');
+    st.lateral[bike] = -0.15;
+    st.lateralBase[bike] = -0.15;
+    return { st, car, bike };
+  };
+
+  it('keeps the rider out of the car\'s target while the car could still move', () => {
+    const { st, bike } = alongside();
+    expect(pathBlocked(st, bike, 0.45)).toBe(true);
+  });
+
+  it('lets the rider edge away from a car its body holds, but not towards it', () => {
+    const { st, car, bike } = alongside();
+    st.heldBy[car] = bike;
+    expect(pathBlocked(st, bike, 0.45)).toBe(false);
+    expect(pathBlocked(st, bike, -0.45)).toBe(true);
+  });
+});
+
+describe('a standing ego in the path of a turn', () => {
+  // The ego came south on `rn-s` and stopped with its nose 6 m inside the box, across the path of
+  // the left turn from `rw-e1` into `rn-n`.
+  const EGO_IN_BOX = Object.freeze({ pos: { x: -1.75, z: -3.25 }, heading: -Math.PI / 2, speed: 0, lengthM: 4.5, widthM: 1.8 });
+  const egoFoot = footprint(EGO_IN_BOX.pos, EGO_IN_BOX.heading, EGO_IN_BOX.lengthM, EGO_IN_BOX.widthM);
+
+  /**
+   * Places an agent on `rw-e1` heading for the left turn.
+   * @param {TrafficState} st State.
+   * @param {number} s Centre distance.
+   * @param {string} model Model.
+   * @returns {number} Slot.
+   */
+  const turner = (st, s, model) => {
+    const slot = spawnAgent(st, /** @type {number} */ (st.graph.edgeIndex.get('rw-e1')), s, 5, st.modelKeys.indexOf(model));
+    st.nextEdge[slot] = /** @type {number} */ (st.graph.edgeIndex.get('c-rw-e1-rn-n'));
+    return slot;
+  };
+
+  /**
+   * Runs the turn with the ego standing in the box from t 0, westbound green.
+   * @param {string} model Model of the turning agent.
+   * @returns {{entered: number, cleared: number, touched: boolean, onConnector: boolean}} When the
+   *   agent entered and left the connector (Infinity if never), whether it touched the ego, and
+   *   whether it is still on the connector at the end.
+   */
+  const turnPastEgo = (model) => {
+    const map = emptyMap();
+    const st = createTraffic(map, LAWFUL, 31);
+    const k = turner(st, 130, model);
+    const conn = /** @type {number} */ (st.graph.edgeIndex.get('c-rw-e1-rn-n'));
+    let entered = Infinity;
+    let cleared = Infinity;
+    let touched = false;
+    for (let i = 0; i < Math.round(25 / DT); i += 1) {
+      const t = i * DT;
+      stepTraffic(st, { ego: EGO_IN_BOX, egoReset: false, scripted: [], lights: allLights(map, 'green'), egoContacts: [], t });
+      if (st.edge[k] === conn && entered === Infinity) entered = t;
+      if (entered < Infinity && st.edge[k] !== conn && cleared === Infinity) cleared = t;
+      if (polygonsIntersect(egoFoot, footprint({ x: st.x[k], z: st.z[k] }, st.heading[k], st.lengthM[k], st.widthM[k]))) touched = true;
+    }
+    return { entered, cleared, touched, onConnector: st.edge[k] === conn };
+  };
+
+  it('lets a rider on the connector go round it within 10 s, without touching it', () => {
+    const r = turnPastEgo('motorbike');
+    expect(r.entered).toBeLessThan(10);
+    expect(r.cleared - r.entered).toBeLessThan(10);
+    expect(r.touched).toBe(false);
+  });
+
+  it('keeps a car on the connector waiting behind it', () => {
+    const r = turnPastEgo('car');
+    expect(r.entered).toBeLessThan(10);
+    expect(r.cleared).toBe(Infinity);
+    expect(r.onConnector).toBe(true);
+    expect(r.touched).toBe(false);
+  });
+
+  it('leaves the rider waiting while the ego has stood only briefly', () => {
+    const map = emptyMap();
+    const st = createTraffic(map, LAWFUL, 31);
+    const k = turner(st, 130, 'motorbike');
+    const conn = /** @type {number} */ (st.graph.edgeIndex.get('c-rw-e1-rn-n'));
+    // The ego creeps forward and stops again every 2 s, so it never stands long enough.
+    let lateralOnConnector = Number.NaN;
+    for (let i = 0; i < Math.round(15 / DT); i += 1) {
+      const t = i * DT;
+      const creeping = i % Math.round(2 / DT) === 0;
+      stepTraffic(st, { ego: { ...EGO_IN_BOX, speed: creeping ? 0.5 : 0 }, egoReset: false, scripted: [], lights: allLights(map, 'green'), egoContacts: [], t });
+      if (st.edge[k] === conn) {
+        if (Number.isNaN(lateralOnConnector)) lateralOnConnector = st.lateralBase[k];
+        expect(st.lateralBase[k]).toBe(lateralOnConnector);
+      }
+    }
+    expect(st.edge[k]).toBe(conn);
   });
 });

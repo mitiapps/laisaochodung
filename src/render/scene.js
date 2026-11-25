@@ -3,7 +3,8 @@
  * rain, night emissives, and the smoothed chase camera. No cockpit or rider view in the MVP.
  *
  * - Far plane 300 m. The day fog leaves about 1% of a surface's colour at that distance, so the
- *   cut never shows, and it lets distant scenery chunks be culled.
+ *   cut never shows, and it lets distant scenery chunks be culled. The low-cost path of software
+ *   rasterisers uses `LOW_FAR_M` with the fog thickened to match.
  * - Shadows: the sun casts, with its shadow camera following the camera focus; the renderer turns
  *   `shadowMap` on. Only the ego and traffic cast; scenery and road only receive.
  * - Night: materials with a numeric `userData.nightEmissive` get `emissiveIntensity = night × value`
@@ -38,6 +39,14 @@ const RAIN_DROPS = 1500;
 const RAIN_BOX_M = 40;
 /** Camera far plane in metres. */
 export const FAR_M = 300;
+/**
+ * Far plane on the low-cost path, in metres (design). A software rasteriser spends most of its
+ * frame filling pixels; the scenery past this range is drawn at a few pixels per building but
+ * still costs its triangles, and the measured frame rate on `osm-pasteur` rose with a shorter
+ * range. The clear-day fog is thickened by `FAR_M / LOW_FAR_M` there so the cut stays as hidden as
+ * at 300 m; rain and night fog are thicker than that already.
+ */
+export const LOW_FAR_M = 150;
 /** Half side of the square the sun's shadow covers around the focus, in metres (design). */
 export const SHADOW_HALF_M = 45;
 
@@ -68,9 +77,13 @@ export function environmentLook(env) {
  * Adds lights, fog and rain to a scene.
  * @param {Scene} scene Scene.
  * @param {MeshStandardMaterial} asphalt Asphalt material, made glossy in rain.
+ * @param {{farM?: number}} [options] Camera far plane the fog must hide; `FAR_M` by default.
  * @returns {SceneEnvironment} Environment.
  */
-export function createEnvironment(scene, asphalt) {
+export function createEnvironment(scene, asphalt, { farM = FAR_M } = {}) {
+  // A shorter far plane needs at least the clear-day fog scaled up to hide it at that range;
+  // thicker fog (rain, night) already hides it and stays as it is.
+  const minFog = farM < FAR_M ? (environmentLook({ clockMin: 720, weather: 'clear' }).fogDensity * FAR_M) / farM : 0;
   const hemi = new HemisphereLight(0xdfefff, 0x4a4535, 1);
   scene.add(hemi);
   const sun = new DirectionalLight(0xfff1d8, 2);
@@ -126,7 +139,7 @@ export function createEnvironment(scene, asphalt) {
       const isRain = env.weather === 'rain';
       sky.copy(NIGHT_SKY).lerp(isRain ? RAIN_SKY : DAY_SKY, look.day);
       fog.color.copy(sky);
-      fog.density = look.fogDensity;
+      fog.density = Math.max(look.fogDensity, minFog);
       hemi.intensity = look.hemiIntensity;
       const elev = Math.max(0.05, sunElevation(env.clockMin));
       sun.intensity = look.sunIntensity;
@@ -218,10 +231,11 @@ export function chaseTarget(pose, legalClass) {
  * Smoothed chase camera.
  * @param {number} aspect Aspect ratio.
  * @param {'car' | 'motorbike' | 'moped'} legalClass Vehicle class.
+ * @param {number} [farM] Far plane in metres; `FAR_M` by default.
  * @returns {{camera: PerspectiveCamera, follow: (pose: {x: number, y: number, z: number, heading: number}, dtS: number, snap: boolean, shake: [number, number, number]) => void}} Camera.
  */
-export function createChaseCamera(aspect, legalClass) {
-  const camera = new PerspectiveCamera(60, aspect, 0.1, FAR_M);
+export function createChaseCamera(aspect, legalClass, farM = FAR_M) {
+  const camera = new PerspectiveCamera(60, aspect, 0.1, farM);
   const eye = new Vector3();
   const look = new Vector3();
   let primed = false;

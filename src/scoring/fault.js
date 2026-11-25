@@ -38,9 +38,15 @@
  *   fall, or any contact when the policy has no `faultRows`), exactly as before the table existed.
  * @property {CrashCause | null} rearEndCause Worst episode of a `rearEndContributingRules` rule
  *   active within the cause window, or null.
- * @property {boolean} egoSpedUp The player gained more than `excuseMaxSpeedGainMps` between the
- *   other party's excusing violation first showing and the contact: it closed in on a party it saw
- *   breaking the rule, so that violation no longer excuses it.
+ * @property {boolean} egoSpedUp The player's speed at contact was more than
+ *   `excuseMaxSpeedGainMps` above its speed when the other party's excusing violation first
+ *   showed: it closed in on a party it saw breaking the rule, so that violation no longer excuses
+ *   it, unless it is a right-of-way violation (`rightOfWayViolations`) of a party that was moving
+ *   across the player's path (see `otherMoving`) and not ahead in the player's lane.
+ * @property {boolean} otherMoving The other party was moving at contact: not a wreck, and at or
+ *   above the contact speed gate (`contactMinEgoSpeed`). A party standing at the contact, such as
+ *   a wreck or a runner halted on the junction connector, is an obstacle the player must slow down
+ *   and stop for, so its latched right-of-way violation does not outlast the player's speed gain.
  */
 
 /**
@@ -99,13 +105,21 @@ export function contactFields(e) {
  * @param {CollisionEvent | FallEvent} e Event.
  * @param {FaultFacts} facts Facts.
  * @param {readonly string[]} excusing Excusing violations.
+ * @param {readonly string[]} rightOfWay Excusing violations that a speed gain does not void when
+ *   the other party was moving at contact and not ahead in the player's lane.
  * @returns {boolean} The row matches.
  */
-function rowMatches(row, e, facts, excusing) {
+function rowMatches(row, e, facts, excusing, rightOfWay) {
   if (row.when === 'aftermath') return facts.aftermath;
   // Only vehicle contacts reach the other conditions (the caller filters the rest).
   const c = contactFields(/** @type {CollisionEvent} */ (e));
-  const excused = !facts.egoSpedUp && c.otherViolations.some((v) => excusing.includes(v));
+  const hasExcusing = c.otherViolations.some((v) => excusing.includes(v));
+  // A party crossing the player's right of way stays at fault while the player gains speed
+  // lawfully; one ahead in the player's lane does not (the player closed in on it), and neither
+  // does one standing at the contact (a visible obstacle the player had to stop for).
+  const keepsRightOfWay =
+    facts.otherMoving && !(/** @type {CollisionEvent} */ (e).sameLaneAhead) && c.otherViolations.some((v) => excusing.includes(v) && rightOfWay.includes(v));
+  const excused = hasExcusing && (!facts.egoSpedUp || keepsRightOfWay);
   switch (row.when) {
     case 'from-behind':
       return c.otherFromBehind && c.striker !== 'ego';
@@ -134,9 +148,10 @@ export function decideFault(policy, e, facts) {
   const vehicle = e.type === 'collision' && VEHICLE_KINDS.includes(e.otherKind);
   if (e.type === 'collision' && e.otherKind === 'pedestrian') return charged;
   const excusing = policy.excusingViolations ?? [];
+  const rightOfWay = policy.rightOfWayViolations ?? [];
   for (const row of rows) {
     if (!vehicle && row.when !== 'aftermath') continue;
-    if (!rowMatches(row, e, facts, excusing)) continue;
+    if (!rowMatches(row, e, facts, excusing, rightOfWay)) continue;
     if (row.result === 'deduction') return { rowId: row.id, result: 'deduction', cause: facts.cause };
     if (row.unlessRearEndContributing && facts.rearEndCause !== null) {
       return { rowId: row.id, result: 'deduction', cause: facts.rearEndCause };

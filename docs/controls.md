@@ -37,6 +37,9 @@ Laid out for a phone in landscape (checked at 844 × 390 and 1280 × 720, every 
 - **Above the pedals, two arc rows:** left indicator, hazard and right indicator; then horn,
   lights, flash, gear down and gear up. The indicator and hazard buttons blink while on.
 - **Top right:** pause.
+- **Top centre:** breach and notice toasts, newest first. Below 480 px of viewport height (a
+  landscape phone) only the newest one shows, with a "+N" count of the others; the result screen
+  lists them all.
 
 A `hold` button acts from the first pointer down until the last pointer lifts; a `press` button
 fires once when the pointer is lifted inside it. Buttons never take focus, so a held key keeps

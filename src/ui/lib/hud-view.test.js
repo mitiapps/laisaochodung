@@ -9,6 +9,7 @@ import {
   actionLabel,
   arcButtons,
   indicatorLamps,
+  newestToast,
   noticeItems,
   pedalControls,
   rpmFraction,
@@ -106,5 +107,18 @@ describe('HUD view helpers', () => {
     expect(items.map((i) => i.key)).toEqual(['100#0', '160#0', '160#1']);
     expect(noticeItems([at(160), at(160)]).map((i) => i.key)).toEqual(['160#0', '160#1']);
     expect(noticeItems([])).toEqual([]);
+  });
+
+  it('picks the newest toast-stack item by tick and counts the rest for a short screen', () => {
+    const at = (/** @type {number} */ tick) =>
+      /** @type {import('../../contracts/score.js').Notice} */ (/** @type {unknown} */ ({ tick, text: { vi: 'x' } }));
+    const toast = (/** @type {string} */ episodeId, /** @type {number} */ tick) => ({ episodeId, breach: { tick } });
+    expect(newestToast([], [])).toEqual({ key: null, more: 0 });
+    expect(newestToast(noticeItems([at(100)]), [])).toEqual({ key: 'notice:100#0', more: 0 });
+    expect(newestToast(noticeItems([at(100)]), [toast('a', 90), toast('b', 120)])).toEqual({ key: 'toast:b', more: 2 });
+    expect(newestToast(noticeItems([at(100), at(300)]), [toast('a', 90), toast('b', 120)])).toEqual({ key: 'notice:300#0', more: 3 });
+    // The last notice of one tick is the newest; a breach toast on the same tick wins.
+    expect(newestToast(noticeItems([at(160), at(160)]), []).key).toBe('notice:160#1');
+    expect(newestToast(noticeItems([at(160)]), [toast('a', 160)]).key).toBe('toast:a');
   });
 });

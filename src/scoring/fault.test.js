@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { ACTOR_LIGHTS, NO_VIOLATIONS } from '../contracts/index.js';
 import { junctionMap, realBundle, scoreScript, summary } from '../../scripts/rules/lib/test-support.js';
+import { scriptValue } from '../testing/frame-builder.js';
 import { bothSidesNote, decideFault, noticeText, vehicleWord } from './fault.js';
 
 /** @typedef {import('../contracts/index.js').CollisionEvent} CollisionEvent */
@@ -60,7 +61,7 @@ function drive(events, more = {}) {
 const crashOf = (report) => report.breaches.find((b) => b.ruleId === 'crash');
 
 describe('decideFault', () => {
-  const facts = { aftermath: false, cause: null, anyCause: null, rearEndCause: null, egoSpedUp: false };
+  const facts = { aftermath: false, cause: null, anyCause: null, rearEndCause: null, egoSpedUp: false, otherMoving: true };
 
   it('charges every contact as before when the policy has no fault table', async () => {
     const { faultRows, ...policy } = (await realBundle()).collisionPolicy;
@@ -355,7 +356,17 @@ describe('an excusing violation and a player who speeds up', () => {
       extraActors: (t) => [riderAt(t)],
       extraEvents: (t) =>
         Math.abs(t - CONTACT_AT) < 1e-6
-          ? [hit({ otherKind: 'motorbike', otherId: 'npc-8', otherModel: 'motorbike', striker: 'ego', sameLaneAhead: true, otherViolations: riderAt(t).violations })]
+          ? [
+              hit({
+                otherKind: 'motorbike',
+                otherId: 'npc-8',
+                otherModel: 'motorbike',
+                striker: 'ego',
+                sameLaneAhead: true,
+                egoSpeed: scriptValue(speed, t),
+                otherViolations: riderAt(t).violations,
+              }),
+            ]
           : [],
     });
 
@@ -378,11 +389,190 @@ describe('an excusing violation and a player who speeds up', () => {
 
   it('lets the speed gain lift the excuse in the table', async () => {
     const policy = (await realBundle()).collisionPolicy;
-    const facts = { aftermath: false, cause: null, anyCause: null, rearEndCause: null, egoSpedUp: true };
+    const facts = { aftermath: false, cause: null, anyCause: null, rearEndCause: null, egoSpedUp: true, otherMoving: true };
     const event = hit({ otherKind: 'motorbike', striker: 'ego', otherViolations: ['unsafe-lane-change'] });
     expect(decideFault(policy, event, facts)).toMatchObject({ rowId: 'ego-strikes', result: 'deduction' });
     expect(decideFault(policy, event, { ...facts, egoSpedUp: false })).toMatchObject({ rowId: 'otherwise', result: 'notice' });
     expect(decideFault(policy, { ...event, sameLaneAhead: true }, facts).rowId).toBe('same-lane-ahead');
+  });
+});
+
+describe('a right-of-way violation and a player who speeds up', () => {
+  /** The runner shows its flag at t 1; the contact comes at t 2.5, inside the latch. */
+  const FLAG_AT = 1;
+  const CONTACT_AT = 2.5;
+  /** Speed script of a player pulling away and gaining well over the excuse margin. */
+  const PULLING_AWAY = [
+    { t: 0, value: LEGAL - 4 },
+    { t: FLAG_AT, value: LEGAL - 4 },
+    { t: CONTACT_AT - 0.1, value: LEGAL },
+  ];
+
+  /**
+   * A party crossing the player's path from the right, flagged from FLAG_AT on.
+   * @param {NpcViolation} violation Its violation.
+   * @param {Partial<ActorPose>} [over] Pose fields that replace the moving crosser's.
+   * @returns {(t: number) => ActorPose} Pose by time.
+   */
+  const crosserAt = (violation, over = {}) => (t) => ({
+    id: 'npc-9',
+    kind: 'car',
+    pos: { x: -120, z: 8 - 6 * t },
+    heading: Math.PI / 2,
+    speed: 6,
+    active: true,
+    model: 'car',
+    variant: 0,
+    lengthM: 4.5,
+    widthM: 1.8,
+    lights: ACTOR_LIGHTS.off,
+    state: 'moving',
+    violations: t >= FLAG_AT ? Object.freeze(/** @type {NpcViolation[]} */ ([violation])) : NO_VIOLATIONS,
+    ...over,
+  });
+
+  /** The flagged party halted across the player's lane, as a runner held on the junction connector. */
+  const STANDING = { pos: { x: -120, z: 1.75 }, speed: 0, state: /** @type {const} */ ('stopped') };
+  /** The flagged party wrecked across the player's lane, still sliding. */
+  const WRECKED = { pos: { x: -120, z: 1.75 }, speed: 3, state: /** @type {const} */ ('crashed') };
+
+  /**
+   * Scores the player's front meeting the crossing party at CONTACT_AT.
+   * @param {NpcViolation} violation The crossing party's violation.
+   * @param {boolean} sameLaneAhead The contact is reported as with the vehicle ahead in the lane.
+   * @param {Partial<ActorPose>} [over] Pose fields that replace the moving crosser's.
+   * @returns {ReturnType<typeof scoreScript>} Result.
+   */
+  const meet = (violation, sameLaneAhead, over = {}) => {
+    const at = crosserAt(violation, over);
+    return drive([], {
+      speed: PULLING_AWAY,
+      extraActors: (t) => [at(t)],
+      extraEvents: (t) => (Math.abs(t - CONTACT_AT) < 1e-6 ? [hit({ otherId: 'npc-9', striker: 'ego', sameLaneAhead, otherViolations: at(t).violations })] : []),
+    });
+  };
+
+  it('keeps excusing a player who pulls away into a red-light runner crossing its path', async () => {
+    const { report } = await meet('red-light', false);
+    expect(summary(report)).toEqual([]);
+    expect(report.notices.map((n) => n.violations)).toEqual([['red-light']]);
+  });
+
+  it('keeps excusing a player who pulls away into a vehicle that did not yield', async () => {
+    const { report } = await meet('no-yield', false);
+    expect(summary(report)).toEqual([]);
+    expect(report.notices.map((n) => n.violations)).toEqual([['no-yield']]);
+  });
+
+  it('still charges a player who speeds up into a red-light runner ahead in its lane', async () => {
+    const { report } = await meet('red-light', true);
+    expect(summary(report)).toEqual(['crash:0:D6.4.l']);
+    expect(report.notices).toEqual([]);
+  });
+
+  it('lets only the right-of-way violations outlast the speed gain in the table', async () => {
+    const policy = (await realBundle()).collisionPolicy;
+    const facts = { aftermath: false, cause: null, anyCause: null, rearEndCause: null, egoSpedUp: true, otherMoving: true };
+    for (const v of /** @type {NpcViolation[]} */ (['red-light', 'no-yield'])) {
+      const event = hit({ otherKind: 'motorbike', striker: 'ego', otherViolations: [v] });
+      expect(decideFault(policy, event, facts), v).toMatchObject({ rowId: 'otherwise', result: 'notice' });
+      expect(decideFault(policy, { ...event, sameLaneAhead: true }, facts), v).toMatchObject({ rowId: 'same-lane-ahead', result: 'deduction' });
+    }
+    for (const v of /** @type {NpcViolation[]} */ (['unsafe-lane-change', 'wrong-way'])) {
+      const event = hit({ otherKind: 'motorbike', striker: 'ego', otherViolations: [v] });
+      expect(decideFault(policy, event, facts), v).toMatchObject({ rowId: 'ego-strikes', result: 'deduction' });
+    }
+  });
+
+  it('lets a right-of-way violation outlast the speed gain only while the other party moves', async () => {
+    const policy = (await realBundle()).collisionPolicy;
+    const facts = { aftermath: false, cause: null, anyCause: null, rearEndCause: null, egoSpedUp: true, otherMoving: false };
+    for (const v of /** @type {NpcViolation[]} */ (['red-light', 'no-yield'])) {
+      const event = hit({ otherKind: 'motorbike', striker: 'ego', otherViolations: [v] });
+      expect(decideFault(policy, event, facts), v).toMatchObject({ rowId: 'ego-strikes', result: 'deduction' });
+      expect(decideFault(policy, event, { ...facts, otherMoving: true }), v).toMatchObject({ rowId: 'otherwise', result: 'notice' });
+    }
+  });
+
+  for (const v of /** @type {NpcViolation[]} */ (['red-light', 'no-yield'])) {
+    it(`charges a player who speeds up into a ${v} party standing across its path`, async () => {
+      const { report } = await meet(v, false, STANDING);
+      expect(summary(report)).toEqual(['crash:0:-']);
+      expect(report.notices).toEqual([]);
+    });
+  }
+
+  it('charges a player who speeds up into a wrecked red-light runner, although the wreck still slides', async () => {
+    const { report } = await meet('red-light', false, WRECKED);
+    expect(summary(report)).toEqual(['crash:0:-']);
+    expect(report.notices).toEqual([]);
+  });
+});
+
+describe('the speed gain runs to the speed at contact', () => {
+  /** The rider cuts in at t 1; the contact comes at t 2.5. */
+  const CUT_AT = 1;
+  const CONTACT_AT = 2.5;
+  /**
+   * A rider ahead in the ego's lane, flagged from `flagAt` on.
+   * @param {number} flagAt Time its flag first shows.
+   * @returns {(t: number) => ActorPose} Pose by time.
+   */
+  const riderAt = (flagAt) => (t) => ({
+    id: 'npc-8',
+    kind: 'motorbike',
+    pos: { x: -150 + LEGAL * t + 6, z: 1.75 },
+    heading: 0,
+    speed: 6,
+    active: true,
+    model: 'motorbike',
+    variant: 0,
+    lengthM: 1.9,
+    widthM: 0.7,
+    lights: ACTOR_LIGHTS.off,
+    state: 'moving',
+    violations: t >= flagAt - 1e-6 ? Object.freeze(/** @type {NpcViolation[]} */ (['unsafe-lane-change'])) : NO_VIOLATIONS,
+  });
+
+  /**
+   * Scores a hard contact: the frame's ego speed collapses at the contact, the event keeps the
+   * speed the ego struck with.
+   * @param {number} flagAt Time the rider's flag first shows.
+   * @param {number} contactSpeed The event's ego speed.
+   * @returns {ReturnType<typeof scoreScript>} Result.
+   */
+  const hard = (flagAt, contactSpeed) => {
+    const at = riderAt(flagAt);
+    return drive([], {
+      speed: [
+        { t: 0, value: 5.47 },
+        { t: CONTACT_AT - 0.1, value: 5.47 },
+        { t: CONTACT_AT, value: 0.32 },
+      ],
+      extraActors: (t) => [at(t)],
+      extraEvents: (t) =>
+        Math.abs(t - CONTACT_AT) < 1e-6
+          ? [hit({ otherKind: 'motorbike', otherId: 'npc-8', otherModel: 'motorbike', striker: 'ego', sameLaneAhead: true, egoSpeed: contactSpeed, otherViolations: at(t).violations })]
+          : [],
+    });
+  };
+
+  it('charges a player that struck well above its speed when the flag showed, though the frame speed collapsed', async () => {
+    const { report } = await hard(CUT_AT, 10.87);
+    expect(summary(report)).toEqual(['crash:0:D6.4.l']);
+    expect(report.notices).toEqual([]);
+  });
+
+  it('excuses a player that struck at the speed it held when the flag showed', async () => {
+    const { report } = await hard(CUT_AT, 5.47);
+    expect(summary(report)).toEqual([]);
+    expect(report.notices.map((n) => n.violations)).toEqual([['unsafe-lane-change']]);
+  });
+
+  it('sees no gain when the flag first shows in the contact frame', async () => {
+    const { report } = await hard(CONTACT_AT, 10.87);
+    expect(summary(report)).toEqual([]);
+    expect(report.notices.map((n) => n.violations)).toEqual([['unsafe-lane-change']]);
   });
 });
 

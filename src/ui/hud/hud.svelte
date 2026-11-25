@@ -9,7 +9,7 @@
   import RoundButton from './controls/round-button.svelte';
   import SteeringSlider from './controls/steering-slider.svelte';
   import { formatGear, formatScore, formatSpeed } from '../lib/format.js';
-  import { actionLabel, arcButtons, noticeItems, pedalControls, rpmFraction } from '../lib/hud-view.js';
+  import { actionLabel, arcButtons, newestToast, noticeItems, pedalControls, rpmFraction } from '../lib/hud-view.js';
   import { watchBadgeVisibility } from '../lib/key-label.js';
 
   /**
@@ -32,6 +32,9 @@
   const rows = $derived(arcButtons(hud));
   const pedals = $derived(pedalControls(hud.controls, isCar, hud.controlPreset));
   const notices = $derived(noticeItems(hud.notices));
+  // Below 480 px of viewport height only the newest toast-stack item shows, with a count of the rest.
+  const newest = $derived(newestToast(notices, toasts));
+  const SHORT_HIDDEN = '[@media(max-height:480px)]:hidden';
 
   let showBadges = $state(true);
   $effect(() =>
@@ -54,6 +57,14 @@
    */
   const pressOf = (action) => () => controls.press(action);
 </script>
+
+{#snippet moreCount()}
+  <span
+    class="pointer-events-none absolute bottom-1 right-1 hidden rounded-full bg-stone-700 px-1.5 text-[10px] font-semibold text-white [@media(max-height:480px)]:block"
+    data-testid="toast-more"
+    aria-label={`${newest.more} thông báo khác`}>+{newest.more}</span
+  >
+{/snippet}
 
 <div class="pointer-events-none absolute inset-0 text-stone-900" data-testid="hud">
   <div
@@ -150,20 +161,33 @@
       </div>
 
       <!-- Toasts: top centre, height capped clear of the arc, the pedals and the pause button; the
-           newest first, so the cap never hides it. -->
+           newest first, so the cap never hides it. Below 480 px of viewport height (a landscape
+           phone) only the newest item shows, with a "+N" count of the hidden ones, since two toasts
+           do not fit above the arc there. -->
       <div
         class="absolute left-1/2 top-0 flex max-h-[calc(100dvh-16rem)] w-72 max-w-[calc(100%-26rem)] min-w-60 -translate-x-1/2 flex-col gap-2 overflow-y-auto overflow-x-hidden"
         data-testid="toast-stack"
       >
         {#if notices.length > 0}
-          <div class="flex flex-col gap-2" data-testid="notice-stack">
+          <div
+            class={`flex flex-col gap-2 ${newest.key?.startsWith('notice:') ? '' : SHORT_HIDDEN}`}
+            data-testid="notice-stack"
+          >
             {#each [...notices].reverse() as item (item.key)}
-              <NoticeToast notice={item.notice} />
+              {@const isNewest = newest.key === `notice:${item.key}`}
+              <div class={`relative shrink-0 ${isNewest ? '' : SHORT_HIDDEN}`}>
+                <NoticeToast notice={item.notice} />
+                {#if isNewest && newest.more > 0}{@render moreCount()}{/if}
+              </div>
             {/each}
           </div>
         {/if}
         {#each [...toasts].reverse() as toast (toast.episodeId)}
-          <BreachToast breach={toast.breach} ondismiss={() => ondismiss(toast.episodeId)} />
+          {@const isNewest = newest.key === `toast:${toast.episodeId}`}
+          <div class={`relative shrink-0 ${isNewest ? '' : SHORT_HIDDEN}`}>
+            <BreachToast breach={toast.breach} ondismiss={() => ondismiss(toast.episodeId)} />
+            {#if isNewest && newest.more > 0}{@render moreCount()}{/if}
+          </div>
         {/each}
       </div>
     </div>

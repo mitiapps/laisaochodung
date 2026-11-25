@@ -29,12 +29,47 @@ function allPathHeaders(text) {
   return headers;
 }
 
+/** Size budget of every output chunk, in kB of minified code (1 kB = 1000 bytes). */
+const DEFAULT_CHUNK_BUDGET_KB = 500;
+/**
+ * Budgets of the two large chunks, by chunk name. Both load only when a run starts (the session
+ * awaits them with the map), so the home page stays at the entry chunk. `render` is three.js plus
+ * the scene code; three.js alone stays over 500 kB however it is split. `rapier` is the compat
+ * build of Rapier, whose JavaScript carries its wasm inlined as base64.
+ * @type {Record<string, number>}
+ */
+const CHUNK_BUDGET_KB = { render: 900, rapier: 4600 };
+
+/**
+ * Fails the build when a chunk grows past its budget, in place of the generic size warning that
+ * the two large lazy chunks would always raise.
+ * @returns {import('vite').Plugin} Plugin.
+ */
+function chunkBudget() {
+  return {
+    name: 'chunk-budget',
+    apply: 'build',
+    generateBundle(_options, bundle) {
+      const over = [];
+      for (const file of Object.values(bundle)) {
+        if (file.type !== 'chunk') continue;
+        const kb = Buffer.byteLength(file.code, 'utf8') / 1000;
+        const budget = CHUNK_BUDGET_KB[file.name] ?? DEFAULT_CHUNK_BUDGET_KB;
+        if (kb > budget) over.push(`${file.fileName} (chunk "${file.name}") is ${kb.toFixed(1)} kB, budget ${budget} kB`);
+      }
+      if (over.length > 0) this.error(`Chunk size budget exceeded:\n${over.join('\n')}`);
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [tailwindcss(), svelte()],
-  // Licence texts of the bundled third-party code, linked from the credits page.
+  plugins: [tailwindcss(), svelte(), chunkBudget()],
   build: {
+    // Licence texts of the bundled third-party code, linked from the credits page.
     license: { fileName: 'third-party-licenses.md' },
+    // The per-chunk budgets of `chunkBudget` replace the generic warning; this only silences it.
+    chunkSizeWarningLimit: Math.max(DEFAULT_CHUNK_BUDGET_KB, ...Object.values(CHUNK_BUDGET_KB)),
   },
   preview: {
     headers: allPathHeaders(readFileSync(new URL('./public/_headers', import.meta.url), 'utf8')),

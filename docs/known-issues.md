@@ -30,9 +30,14 @@ says what happens and where.
   with a car or motorbike is charged only when the player contributed: an episode of any rule but
   `nonContributingRules` active within `crashCauseWindowS` (a contributing episode), running into the vehicle ahead in the
   same lane, or striking a vehicle that carries no excusing violation (`red-light`, `wrong-way`,
-  `no-yield`, `unsafe-lane-change`) that the player did not speed up into (more than
-  `excuseMaxSpeedGainMps`, 0.5 m/s, gained since it showed). Speed gain stands in for "could have
-  avoided it" and is a game threshold. Being struck from behind is never charged unless the player
+  `no-yield`, `unsafe-lane-change`) that the player did not speed up into (a speed at contact more
+  than `excuseMaxSpeedGainMps`, 0.5 m/s, above the speed when it showed). Speed gain stands in for
+  "could have avoided it" and is a game threshold. A `red-light` or `no-yield` vehicle that was
+  still moving at the contact and not ahead in the player's lane keeps excusing a player who gained
+  speed (`rightOfWayViolations`), so pulling away on green into a red-light runner is a notice.
+  A `red-light` or `no-yield` vehicle standing or wrecked in the junction still excuses a player
+  who drives into it without gaining speed while its flag is latched (within `crashCauseWindowS`).
+  Being struck from behind is never charged unless the player
   had just cut in or turned without signalling. Everything else is a notice with no deduction, as
   is every contact within `aftermathWindowS` after a notice (the shove). Contacts with pedestrians
   are always charged; static objects, kerbs and falls only escape inside the aftermath window.
@@ -109,14 +114,11 @@ says what happens and where.
   pedal on a touch screen.
 - **Portrait, fullscreen, tilt steering and gamepads** are not supported yet.
 - On Thực tế, indicators do not cancel themselves; pressing the same side again turns them off.
+- **Touch controls are tested only by emulation.** The browser tests drive them with emulated
+  touch; they have never been run on a real phone.
 
 ## Traffic
 
-- **A rider turning across the player can stand off with it.** On `tutorial-03-ban-dem` a rider
-  turning across the lane the player waits in can stop in front of it and wait for the player,
-  which the legal test driver, waiting for the rider, never resolves: it misses the time limit in
-  1 of 20 seeds, with and without the Đơn giản assists. On `osm-pasteur` and `tutorial-02-nga-tu`
-  it finishes all 20 seeds in both modes, and no seed costs it a point.
 - **A turning bus can brush a player waiting at the stop line.** Traffic waits behind the sweep of
   a long vehicle turning, but the player's stop point is the painted line, which a bus turning
   tightly can swing over. The contact is the bus's, so the player gets a notice.
@@ -125,8 +127,8 @@ says what happens and where.
 - **Traffic agents can stop dead.** An agent that finds the agent ahead too close stops in one
   step instead of braking, so a player following too closely may run into it and be charged.
 - **No riding against the flow or on the pavement.** Traffic agents always travel with their
-  lane; the HCMC habits of riding a short way against the flow or along the pavement are not
-  modelled. A scripted actor that moves against its lane carries `wrong-way`.
+  lane. The HCMC habits of riding a short way against the flow or along the pavement are out of
+  scope. A scripted actor that moves against its lane carries `wrong-way`.
 - **Design motorbike parameters.** Motorbike speeds, gaps, lateral slots and violation rates in
   `data/traffic/params.yaml` are game values (`paramBasis: design`), not measured HCMC data.
 - **Procedural motorbikes and bus.** The player's scooter, traffic motorbikes and the bus are
@@ -147,6 +149,11 @@ says what happens and where.
 - Replays are deterministic on one machine and build only; the deterministic Rapier build is not
   used, so a recorded run replays only on the same engine build.
 - Frame time has been measured only in headless software rendering, not on a real GPU.
+- **Below 12 frames per second the game runs in slow motion.** The loop takes at most 5 fixed
+  60 Hz steps per rendered frame (`src/game/loop.js`), so at a lower frame rate simulated time
+  falls behind the clock.
+- In software GL (SwiftShader, 1280 x 720, production build) the low-cost path draws osm-pasteur at
+  about 35 frames per second and tutorial 01 at about 57.
 - The straight side of a T-junction has no pavement or kerb: corner pavements fill only real
   corners. On `tutorial-02-nga-tu` the larger trim at j4 widens that open side from about 9 m to
   16 m.
