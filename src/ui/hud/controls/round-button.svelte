@@ -3,10 +3,10 @@
   import KeyBadge from './key-badge.svelte';
 
   /**
-   * A round button of the arc above the pedals. The indicator and hazard buttons draw their lamp
-   * and blink while on; the lights button holds the low- and high-beam pips.
+   * A round button of the stalk, the wheel hub or the console. The indicator and hazard buttons draw
+   * their lamp and blink while on; the lights button holds the low- and high-beam pips.
    * @type {{
-   *   button: import('../../lib/hud-view.js').ArcButton,
+   *   button: import('../../lib/hud-view.js').ButtonView,
    *   lights: import('../../../contracts/telemetry.js').Lights,
    *   showBadges: boolean,
    *   onhold: (on: boolean) => void,

@@ -98,6 +98,9 @@
  * @property {() => void} dispose Free GPU resources.
  * @property {() => number} [drawCalls] Draw calls of the last `render`, every pass included
  *   (diagnostics).
+ * @property {(mode: import('./controls.js').CameraMode) => void} [setCameraMode] Switch the camera;
+ *   redraws the last frame at once when one was drawn, so a switch while paused shows. Does nothing
+ *   after `dispose`.
  */
 
 /**

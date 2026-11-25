@@ -15,6 +15,8 @@ describe('keyLabel and badgeFor', () => {
     expect(keyLabel('Space')).toBe('Space');
     expect(keyLabel('Escape')).toBe('Esc');
     expect(keyLabel('ArrowUp')).toBe('↑');
+    expect(keyLabel('PageUp')).toBe('PgUp');
+    expect(keyLabel('PageDown')).toBe('PgDn');
     expect(keyLabel('Digit3')).toBe('3');
     expect(keyLabel('F13')).toBe('F13');
   });
@@ -23,13 +25,18 @@ describe('keyLabel and badgeFor', () => {
     expect(keyName('KeyW')).toBe('W');
     expect(keyName('ArrowUp')).toBe('↑');
     expect(keyName('Space')).toBe('Phím cách');
+    expect(keyName('PageUp')).toBe('Page Up');
+    expect(keyName('PageDown')).toBe('Page Down');
     expect(keyName('Digit3')).toBe('3');
   });
 
   it('labels every action by the first key of its binding', () => {
     for (const b of KEY_BINDINGS) expect(badgeFor(b.action)).toBe(keyLabel(b.keys[0]));
     expect(badgeFor('throttle')).toBe('W');
-    expect(badgeFor('handbrake')).toBe('Space');
+    expect(badgeFor('handbrake')).toBe('L');
+    expect(badgeFor('brakeRear')).toBe('Space');
+    expect(badgeFor('gearUp')).toBe('I');
+    expect(badgeFor('camera')).toBe('V');
     expect(badgeFor('pause')).toBe('Esc');
     expect(() => badgeFor(/** @type {never} */ ('jump'))).toThrow(RangeError);
   });

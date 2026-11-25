@@ -10,9 +10,9 @@ import { KEY_BINDINGS } from '../../contracts/controls.js';
 
 const ARROWS = Object.freeze({ ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→' });
 /** Cap text of `KeyboardEvent.code` values that are not a single letter or digit. */
-const CAP_NAMES = Object.freeze({ ...ARROWS, Space: 'Space', Escape: 'Esc' });
+const CAP_NAMES = Object.freeze({ ...ARROWS, Space: 'Space', Escape: 'Esc', PageUp: 'PgUp', PageDown: 'PgDn' });
 /** Vietnamese names of the same codes, for running text. */
-const VI_NAMES = Object.freeze({ ...ARROWS, Space: 'Phím cách', Escape: 'Esc' });
+const VI_NAMES = Object.freeze({ ...ARROWS, Space: 'Phím cách', Escape: 'Esc', PageUp: 'Page Up', PageDown: 'Page Down' });
 
 /**
  * Name of a key code from a table, then the letter or digit it carries, then the code itself.
@@ -31,7 +31,7 @@ function nameFrom(names, code) {
 /**
  * Short label of a key code for a badge (the text on the key cap).
  * @param {string} code `KeyboardEvent.code`.
- * @returns {string} E.g. `W`, `Space`, `Esc`, `↑`.
+ * @returns {string} E.g. `W`, `Space`, `Esc`, `PgUp`, `↑`.
  */
 export function keyLabel(code) {
   return nameFrom(CAP_NAMES, code);

@@ -42,20 +42,27 @@ function unit(v) {
   return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0;
 }
 
+/** Turn of the drawn steering wheel at full lock, in degrees; a handlebar turns `HANDLEBAR_TURN_DEG`. */
+export const WHEEL_TURN_DEG = 120;
+/** Turn of the drawn handlebar at full lock, in degrees. */
+export const HANDLEBAR_TURN_DEG = 25;
+
 /**
- * Steering as a 0..1 position across the slider: 0 full left, 0.5 centred, 1 full right.
- * @param {number} steer −1..1, + to the right.
- * @returns {number} 0..1.
+ * Turn of the drawn steering control for an applied steering, in degrees, + clockwise.
+ * @param {number} steer −1..1, + to the right; anything not finite reads as centred.
+ * @param {'wheel' | 'handlebar'} shape Steering control.
+ * @returns {number} Degrees.
  */
-export function steerPosition(steer) {
-  return unit(((Number.isFinite(steer) ? steer : 0) + 1) / 2);
+export function steeringTurnDeg(steer, shape) {
+  const s = Number.isFinite(steer) ? Math.max(-1, Math.min(1, steer)) : 0;
+  return s * (shape === 'wheel' ? WHEEL_TURN_DEG : HANDLEBAR_TURN_DEG);
 }
 
-/** Horizontal pointer travel on the steering slider, in CSS px, that gives full lock. */
+/** Horizontal pointer travel on the steering control, in CSS px, that gives full lock. */
 export const STEER_SLIDER_RANGE_PX = 72;
 
 /**
- * Steering from the slider pointer's horizontal offset from where it went down.
+ * Steering from the steering pointer's horizontal offset from where it went down.
  * @param {number} dxPx Offset in CSS px, + to the right.
  * @param {number} [rangePx] Offset of full lock.
  * @returns {number} −1..1; 0 for a non-finite offset.
@@ -77,7 +84,85 @@ export function actionLabel(action) {
 }
 
 /**
- * @typedef {object} ArcButton
+ * @typedef {object} ControlLayout
+ * The on-screen controls of a vehicle and preset, by cabin zone, left to right as in a cabin: the
+ * indicator and light stalk (a motorbike's left switch cluster), the left lever, the steering, the
+ * horn beside the wheel, the pedals, the right-hand console, and the game buttons at the top right.
+ * @property {'wheel' | 'handlebar'} steering Steering control: a round wheel (car) or a handlebar.
+ * @property {readonly (readonly ControlAction[])[]} stalk Stalk or switch-cluster rows, top row first.
+ * @property {readonly ControlAction[]} lever Left-hand lever: the motorbike's rear brake on Thực tế.
+ * @property {readonly ControlAction[]} horn Horn beside the wheel, on its right (car).
+ * @property {readonly ControlAction[]} pedals Brake then throttle; the throttle sits nearest the edge.
+ * @property {readonly ControlAction[]} console Right-hand console, top to bottom: hazard, then the
+ *   car's gear lever and handbrake.
+ * @property {boolean} consoleOverThrottle The console stands above the throttle at the screen edge
+ *   (a motorbike's lone hazard switch) instead of in its own column beside it.
+ * @property {readonly ControlAction[]} top Game buttons at the top right.
+ */
+
+/** Car zones; the stalk carries indicators and lights, the horn sits on the wheel's right. */
+const CAR_LAYOUT = Object.freeze({
+  steering: /** @type {const} */ ('wheel'),
+  stalk: Object.freeze([Object.freeze(/** @type {ControlAction[]} */ (['lightsCycle', 'flash'])), Object.freeze(/** @type {ControlAction[]} */ (['signalLeft', 'signalRight']))]),
+  lever: Object.freeze(/** @type {ControlAction[]} */ ([])),
+  horn: Object.freeze(/** @type {ControlAction[]} */ (['horn'])),
+  pedals: Object.freeze(/** @type {ControlAction[]} */ (['brake', 'throttle'])),
+  console: Object.freeze(/** @type {ControlAction[]} */ (['hazard', 'gearUp', 'gearDown', 'handbrake'])),
+  consoleOverThrottle: false,
+  top: Object.freeze(/** @type {ControlAction[]} */ (['camera', 'pause'])),
+});
+
+/**
+ * Motorbike zones: the left switch cluster holds the lights, the indicators and the horn; the
+ * rear-brake lever shows only on Thực tế, since the Đơn giản brake applies both brakes.
+ */
+const MOTORBIKE_ZONES = Object.freeze({
+  steering: /** @type {const} */ ('handlebar'),
+  stalk: Object.freeze([
+    Object.freeze(/** @type {ControlAction[]} */ (['lightsCycle', 'flash'])),
+    Object.freeze(/** @type {ControlAction[]} */ (['signalLeft', 'signalRight', 'horn'])),
+  ]),
+  horn: Object.freeze(/** @type {ControlAction[]} */ ([])),
+  pedals: Object.freeze(/** @type {ControlAction[]} */ (['brake', 'throttle'])),
+  console: Object.freeze(/** @type {ControlAction[]} */ (['hazard'])),
+  consoleOverThrottle: true,
+  top: Object.freeze(/** @type {ControlAction[]} */ (['camera', 'pause'])),
+});
+const MOTORBIKE_REAL = Object.freeze({ ...MOTORBIKE_ZONES, lever: Object.freeze(/** @type {ControlAction[]} */ (['brakeRear'])) });
+const MOTORBIKE_SIMPLE = Object.freeze({ ...MOTORBIKE_ZONES, lever: Object.freeze(/** @type {ControlAction[]} */ ([])) });
+
+/**
+ * The on-screen controls of a vehicle class and preset, by zone. The HUD draws these zones and the
+ * browser tests read the same function, so what is drawn is what is checked.
+ * @param {import('../../contracts/vehicle.js').LegalClass} legalClass Vehicle class.
+ * @param {import('../../contracts/controls.js').ControlPreset} preset Control preset of the run.
+ * @returns {ControlLayout} Zones.
+ */
+export function controlLayout(legalClass, preset) {
+  if (legalClass === 'car') return CAR_LAYOUT;
+  return preset === 'real' ? MOTORBIKE_REAL : MOTORBIKE_SIMPLE;
+}
+
+/**
+ * Every action that has an on-screen control in a layout, the steering's two included.
+ * @param {ControlLayout} layout Layout.
+ * @returns {ControlAction[]} Actions in zone order.
+ */
+export function layoutActions(layout) {
+  return [
+    ...layout.stalk.flat(),
+    ...layout.lever,
+    'steerLeft',
+    'steerRight',
+    ...layout.horn,
+    ...layout.pedals,
+    ...layout.console,
+    ...layout.top,
+  ];
+}
+
+/**
+ * @typedef {object} ButtonView
  * @property {ControlAction} action Action.
  * @property {'hold' | 'press'} mode Hold or press.
  * @property {string} label `aria-label`.
@@ -87,14 +172,8 @@ export function actionLabel(action) {
  * @property {boolean} blink Blinks while on (indicators).
  */
 
-/** Arc rows above the pedals: signals and hazard, then horn, lights, flash and the gear pair. */
-export const ARC_ROWS = Object.freeze([
-  Object.freeze(/** @type {ControlAction[]} */ (['signalLeft', 'hazard', 'signalRight'])),
-  Object.freeze(/** @type {ControlAction[]} */ (['horn', 'lightsCycle', 'flash', 'gearDown', 'gearUp'])),
-]);
-
-/** Short visible text of the arc buttons; signals and hazard show icons instead. */
-const ARC_TEXT = Object.freeze({
+/** Short visible text of the round buttons; signals and hazard show icons instead. */
+const BUTTON_TEXT = Object.freeze({
   signalLeft: '',
   hazard: '',
   signalRight: '',
@@ -106,12 +185,14 @@ const ARC_TEXT = Object.freeze({
 });
 
 /**
- * The arc buttons with the state each shows. Every vehicle gets the gear pair: the scooter's
- * automatic gearbox moves between N and D on it.
+ * A round button with the state it shows.
+ * @param {ControlAction} action Action of a stalk, horn or console button.
  * @param {import('../../contracts/hud.js').HudState} state HUD state.
- * @returns {ArcButton[][]} Rows, top row first.
+ * @returns {ButtonView} Button.
  */
-export function arcButtons(state) {
+export function buttonView(action, state) {
+  const binding = KEY_BINDINGS.find((b) => b.action === action);
+  if (!binding || !Object.hasOwn(BUTTON_TEXT, action)) throw new RangeError(`"${String(action)}" is not a round-button action`);
   const lamps = indicatorLamps(state.indicators);
   /** @type {Partial<Record<ControlAction, {testId: string, on: boolean, blink?: boolean}>>} */
   const shows = {
@@ -120,56 +201,70 @@ export function arcButtons(state) {
     signalRight: { testId: 'hud-indicator-right', on: lamps.right, blink: true },
     horn: { testId: 'hud-horn', on: state.horn },
   };
-  return ARC_ROWS.map((row) =>
-    row.map((action) => {
-      const binding = /** @type {import('../../contracts/controls.js').KeyBinding} */ (KEY_BINDINGS.find((b) => b.action === action));
-      const show = shows[action];
-      return {
-        action,
-        mode: binding.mode,
-        label: binding.label.vi,
-        text: ARC_TEXT[/** @type {keyof ARC_TEXT} */ (action)],
-        testId: show?.testId ?? null,
-        on: show?.on ?? false,
-        blink: show?.blink ?? false,
-      };
-    }),
-  );
+  const show = shows[action];
+  return {
+    action,
+    mode: binding.mode,
+    label: binding.label.vi,
+    text: BUTTON_TEXT[/** @type {keyof BUTTON_TEXT} */ (action)],
+    testId: show?.testId ?? null,
+    on: show?.on ?? false,
+    blink: show?.blink ?? false,
+  };
 }
 
 /**
  * @typedef {object} PedalControl
- * @property {'handbrake' | 'brake' | 'throttle'} action Action.
+ * @property {'handbrake' | 'brakeRear' | 'brake' | 'throttle'} action Action.
  * @property {'hud-handbrake' | 'hud-brake-rear' | 'hud-brake-front' | 'hud-throttle'} testId Test
  *   id of the state it shows.
  * @property {string} label Vietnamese label.
  * @property {number} fraction Applied value 0..1.
  * @property {boolean} on Applied at all.
  * @property {'lever' | 'pedal'} shape A round lever button or a tall pedal.
+ * @property {{testId: 'hud-brake-rear', fraction: number} | null} rear The rear brake the
+ *   motorbike's Đơn giản brake applies with it, shown as a second fill; null elsewhere.
  */
 
 /**
- * Pedals and the lever beside them, left to right: handbrake (car) or rear brake (motorbike),
- * brake, throttle at the screen edge. On the simple preset the motorbike's one brake applies both
- * brakes, so its pedal reads "Phanh".
+ * A pedal or a lever with the value it shows. On Đơn giản the motorbike's one brake applies both
+ * brakes, so its pedal reads "Phanh" and also shows the rear brake.
+ * @param {'handbrake' | 'brakeRear' | 'brake' | 'throttle'} action Action.
  * @param {import('../../contracts/hud.js').HudControls} controls Applied controls.
  * @param {boolean} isCar Car or motorbike.
  * @param {import('../../contracts/controls.js').ControlPreset} preset Control preset of the run.
- * @returns {PedalControl[]} Controls in display order.
+ * @returns {PedalControl} Control.
  */
-export function pedalControls(controls, isCar, preset) {
-  const lever = isCar
-    ? { action: /** @type {const} */ ('handbrake'), testId: /** @type {const} */ ('hud-handbrake'), label: 'Phanh tay', fraction: controls.handbrake ? 1 : 0 }
-    : { action: /** @type {const} */ ('handbrake'), testId: /** @type {const} */ ('hud-brake-rear'), label: 'Phanh sau', fraction: unit(controls.brakeRear) };
-  const brakeLabel = isCar ? 'Phanh chân' : preset === 'simple' ? 'Phanh' : 'Phanh trước';
-  /** @type {Omit<PedalControl, 'on'>[]} */
-  const controlsInOrder = [
-    { ...lever, shape: 'lever' },
-    { action: 'brake', testId: 'hud-brake-front', label: brakeLabel, fraction: unit(controls.brakeFront), shape: 'pedal' },
-    { action: 'throttle', testId: 'hud-throttle', label: 'Ga', fraction: unit(controls.throttle), shape: 'pedal' },
-  ];
-  return controlsInOrder.map((c) => ({ ...c, on: c.fraction > 0 }));
+export function pedalControl(action, controls, isCar, preset) {
+  /** @type {Omit<PedalControl, 'on'>} */
+  let c;
+  if (action === 'handbrake') {
+    c = { action, testId: 'hud-handbrake', label: 'Phanh tay', fraction: controls.handbrake ? 1 : 0, shape: 'lever', rear: null };
+  } else if (action === 'brakeRear') {
+    c = { action, testId: 'hud-brake-rear', label: 'Phanh sau', fraction: unit(controls.brakeRear), shape: 'lever', rear: null };
+  } else if (action === 'brake') {
+    const combined = !isCar && preset === 'simple';
+    const label = isCar ? 'Phanh chân' : combined ? 'Phanh' : 'Phanh trước';
+    c = {
+      action,
+      testId: 'hud-brake-front',
+      label,
+      fraction: unit(controls.brakeFront),
+      shape: 'pedal',
+      rear: combined ? { testId: 'hud-brake-rear', fraction: unit(controls.brakeRear) } : null,
+    };
+  } else if (action === 'throttle') {
+    c = { action, testId: 'hud-throttle', label: 'Ga', fraction: unit(controls.throttle), shape: 'pedal', rear: null };
+  } else {
+    throw new RangeError(`"${String(action)}" is not a pedal or lever action`);
+  }
+  return { ...c, on: c.fraction > 0 };
 }
+
+/** Vietnamese name of each camera mode, for the HUD button and the home page. */
+export const CAMERA_NAMES = Object.freeze({ chase: 'Thứ ba (sau xe)', cockpit: 'Thứ nhất (trong xe)' });
+/** Short name of each camera mode, on the HUD button. */
+export const CAMERA_SHORT_NAMES = Object.freeze({ chase: 'Sau xe', cockpit: 'Trong xe' });
 
 /** Vietnamese name of each preset, for the pause menu and the home page. */
 export const PRESET_NAMES = Object.freeze({ simple: 'Đơn giản', real: 'Thực tế' });

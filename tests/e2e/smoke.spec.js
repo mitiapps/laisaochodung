@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test';
+import { KEY_BINDINGS } from '../../src/contracts/controls.js';
 import { CONTROL_PRESET_STORAGE_KEY } from '../../src/ui/lib/control-preset-store.js';
+
+/** First key of each action, from the game's own bindings. */
+const KEY = Object.fromEntries(KEY_BINDINGS.map((b) => [b.action, b.keys[0]]));
 
 /**
  * Smoke path through the shipped build: the home page lists the vehicles and maps, a run of
@@ -51,23 +55,23 @@ test('the app loads, drives, and its pages render without console errors', async
   await expect(page.getByTestId('play-screen')).toBeVisible();
   await expect(page.getByTestId('hud')).toBeVisible();
 
-  // The car starts in neutral: E puts it in first gear before W can move it.
+  // The car starts in neutral: the gear-up key puts it in first gear before the throttle can move it.
   await expect(page.getByTestId('hud-gear')).toHaveText('N');
-  await page.keyboard.press('KeyE');
+  await page.keyboard.press(KEY.gearUp);
   await expect(page.getByTestId('hud-gear')).toHaveText('1');
 
-  // Hold W for three seconds; the HUD speed is then polled, not read at a fixed instant.
-  await page.keyboard.down('KeyW');
+  // Hold the throttle for three seconds; the HUD speed is then polled, not read at a fixed instant.
+  await page.keyboard.down(KEY.throttle);
   await page.waitForTimeout(3000);
   await expect.poll(() => hudSpeed(page), { timeout: 15_000 }).toBeGreaterThan(0);
-  await page.keyboard.up('KeyW');
+  await page.keyboard.up(KEY.throttle);
 
-  // Z lights the left indicator.
-  await page.keyboard.press('KeyZ');
+  // The left-indicator key lights the left indicator.
+  await page.keyboard.press(KEY.signalLeft);
   await expect(page.getByTestId('hud-indicator-left')).toHaveAttribute('data-on', 'true');
 
-  // E shifts up again while rolling: the gear readout changes from first to second.
-  await page.keyboard.press('KeyE');
+  // Shifting up again while rolling changes the gear readout from first to second.
+  await page.keyboard.press(KEY.gearUp);
   await expect(page.getByTestId('hud-gear')).toHaveText('2');
 
   await expect(page.getByTestId('hud-nav-distance')).toContainText(/m|km/);

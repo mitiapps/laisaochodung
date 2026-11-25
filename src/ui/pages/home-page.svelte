@@ -1,19 +1,21 @@
 <script>
   import PageShell from '../layout/page-shell.svelte';
   import { KEY_BINDINGS } from '../../contracts/controls.js';
+  import { readCameraMode, writeCameraMode } from '../lib/camera-mode-store.js';
   import { readControlPreset, writeControlPreset } from '../lib/control-preset-store.js';
   import { formatDistance } from '../lib/format.js';
   import { keyName } from '../lib/key-label.js';
-  import { PRESET_NAMES } from '../lib/hud-view.js';
+  import { CAMERA_NAMES, PRESET_NAMES } from '../lib/hud-view.js';
   import { pageHref, playHref } from '../lib/route.js';
 
   /**
    * @type {{
    *   vehicles: ReadonlyArray<import('../../contracts/vehicle.js').VehicleInfo>,
    *   maps: import('../lib/catalog.js').MapsState,
+   *   camera?: import('../../game/camera-control.js').CameraControl | null,
    * }}
    */
-  let { vehicles, maps } = $props();
+  let { vehicles, maps, camera = null } = $props();
 
   let vehicleId = $state(/** @type {string | null} */ (null));
   let mapId = $state(/** @type {string | null} */ (null));
@@ -24,6 +26,27 @@
     { id: 'simple', hint: 'số tự động, một phanh, xi nhan tự tắt sau khi rẽ' },
     { id: 'real', hint: 'số tay, hai phanh riêng, xi nhan tắt bằng tay' },
   ]);
+
+  const cameraKey = keyName(KEY_BINDINGS.find((b) => b.action === 'camera')?.keys[0] ?? '');
+  let cameraMode = $state(readCameraMode());
+  $effect(() =>
+    camera?.subscribe((mode) => {
+      cameraMode = mode;
+    }),
+  );
+
+  /** Camera choices with what each one shows. */
+  const CAMERAS = /** @type {const} */ ([
+    { id: 'chase', hint: 'nhìn từ phía sau, thấy cả xe và xe bên cạnh' },
+    { id: 'cockpit', hint: 'nhìn từ ghế lái, thấy đường phía trước rõ nhất' },
+  ]);
+
+  /** @param {import('../../contracts/controls.js').CameraMode} id Chosen camera mode. */
+  function chooseCamera(id) {
+    cameraMode = id;
+    if (camera) camera.set(id);
+    else if (!writeCameraMode(id)) console.warn('The camera mode could not be saved; it applies to this visit only');
+  }
 
   /** @param {import('../../contracts/controls.js').ControlPreset} id Chosen preset. */
   function choosePreset(id) {
@@ -97,6 +120,32 @@
           </label>
         {/each}
       </div>
+
+      <h2 class="mb-3 mt-6 text-xl font-semibold">Góc nhìn</h2>
+      <div class="grid gap-2" role="radiogroup" aria-label="Góc nhìn">
+        {#each CAMERAS as option (option.id)}
+          <label
+            class="flex cursor-pointer items-center gap-3 rounded-lg border p-3 {cameraMode === option.id
+              ? 'border-police-500 bg-police-50'
+              : 'border-stone-300 bg-white hover:border-police-300'}"
+          >
+            <input
+              class="accent-police-600"
+              type="radio"
+              name="camera-mode"
+              value={option.id}
+              checked={cameraMode === option.id}
+              onchange={() => chooseCamera(option.id)}
+              data-testid="camera-{option.id}"
+            />
+            <span>
+              <span class="font-medium">{CAMERA_NAMES[option.id]}</span>
+              <span class="block text-sm text-stone-600">{option.hint}</span>
+            </span>
+          </label>
+        {/each}
+      </div>
+      <p class="mt-2 text-sm text-stone-600">Đổi được cả khi đang lái, bằng phím {cameraKey} hoặc nút Góc nhìn.</p>
     </section>
 
     <section>

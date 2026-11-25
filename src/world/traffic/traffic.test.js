@@ -43,6 +43,14 @@ function noPreRoll() {
 }
 
 /**
+ * @returns {import('../../contracts/traffic.js').TrafficParams} No pre-roll, and wrecks that outlast
+ *   any run, for tests that use a wreck as a standing obstacle.
+ */
+function standingWrecks() {
+  return { ...noPreRoll(), wreckClearS: 60 };
+}
+
+/**
  * Places an agent on a lane, heading for a connector.
  * @param {TrafficState} st State.
  * @param {string} laneId Lane.
@@ -322,7 +330,7 @@ describe('ego reset and contacts', () => {
 
   it('turns the named agent into a wreck with speed 0 on the next step, and followers stop behind it', () => {
     const map = emptyMap();
-    const st = createTraffic(map, noPreRoll(), 5);
+    const st = createTraffic(map, standingWrecks(), 5);
     const k = place(st, 'rw-e1', 60, 10, 'car', 'c-rw-e1-re-e0');
     place(st, 'rw-e1', 30, 10, 'car', 'c-rw-e1-re-e0');
     run(st, map, 0, 1);
@@ -420,7 +428,7 @@ describe('stepWorld', () => {
         loop: false,
       },
     ];
-    let world = createWorld(map, { traffic: 'map', params: noPreRoll(), runSeed: 9 });
+    let world = createWorld(map, { traffic: 'map', params: standingWrecks(), runSeed: 9 });
     const st = /** @type {TrafficState} */ (world.traffic);
     // A stopped car standing in the pedestrian's path holds it.
     place(st, 'rw-e0', 97, 0, 'car');

@@ -116,6 +116,14 @@ says what happens and where.
 - On Thực tế, indicators do not cancel themselves; pressing the same side again turns them off.
 - **Touch controls are tested only by emulation.** The browser tests drive them with emulated
   touch; they have never been run on a real phone.
+- **No live mirrors in the cockpit view.** The mirror heads are drawn dark; switch to the chase
+  view to look behind.
+- **The speed panel covers the bottom centre on a phone**, including the scooter's cockpit cowl.
+- **The chase camera sits closer behind the car than behind a real sedan.** The drawn sedan is
+  1.89 m tall (Car Kit proportions, not the 1.45 m `heightM`), so the camera is moved in to keep
+  the road 4 m ahead of the bumper visible over the roof.
+- **On a desktop the centred steering control covers the lower edge of the car** in the chase
+  view.
 
 ## Traffic
 
@@ -134,6 +142,15 @@ says what happens and where.
 - **Procedural motorbikes and bus.** The player's scooter, traffic motorbikes and the bus are
   built from code, not from model files; cars, taxis, trucks, riders and pedestrians use Kenney
   models.
+- **Wrecks leave 3 s after the contact.** Every wrecked traffic vehicle, whether the player or
+  another agent struck it, is removed `wreckClearS` (3 s) after the contact, sliding car wrecks
+  included; the player drives on from where the contact left them. A wreck's `red-light` or
+  `no-yield` latch lasts as long (`LATCH_S`), so a wreck standing unflagged in the road no longer
+  happens in a run; the fault rows for it stay, for scripted actors and tests. The clearing
+  check accepts the step that lands within half a step (`DT / 2`) of 3 s, because step times are
+  float sums of `DT`; that slack is a rounding guard, not a tuning value, so retune
+  `wreckClearS` and leave the slack alone.
+- **A wreck vanishes in view.** It is removed in one step, with no fade or blink first.
 - **NPCs cannot wreck scripted actors.** Traffic agents stop for scripted actors (perceived
   exactly), and a scripted actor holds for anything in its path, so neither ever strikes the other.
 - **A parked scripted actor closes its lane.** A scripted actor that ends its path on a lane stays

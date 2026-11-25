@@ -4,7 +4,9 @@
  * missing or broken model never blocks drawing.
  *
  * Node layout: `root` (ground position, `rotation.y = heading`, +X forward) → `lean` (roll) →
- * `model` (turns the Kenney frame, front +Z and left +X, to +X forward) → content.
+ * `model` (turns the Kenney frame, front +Z and left +X, to +X forward) → `body` (the body, wheels
+ * and rider, hidden in the cockpit view) and the lamps. `mount` adds objects to `lean` (the
+ * cockpit), so they roll with a motorbike.
  */
 
 import {
@@ -310,7 +312,12 @@ function castShadows(node) {
  * @property {Group} root Root to add to the scene.
  * @property {(pose: DrawPose, ego: {speed: number, yawRate: number, wheels: {steer: number}[]}, wheelAngles: number[], lamps: LampState | null) => void} update
  *   Pose the vehicle; `wheelAngles` are accumulated spin angles per wheel.
- * @property {() => Group} ghost A static copy of the current look (for the fall effect).
+ * @property {() => Group} ghost A static copy of the current look (for the fall effect), with the
+ *   body shown and mounted objects left out.
+ * @property {(visible: boolean) => void} setBodyVisible Show or hide the body, wheels and rider;
+ *   the lamps and headlight beams stay.
+ * @property {(object: Object3D) => void} mount Add an object to the leaning frame (+X forward,
+ *   +Y up, +Z right of the vehicle centre on the ground); `ghost` leaves it out.
  * @property {() => void} dispose Free owned resources.
  */
 
@@ -329,6 +336,9 @@ export function createVehicleView(options) {
   const model = new Group();
   model.rotation.y = MODEL_YAW;
   lean.add(model);
+  const body = new Group();
+  body.userData.egoBody = true;
+  model.add(body);
 
   const kind = config.kind === 'car' ? 'car' : 'motorbike';
   let disposed = false;
@@ -341,9 +351,14 @@ export function createVehicleView(options) {
   let content = built.content;
   /** @type {Object3D[]} */
   let wheels = built.wheels;
-  model.add(content);
+  body.add(content);
 
-  const lampKit = options.lamps ? buildLamps(kit, model, kind, L, W, config.heightM) : null;
+  // Lamp lenses hide with the body (from the driver's seat they would float over the bonnet); the
+  // headlight spot and beam stay, so the road stays lit in the cockpit view.
+  const lenses = new Group();
+  lenses.userData.egoBody = true;
+  model.add(lenses);
+  const lampKit = options.lamps ? buildLamps(kit, model, lenses, kind, L, W, config.heightM) : null;
   castShadows(root);
 
   if (config.glb) {
@@ -363,9 +378,9 @@ export function createVehicleView(options) {
           node.rotation.order = 'YXZ';
           found.push(node);
         }
-        model.remove(content);
+        body.remove(content);
         content = holder;
-        model.add(content);
+        body.add(content);
         castShadows(content);
         if (found.length === built.wheels.length) {
           wheels = found;
@@ -396,9 +411,18 @@ export function createVehicleView(options) {
     ghost() {
       const copy = /** @type {Group} */ (root.clone(true));
       copy.traverse((o) => {
-        if (o instanceof SpotLight) o.visible = false;
+        if (o instanceof SpotLight || o.userData.mounted) o.visible = false;
+        if (o.userData.egoBody) o.visible = true;
       });
       return copy;
+    },
+    setBodyVisible(visible) {
+      body.visible = visible;
+      lenses.visible = visible;
+    },
+    mount(object) {
+      object.userData.mounted = true;
+      lean.add(object);
     },
     dispose() {
       disposed = true;
@@ -411,14 +435,15 @@ export function createVehicleView(options) {
 /**
  * Head, brake and indicator lamps plus a headlight spot and beam, in the Kenney frame.
  * @param {PartKit} kit Part kit.
- * @param {Group} model Model group (Kenney frame).
+ * @param {Group} model Model group (Kenney frame), for the headlight spot and beam.
+ * @param {Group} lenses Group in the same frame for the lamp lenses.
  * @param {'car' | 'motorbike'} kind Kind.
  * @param {number} L Length.
  * @param {number} W Width.
  * @param {number} H Height.
  * @returns {{update: (s: LampState) => void, dispose: () => void}} Lamp controller.
  */
-function buildLamps(kit, model, kind, L, W, H) {
+function buildLamps(kit, model, lenses, kind, L, W, H) {
   const head = kit.own(new MeshBasicMaterial({ color: 0x777766 }));
   const brake = kit.own(new MeshBasicMaterial({ color: 0x551111 }));
   const indL = kit.own(new MeshBasicMaterial({ color: 0x664411 }));
@@ -428,13 +453,13 @@ function buildLamps(kit, model, kind, L, W, H) {
   const zr = -L / 2 - 0.01;
   const xs = kind === 'car' ? [W / 2 - 0.25, -(W / 2 - 0.25)] : [0];
   for (const x of xs) {
-    model.add(kit.box(0.28, 0.12, 0.04, head, [x, y, zf]));
-    model.add(kit.box(0.28, 0.1, 0.04, brake, [x, y, zr]));
+    lenses.add(kit.box(0.28, 0.12, 0.04, head, [x, y, zf]));
+    lenses.add(kit.box(0.28, 0.1, 0.04, brake, [x, y, zr]));
   }
   const xi = kind === 'car' ? W / 2 - 0.06 : 0.2;
   for (const z of [zf, zr]) {
-    model.add(kit.box(0.1, 0.07, 0.04, indL, [xi, y + 0.1, z]));
-    model.add(kit.box(0.1, 0.07, 0.04, indR, [-xi, y + 0.1, z]));
+    lenses.add(kit.box(0.1, 0.07, 0.04, indL, [xi, y + 0.1, z]));
+    lenses.add(kit.box(0.1, 0.07, 0.04, indR, [-xi, y + 0.1, z]));
   }
   const spot = new SpotLight(0xfff4d6, 0, 40, 0.5, 0.5, 1.2);
   spot.position.set(0, y, zf);

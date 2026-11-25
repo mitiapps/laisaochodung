@@ -9,28 +9,55 @@
   import RoundButton from './controls/round-button.svelte';
   import SteeringSlider from './controls/steering-slider.svelte';
   import { formatGear, formatScore, formatSpeed } from '../lib/format.js';
-  import { actionLabel, arcButtons, newestToast, noticeItems, pedalControls, rpmFraction } from '../lib/hud-view.js';
+  import { CAMERA_SHORT_NAMES, actionLabel, buttonView, controlLayout, newestToast, noticeItems, pedalControl, rpmFraction } from '../lib/hud-view.js';
   import { watchBadgeVisibility } from '../lib/key-label.js';
 
   /**
-   * The HUD is a control surface: readouts plus a working on-screen control for every action, each
-   * with its key badge, laid out where touch controls sit on a phone in landscape.
+   * The HUD is a control surface: readouts plus a working on-screen control for every action of
+   * the vehicle, each with its key badge, in cabin order from left to right (`controlLayout`): the
+   * stalk, the left lever, the steering, the horn, the pedals and the right-hand console. On a
+   * phone the steering sits in the left thumb zone under the stalk; on a desktop window (the `desk`
+   * variant) it moves to the bottom centre with the stalk on its left and the horn on its right.
    * @type {{
    *   state: import('../../contracts/hud.js').HudState,
    *   vehicle: import('../../contracts/vehicle.js').VehicleInfo,
    *   toasts: import('../lib/toast-stack.js').Toast[],
    *   controls: import('../../contracts/hud.js').GameControls,
+   *   cameraMode?: import('../../contracts/controls.js').CameraMode,
    *   onpause: () => void,
    *   ondismiss: (episodeId: string) => void,
    *   runKey?: number,
    * }}
    */
-  let { state: hud, vehicle, toasts, controls, onpause, ondismiss, runKey = 0 } = $props();
+  let { state: hud, vehicle, toasts, controls, cameraMode = 'chase', onpause, ondismiss, runKey = 0 } = $props();
 
   const isCar = $derived(vehicle.legalClass === 'car');
   const paused = $derived(hud.runStatus === 'paused');
-  const rows = $derived(arcButtons(hud));
-  const pedals = $derived(pedalControls(hud.controls, isCar, hud.controlPreset));
+  const layout = $derived(controlLayout(vehicle.legalClass, hud.controlPreset));
+  const hasLever = $derived(layout.lever.length > 0);
+
+  /**
+   * Places of the left zones, phone first and `desk:` for a desktop window. The steering is 112 px
+   * (wheel) or 168 × 72 px (handlebar), buttons 56 px with 8 px gaps; the desktop row sits 40 px
+   * up so the map attribution under it stays readable.
+   */
+  const place = $derived(
+    isCar
+      ? {
+          steering: 'bottom-0 left-0 desk:bottom-10 desk:left-1/2 desk:-translate-x-1/2',
+          stalk: 'bottom-[120px] left-0 desk:bottom-10 desk:left-auto desk:right-[calc(50%+64px)]',
+          lever: '',
+          horn: 'bottom-7 left-[120px] desk:bottom-[68px] desk:left-[calc(50%+64px)]',
+          speed: 'desk:bottom-10 desk:left-auto desk:right-[calc(50%+192px)] desk:translate-x-0',
+        }
+      : {
+          steering: `bottom-0 ${hasLever ? 'left-16' : 'left-0'} desk:bottom-10 desk:left-1/2 desk:-translate-x-1/2`,
+          stalk: `bottom-20 left-0 desk:bottom-10 desk:left-auto ${hasLever ? 'desk:right-[calc(50%+156px)]' : 'desk:right-[calc(50%+92px)]'}`,
+          lever: 'bottom-2 left-0 desk:bottom-12 desk:left-auto desk:right-[calc(50%+92px)]',
+          horn: '',
+          speed: 'desk:bottom-10 desk:left-[calc(50%+92px)] desk:translate-x-0',
+        },
+  );
   const notices = $derived(noticeItems(hud.notices));
   // Below 480 px of viewport height only the newest toast-stack item shows, with a count of the rest.
   const newest = $derived(newestToast(notices, toasts));
@@ -81,7 +108,21 @@
           onpointerdown={(e) => e.preventDefault()}
           oncontextmenu={(e) => e.preventDefault()}
         >
-          <div class="absolute right-0 top-0">
+          <!-- Lifted above the pause overlay, so pause and the camera stay usable while paused. -->
+          <div class="absolute right-0 top-0 z-10 flex gap-2">
+            <ControlButton
+              action="camera"
+              mode="press"
+              label={actionLabel('camera')}
+              onpress={() => controls.press('camera')}
+              testid="hud-camera"
+              dataValue={cameraMode}
+              class="h-14 min-w-14 flex-col rounded-xl border-2 border-white/70 bg-white/95 px-2 text-xs font-semibold text-stone-800 shadow-md"
+            >
+              <span>Góc nhìn</span>
+              <span class="text-[10px] font-normal text-stone-600">{CAMERA_SHORT_NAMES[cameraMode]}</span>
+              <KeyBadge action="camera" shown={showBadges} class="-bottom-2 right-1" />
+            </ControlButton>
             <ControlButton
               action="pause"
               mode="press"
@@ -95,23 +136,59 @@
             </ControlButton>
           </div>
 
-          <div class="absolute bottom-0 left-0">
-            <SteeringSlider steer={hud.controls.steer} {showBadges} onsteer={(v) => controls.steer(v)} />
-          </div>
-
-          <div class="absolute bottom-0 right-0 flex flex-col items-end gap-2">
-            {#each rows as row, i (i)}
+          <!-- Left stalk, or a motorbike's left switch cluster: lights above, indicators below. -->
+          <div class="absolute flex flex-col items-start gap-2 desk:items-end {place.stalk}" data-zone="stalk">
+            {#each layout.stalk as row, i (i)}
               <div class="flex gap-2">
-                {#each row as button (button.action)}
-                  <RoundButton {button} lights={hud.lights} {showBadges} onhold={holdOf(button.action)} onpress={pressOf(button.action)} />
+                {#each row as action (action)}
+                  <RoundButton button={buttonView(action, hud)} lights={hud.lights} {showBadges} onhold={holdOf(action)} onpress={pressOf(action)} />
                 {/each}
               </div>
             {/each}
-            <div class="flex items-end gap-2">
-              {#each pedals as control (control.action)}
-                <Pedal {control} {showBadges} onhold={holdOf(control.action)} />
-              {/each}
+          </div>
+
+          {#each layout.lever as action (action)}
+            <div class="absolute {place.lever}" data-zone="lever">
+              <Pedal control={pedalControl(/** @type {'brakeRear'} */ (action), hud.controls, isCar, hud.controlPreset)} {showBadges} onhold={holdOf(action)} />
             </div>
+          {/each}
+
+          <div class="absolute {place.steering}" data-zone="steering">
+            <SteeringSlider steer={hud.controls.steer} shape={layout.steering} {showBadges} onsteer={(v) => controls.steer(v)} />
+          </div>
+
+          {#each layout.horn as action (action)}
+            <div class="absolute {place.horn}" data-zone="horn">
+              <RoundButton button={buttonView(action, hud)} lights={hud.lights} {showBadges} onhold={holdOf(action)} onpress={pressOf(action)} />
+            </div>
+          {/each}
+
+          <!-- Right cluster: brake, throttle, then the console at the screen edge (a motorbike's
+               lone hazard switch stands above the throttle instead). -->
+          <div class="absolute bottom-0 right-0 flex items-end gap-2" data-zone="right">
+            {#each layout.pedals as action (action)}
+              {#if action === 'throttle' && layout.consoleOverThrottle}
+                <div class="flex flex-col items-center gap-2" data-zone="console">
+                  {#each layout.console as c (c)}
+                    <RoundButton button={buttonView(c, hud)} lights={hud.lights} {showBadges} onhold={holdOf(c)} onpress={pressOf(c)} />
+                  {/each}
+                  <Pedal control={pedalControl('throttle', hud.controls, isCar, hud.controlPreset)} {showBadges} onhold={holdOf(action)} />
+                </div>
+              {:else}
+                <Pedal control={pedalControl(/** @type {'brake' | 'throttle'} */ (action), hud.controls, isCar, hud.controlPreset)} {showBadges} onhold={holdOf(action)} />
+              {/if}
+            {/each}
+            {#if !layout.consoleOverThrottle}
+              <div class="flex flex-col gap-2" data-zone="console">
+                {#each layout.console as c (c)}
+                  {#if c === 'handbrake'}
+                    <Pedal control={pedalControl('handbrake', hud.controls, isCar, hud.controlPreset)} {showBadges} onhold={holdOf(c)} />
+                  {:else}
+                    <RoundButton button={buttonView(c, hud)} lights={hud.lights} {showBadges} onhold={holdOf(c)} onpress={pressOf(c)} />
+                  {/if}
+                {/each}
+              </div>
+            {/if}
           </div>
         </div>
       {/key}
@@ -128,7 +205,7 @@
       </div>
 
       <div
-        class="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-end gap-2 rounded-lg border border-white/60 bg-white/90 p-2 shadow-md backdrop-blur"
+        class="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-end gap-2 rounded-lg border border-white/60 bg-white/90 p-2 shadow-md backdrop-blur {place.speed}"
         data-testid="hud-speed-panel"
       >
         <SpeedLimitSign limitKmh={hud.speedLimitKmh} verified={hud.speedLimitVerified} />
@@ -160,10 +237,10 @@
         </div>
       </div>
 
-      <!-- Toasts: top centre, height capped clear of the arc, the pedals and the pause button; the
+      <!-- Toasts: top centre, height capped clear of the controls and the top-right buttons; the
            newest first, so the cap never hides it. Below 480 px of viewport height (a landscape
            phone) only the newest item shows, with a "+N" count of the hidden ones, since two toasts
-           do not fit above the arc there. -->
+           do not fit above the controls there. -->
       <div
         class="absolute left-1/2 top-0 flex max-h-[calc(100dvh-16rem)] w-72 max-w-[calc(100%-26rem)] min-w-60 -translate-x-1/2 flex-col gap-2 overflow-y-auto overflow-x-hidden"
         data-testid="toast-stack"

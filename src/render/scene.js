@@ -1,6 +1,7 @@
 /**
  * Scene environment: sun and sky light from `env.clockMin`, fog, a wet look and rain streaks in
- * rain, night emissives, and the smoothed chase camera. No cockpit or rider view in the MVP.
+ * rain, night emissives, and the camera rig: a smoothed chase camera behind and above the vehicle,
+ * or a rigid cockpit camera at the driver's or rider's eyes.
  *
  * - Far plane 300 m. The day fog leaves about 1% of a surface's colour at that distance, so the
  *   cut never shows, and it lets distant scenery chunks be culled. The low-cost path of software
@@ -211,50 +212,154 @@ export function applyNight(targets, night) {
 }
 
 /**
+ * @typedef {object} ChaseRig
+ * @property {number} backM Eye distance behind the vehicle centre.
+ * @property {number} upM Eye height above the vehicle's ground point.
+ * @property {number} lookAheadM Look point ahead of the vehicle centre.
+ * @property {number} lookUpM Look point height.
+ */
+
+/**
+ * Chase camera per vehicle class (design). The camera sits high and pitched down, so the vehicle
+ * fills the lower half of the screen and the road from a few metres ahead of its front shows above
+ * it: the drawn sedan is 1.89 m tall (the Car Kit model fitted to the footprint), a rider's head
+ * about 1.7 m. At 4.5 m and 3.6 m it looks over riders, cars and bus roofs behind, and passes under
+ * cantilever signal heads (5.3 m and up) and the tutorial streets' lowest cable sag (about 4.7 m);
+ * street trees stand 2.6 m from the kerb lane's centre with their crowns clear of it.
+ * @type {Readonly<{car: ChaseRig, motorbike: ChaseRig}>}
+ */
+export const CHASE_RIG = Object.freeze({
+  car: Object.freeze({ backM: 6.5, upM: 4.5, lookAheadM: 6.5, lookUpM: 0 }),
+  motorbike: Object.freeze({ backM: 5.5, upM: 3.6, lookAheadM: 5, lookUpM: 0 }),
+});
+
+/**
+ * @typedef {object} CockpitRig
+ * @property {number} aheadM Eye position ahead of the vehicle centre (negative: behind it).
+ * @property {number} leftM Eye offset to the left of the centreline.
+ * @property {number} upM Eye height.
+ * @property {number} lookAheadM Look point ahead of the vehicle centre.
+ * @property {number} lookUpM Look point height.
+ * @property {number} fovDeg Vertical field of view.
+ * @property {number} rollPerLean Camera roll per radian of drawn lean (a rider's head leans less
+ *   than the bike).
+ */
+
+/**
+ * Cockpit camera per vehicle class (design): a left-hand-drive driver's eyes, and a rider's eyes
+ * over the handlebar. The cockpit drawn under them (`cockpit.js`) fills the bottom fifth to quarter
+ * of the screen and leaves the road visible from about two metres ahead of the front.
+ * @type {Readonly<{car: CockpitRig, motorbike: CockpitRig}>}
+ */
+export const COCKPIT_RIG = Object.freeze({
+  car: Object.freeze({ aheadM: -0.15, leftM: 0.36, upM: 1.2, lookAheadM: 30, lookUpM: 0.9, fovDeg: 60, rollPerLean: 0 }),
+  motorbike: Object.freeze({ aheadM: -0.25, leftM: 0, upM: 1.55, lookAheadM: 12, lookUpM: 0, fovDeg: 70, rollPerLean: 0.5 }),
+});
+
+/** Vertical field of view of the chase camera, in degrees. */
+export const CHASE_FOV_DEG = 60;
+
+/**
+ * @param {'car' | 'motorbike' | 'moped'} legalClass Vehicle class.
+ * @returns {'car' | 'motorbike'} Rig key.
+ */
+const rigKey = (legalClass) => (legalClass === 'car' ? 'car' : 'motorbike');
+
+/**
  * Pure: chase-camera eye and look-at points for a pose.
  * @param {{x: number, y: number, z: number, heading: number}} pose Target pose.
  * @param {'car' | 'motorbike' | 'moped'} legalClass Vehicle class (sets distance and height).
  * @returns {{eye: [number, number, number], look: [number, number, number]}} Points.
  */
 export function chaseTarget(pose, legalClass) {
-  const car = legalClass === 'car';
-  const back = car ? 7.5 : 5;
-  const up = car ? 3 : 2.2;
+  const rig = CHASE_RIG[rigKey(legalClass)];
   const [fx, fz] = headingVector(pose.heading);
   return {
-    eye: [pose.x - fx * back, pose.y + up, pose.z - fz * back],
-    look: [pose.x + fx * 4, pose.y + (car ? 1 : 0.9), pose.z + fz * 4],
+    eye: [pose.x - fx * rig.backM, pose.y + rig.upM, pose.z - fz * rig.backM],
+    look: [pose.x + fx * rig.lookAheadM, pose.y + rig.lookUpM, pose.z + fz * rig.lookAheadM],
   };
 }
 
 /**
- * Smoothed chase camera.
+ * Pure: cockpit-camera eye and look-at points for a pose. Left of heading θ is (−sin θ, 0, −cos θ).
+ * @param {{x: number, y: number, z: number, heading: number}} pose Vehicle pose.
+ * @param {'car' | 'motorbike' | 'moped'} legalClass Vehicle class.
+ * @returns {{eye: [number, number, number], look: [number, number, number]}} Points.
+ */
+export function cockpitTarget(pose, legalClass) {
+  const rig = COCKPIT_RIG[rigKey(legalClass)];
+  const [fx, fz] = headingVector(pose.heading);
+  const lx = -Math.sin(pose.heading);
+  const lz = -Math.cos(pose.heading);
+  const ex = pose.x + fx * rig.aheadM + lx * rig.leftM;
+  const ez = pose.z + fz * rig.aheadM + lz * rig.leftM;
+  const ahead = rig.lookAheadM - rig.aheadM;
+  return {
+    eye: [ex, pose.y + rig.upM, ez],
+    look: [ex + fx * ahead, pose.y + rig.lookUpM, ez + fz * ahead],
+  };
+}
+
+/**
+ * @typedef {object} CameraRig
+ * @property {PerspectiveCamera} camera Camera.
+ * @property {() => import('../contracts/controls.js').CameraMode} mode Current mode.
+ * @property {(mode: import('../contracts/controls.js').CameraMode) => void} setMode Switch mode; the
+ *   next `follow` snaps.
+ * @property {(pose: {x: number, y: number, z: number, heading: number}, leanRad: number, dtS: number, snap: boolean, shake: [number, number, number]) => void} follow
+ *   Place the camera for a pose; `leanRad` is the drawn lean (+ to the left).
+ */
+
+/**
+ * The camera rig: a chase camera smoothed toward its target, or a rigid cockpit camera at the
+ * eyes. Both take the collision shake.
  * @param {number} aspect Aspect ratio.
  * @param {'car' | 'motorbike' | 'moped'} legalClass Vehicle class.
  * @param {number} [farM] Far plane in metres; `FAR_M` by default.
- * @returns {{camera: PerspectiveCamera, follow: (pose: {x: number, y: number, z: number, heading: number}, dtS: number, snap: boolean, shake: [number, number, number]) => void}} Camera.
+ * @returns {CameraRig} Rig.
  */
-export function createChaseCamera(aspect, legalClass, farM = FAR_M) {
-  const camera = new PerspectiveCamera(60, aspect, 0.1, farM);
+export function createCameraRig(aspect, legalClass, farM = FAR_M) {
+  const camera = new PerspectiveCamera(CHASE_FOV_DEG, aspect, 0.1, farM);
+  const cockpit = COCKPIT_RIG[rigKey(legalClass)];
   const eye = new Vector3();
   const look = new Vector3();
+  const target = new Vector3();
+  /** @type {import('../contracts/controls.js').CameraMode} */
+  let mode = 'chase';
   let primed = false;
   return {
     camera,
-    follow(pose, dtS, snap, shake) {
-      const t = chaseTarget(pose, legalClass);
-      if (snap || !primed) {
+    mode: () => mode,
+    setMode(next) {
+      if (next !== 'chase' && next !== 'cockpit') throw new RangeError(`Unknown camera mode "${String(next)}"`);
+      if (next === mode) return;
+      mode = next;
+      primed = false;
+      camera.fov = mode === 'cockpit' ? cockpit.fovDeg : CHASE_FOV_DEG;
+      camera.updateProjectionMatrix();
+    },
+    follow(pose, leanRad, dtS, snap, shake) {
+      if (mode === 'cockpit') {
+        const t = cockpitTarget(pose, legalClass);
         eye.set(...t.eye);
         look.set(...t.look);
-        primed = true;
+        primed = false;
       } else {
-        // Frame-rate independent exponential smoothing, time constant about 0.15 s.
-        const k = 1 - Math.exp(-Math.max(0, dtS) / 0.15);
-        eye.lerp(new Vector3(...t.eye), k);
-        look.lerp(new Vector3(...t.look), Math.min(1, k * 2));
+        const t = chaseTarget(pose, legalClass);
+        if (snap || !primed) {
+          eye.set(...t.eye);
+          look.set(...t.look);
+          primed = true;
+        } else {
+          // Frame-rate independent exponential smoothing, time constant about 0.15 s.
+          const k = 1 - Math.exp(-Math.max(0, dtS) / 0.15);
+          eye.lerp(target.set(...t.eye), k);
+          look.lerp(target.set(...t.look), Math.min(1, k * 2));
+        }
       }
       camera.position.set(eye.x + shake[0], eye.y + shake[1], eye.z + shake[2]);
       camera.lookAt(look);
+      if (mode === 'cockpit' && cockpit.rollPerLean !== 0) camera.rotateZ(leanRad * cockpit.rollPerLean);
     },
   };
 }

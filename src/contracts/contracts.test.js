@@ -9,6 +9,7 @@ import {
   checkMap,
   CLAUSE_ID_PATTERN,
   COLLISION_KINDS,
+  CAMERA_MODES,
   CONTROL_PRESETS,
   ContractError,
   decreeGroupOf,
@@ -62,11 +63,21 @@ describe('key bindings', () => {
   it('covers every action once, with unique keys and Vietnamese labels', () => {
     const actions = KEY_BINDINGS.map((b) => b.action);
     expect(new Set(actions).size).toBe(actions.length);
-    expect(actions).toHaveLength(14);
+    expect(actions).toHaveLength(16);
     const keys = KEY_BINDINGS.flatMap((b) => b.keys);
     expect(new Set(keys).size).toBe(keys.length);
     expect(KEY_BINDINGS.every((b) => b.label.vi.length > 0)).toBe(true);
     expect(neutralInput()).toMatchObject({ throttle: 0, steer: 0, gearCmd: null, horn: false });
+  });
+
+  it('binds no key that needs a modifier, Tab, Enter or a function key', () => {
+    const keys = KEY_BINDINGS.flatMap((b) => b.keys);
+    for (const key of keys) expect(key, key).not.toMatch(/^(Control|Alt|Meta|Shift|Tab|Enter|F\d+)/u);
+  });
+
+  it('fixes the two camera modes, chase first as the default', () => {
+    expect(CAMERA_MODES).toEqual(['chase', 'cockpit']);
+    expect(Object.isFrozen(CAMERA_MODES)).toBe(true);
   });
 
   it('fixes the two control presets', () => {
@@ -328,6 +339,15 @@ describe('catalog and HUD fixtures', () => {
       expect(decreeGroupOf(v.legalClass)).toBe(v.decreeGroup);
       expect(v.lengthM).toBeGreaterThan(v.widthM);
       expect(['manual', 'auto']).toContain(v.gearbox);
+    }
+  });
+
+  it('gives every vehicle that is not a car an automatic gearbox, as the gear keys assume', () => {
+    // The input turns the gear keys off for anything but a car; a manual motorbike would be left
+    // with no way to change gear.
+    const vehicles = json('data/vehicles/vehicles.json');
+    for (const v of vehicles.filter((/** @type {{legalClass: string}} */ x) => x.legalClass !== 'car')) {
+      expect(v.gearbox, v.id).toBe('auto');
     }
   });
 

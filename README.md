@@ -5,12 +5,13 @@ start to finish through Ho Chi Minh City traffic (mostly motorbikes, some of the
 get a score out of 10. Every breach shows its real penalty under Nghị định 168/2024/NĐ-CP, with
 the cited text; a crash someone else caused is a notice, not a deduction.
 
-Controls: W/S or the arrows to drive and brake, A/D to steer, Space for the handbrake (car) or rear
-brake (scooter), Z/C/X for the indicators and hazard, L/F for the lights, H for the horn, Q/E for
-gears, Esc to pause. Every key is also an on-screen button. Two presets: Đơn giản (the default:
-automatic gears, one brake key for the scooter, indicators that cancel after a turn) and Thực tế
-(manual gears, separate brakes); the preset never changes the score. See
-[docs/controls.md](docs/controls.md).
+Controls follow a cabin, left to right: W/S or the arrows to drive and brake, A/D to steer, Q/E
+for the indicators, Z/X for the lights, F for the horn, H for the hazard lights, I/K (or Page
+Up/Down) for the car's gears, L for its handbrake, Space for the scooter's rear brake, V to switch
+between the chase and the first-person camera, Esc to pause. Every key is also an on-screen
+button. Two presets: Đơn giản (the default: automatic gears, one brake key for the scooter,
+indicators that cancel after a turn) and Thực tế (manual gears, separate brakes); the preset never
+changes the score. See [docs/controls.md](docs/controls.md).
 
 Plain JavaScript with JSDoc, Svelte 5, Vite, Tailwind CSS 4, Three.js and Rapier. Static assets
 on Cloudflare Workers.

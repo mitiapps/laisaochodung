@@ -16,10 +16,11 @@
    * @type {{
    *   game?: import('./contracts/hud.js').GameApi | null,
    *   canvas?: HTMLElement | null,
+   *   camera?: import('./game/camera-control.js').CameraControl | null,
    *   loadMaps?: () => Promise<import('./contracts/catalog.js').MapIndexEntry[]>,
    * }}
    */
-  let { game = null, canvas = null, loadMaps = () => loadMapIndex() } = $props();
+  let { game = null, canvas = null, camera = null, loadMaps = () => loadMapIndex() } = $props();
 
   let route = $state(parseHash(location.hash));
   /** @type {import('./ui/lib/catalog.js').MapsState} */
@@ -53,10 +54,10 @@
 </script>
 
 {#if route.name === 'home'}
-  <HomePage vehicles={VEHICLES} {maps} />
+  <HomePage vehicles={VEHICLES} {maps} {camera} />
 {:else if route.name === 'play'}
   {#key `${route.mapId}|${route.vehicleId}`}
-    <PlayPage {game} {canvas} mapId={route.mapId} vehicleId={route.vehicleId} vehicles={VEHICLES} {mapEntry} />
+    <PlayPage {game} {canvas} {camera} mapId={route.mapId} vehicleId={route.vehicleId} vehicles={VEHICLES} {mapEntry} />
   {/key}
 {:else if route.name === 'disclaimer'}
   <DisclaimerPage />

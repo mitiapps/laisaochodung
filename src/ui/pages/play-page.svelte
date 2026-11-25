@@ -11,13 +11,22 @@
    * @type {{
    *   game: import('../../contracts/hud.js').GameApi | null,
    *   canvas: HTMLElement | null,
+   *   camera?: import('../../game/camera-control.js').CameraControl | null,
    *   mapId: string | null,
    *   vehicleId: string | null,
    *   vehicles: ReadonlyArray<import('../../contracts/vehicle.js').VehicleInfo>,
    *   mapEntry: import('../../contracts/catalog.js').MapIndexEntry | null,
    * }}
    */
-  let { game, canvas, mapId, vehicleId, vehicles, mapEntry } = $props();
+  let { game, canvas, camera = null, mapId, vehicleId, vehicles, mapEntry } = $props();
+
+  /** @type {import('../../contracts/controls.js').CameraMode} */
+  let cameraMode = $state('chase');
+  $effect(() =>
+    camera?.subscribe((mode) => {
+      cameraMode = mode;
+    }),
+  );
 
   const vehicle = $derived(vehicles.find((v) => v.id === vehicleId) ?? null);
 
@@ -120,6 +129,7 @@
         {vehicle}
         toasts={stack.items}
         controls={/** @type {import('../../contracts/hud.js').GameApi} */ (game).controls}
+        {cameraMode}
         {runKey}
         onpause={togglePause}
         ondismiss={(id) => (stack = dismissToast(stack, id))}

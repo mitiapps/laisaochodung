@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import frames from '../../tests/fixtures/frames-straight.json';
+import { TOAST_MS } from '../ui/lib/toast-stack.js';
 import { HUD_NOTICE_MAX, HUD_NOTICE_S, HUD_TOAST_WINDOW, hudStateOf } from './hud-state.js';
 
 /** @typedef {import('../contracts/telemetry.js').Frame} Frame */
@@ -64,10 +65,17 @@ describe('hudStateOf', () => {
     expect(later.toasts).toHaveLength(HUD_TOAST_WINDOW);
   });
 
+  it('shows a notice for 4 s, shorter than the 6 s of a breach toast with its legal text', () => {
+    expect(HUD_NOTICE_S).toBe(4);
+    expect(TOAST_MS).toBe(6000);
+  });
+
   it('drops a notice once its time is up and caps how many are sent', () => {
-    const notices = [notice(1), notice(5), notice(5.2), notice(5.4), notice(5.6)];
-    const state = hudStateOf({ frame: frameAt(1 + HUD_NOTICE_S), context, score: 10, breaches: [], notices, controlPreset: 'simple', runStatus: 'running' });
-    expect(state.notices.map((n) => n.t)).toEqual([5.2, 5.4, 5.6]);
+    // One notice at t = 1, four more in the last two seconds before its time is up.
+    const end = 1 + HUD_NOTICE_S;
+    const notices = [notice(1), notice(end - 2), notice(end - 1.8), notice(end - 1.6), notice(end - 1.4)];
+    const state = hudStateOf({ frame: frameAt(end), context, score: 10, breaches: [], notices, controlPreset: 'simple', runStatus: 'running' });
+    expect(state.notices.map((n) => n.t)).toEqual([end - 1.8, end - 1.6, end - 1.4]);
     expect(state.notices).toHaveLength(HUD_NOTICE_MAX);
     expect(hudStateOf({ frame: frameAt(20), context, score: 10, breaches: [], notices, controlPreset: 'simple', runStatus: 'running' }).notices).toEqual([]);
     expect(hudStateOf({ frame: frameAt(3), context, score: 10, breaches: [], controlPreset: 'simple', runStatus: 'running' }).notices).toEqual([]);

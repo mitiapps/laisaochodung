@@ -224,6 +224,10 @@ describe('the ego at a conflict zone', () => {
 });
 
 describe('wrecks stop raising right-of-way flags', () => {
+  // A wreck leaves the road when its latch runs out; these cases keep it standing past the latch
+  // to check the flags drop and the fault table still judges such a wreck.
+  const OUTLASTING = { ...LAWFUL, wreckClearS: 60 };
+
   /**
    * The ego striking a standing traffic wreck, decided by the shipped fault table.
    * @param {string} id Wreck id.
@@ -272,7 +276,7 @@ describe('wrecks stop raising right-of-way flags', () => {
 
   it('drops red-light from a red runner wrecked on the connector once its latch runs out, so striking it is a deduction', async () => {
     const map = emptyMap('signal');
-    const st = createTraffic(map, LAWFUL, 2);
+    const st = createTraffic(map, OUTLASTING, 2);
     const k = place(st, 'rs-n', 120, 10, 'car', 'c-rs-n-rn-n');
     st.distractUntil[k] = 1e9;
     const id = st.ids[k];
@@ -305,7 +309,7 @@ describe('wrecks stop raising right-of-way flags', () => {
 
   it('drops no-yield from an agent wrecked by another agent on the connector it forced into', () => {
     const map = emptyMap('give-way');
-    const st = createTraffic(map, LAWFUL, 4);
+    const st = createTraffic(map, OUTLASTING, 4);
     const k = place(st, 'rs-n', 136, 6, 'car', 'c-rs-n-rn-n');
     st.criticalGap[k] = 0.2;
     const id = st.ids[k];

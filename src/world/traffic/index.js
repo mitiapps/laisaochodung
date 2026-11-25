@@ -653,7 +653,10 @@ function applyEvents(st, input, ego) {
     const ahead = dx * hx + dz * hz;
     const dist = Math.hypot(dx, dz);
     if (st.wreck[k]) {
-      if (input.t - st.wreckT[k] >= p.wreckClearS || (dist > p.wreckClearDistM && ahead < 0)) despawnAgent(st, k, 'wreck');
+      // Half a step of slack: step times are sums of DT, so the step that reaches wreckT +
+      // wreckClearS can read a hair short of it and would keep the wreck one step too long.
+      // A rounding guard, not a tuning value: retune wreckClearS, never this slack.
+      if (input.t - st.wreckT[k] >= p.wreckClearS - DT / 2 || (dist > p.wreckClearDistM && ahead < 0)) despawnAgent(st, k, 'wreck');
       continue;
     }
     if (-ahead > p.despawnBehindM) {

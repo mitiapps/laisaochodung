@@ -2,19 +2,21 @@ import { describe, expect, it } from 'vitest';
 import hudStates from '../../../tests/fixtures/hud-states.json';
 import { KEY_BINDINGS } from '../../contracts/controls.js';
 import {
-  ARC_ROWS,
+  CAMERA_NAMES,
   PRESET_NAMES,
   RPM_BAR_MAX,
   STEER_SLIDER_RANGE_PX,
   actionLabel,
-  arcButtons,
+  buttonView,
+  controlLayout,
   indicatorLamps,
+  layoutActions,
   newestToast,
   noticeItems,
-  pedalControls,
+  pedalControl,
   rpmFraction,
   sliderSteer,
-  steerPosition,
+  steeringTurnDeg,
 } from './hud-view.js';
 
 /** @typedef {import('../../contracts/hud.js').HudState} HudState */
@@ -35,50 +37,93 @@ describe('HUD view helpers', () => {
     expect(indicatorLamps('off')).toEqual({ left: false, right: false, hazard: false });
   });
 
-  it('lays out the pedals and the lever, labelled by vehicle and preset, and clamps them', () => {
+  it('shows the pedals and levers, labelled by vehicle and preset, and clamps them', () => {
     const controls = { throttle: 0.4, brakeFront: 1.5, brakeRear: 0.3, steer: 0, handbrake: false };
-    expect(pedalControls(controls, true, 'simple')).toEqual([
-      { action: 'handbrake', testId: 'hud-handbrake', label: 'Phanh tay', fraction: 0, on: false, shape: 'lever' },
-      { action: 'brake', testId: 'hud-brake-front', label: 'Phanh chân', fraction: 1, on: true, shape: 'pedal' },
-      { action: 'throttle', testId: 'hud-throttle', label: 'Ga', fraction: 0.4, on: true, shape: 'pedal' },
-    ]);
-    expect(pedalControls({ ...controls, handbrake: true }, true, 'real')[0]).toMatchObject({ fraction: 1, on: true });
-    const scooter = pedalControls({ ...controls, throttle: Number.NaN }, false, 'real');
-    expect(scooter.map((c) => [c.testId, c.label, c.fraction])).toEqual([
-      ['hud-brake-rear', 'Phanh sau', 0.3],
-      ['hud-brake-front', 'Phanh trước', 1],
-      ['hud-throttle', 'Ga', 0],
-    ]);
-    expect(pedalControls(controls, false, 'simple')[1].label).toBe('Phanh');
+    expect(pedalControl('handbrake', controls, true, 'simple')).toEqual({
+      action: 'handbrake',
+      testId: 'hud-handbrake',
+      label: 'Phanh tay',
+      fraction: 0,
+      on: false,
+      shape: 'lever',
+      rear: null,
+    });
+    expect(pedalControl('brake', controls, true, 'simple')).toMatchObject({ testId: 'hud-brake-front', label: 'Phanh chân', fraction: 1, on: true, shape: 'pedal', rear: null });
+    expect(pedalControl('throttle', controls, true, 'simple')).toMatchObject({ testId: 'hud-throttle', label: 'Ga', fraction: 0.4, on: true });
+    expect(pedalControl('handbrake', { ...controls, handbrake: true }, true, 'real')).toMatchObject({ fraction: 1, on: true });
+    expect(pedalControl('throttle', { ...controls, throttle: Number.NaN }, false, 'real')).toMatchObject({ fraction: 0, on: false });
+    expect(pedalControl('brakeRear', controls, false, 'real')).toMatchObject({ testId: 'hud-brake-rear', label: 'Phanh sau', fraction: 0.3, shape: 'lever' });
+    expect(pedalControl('brake', controls, false, 'real')).toMatchObject({ label: 'Phanh trước', rear: null });
+    // Đơn giản: one brake for both, which also shows the rear brake it applies.
+    expect(pedalControl('brake', controls, false, 'simple')).toMatchObject({ label: 'Phanh', rear: { testId: 'hud-brake-rear', fraction: 0.3 } });
+    expect(() => pedalControl(/** @type {never} */ ('horn'), controls, true, 'simple')).toThrow(RangeError);
   });
 
-  it('puts every press and arc action in exactly one arc button, with the state it shows', () => {
-    const car = arcButtons({ ...RUNNING, indicators: 'left', horn: true });
-    expect(car.map((row) => row.map((b) => b.action))).toEqual(ARC_ROWS.map((row) => [...row]));
-    const flat = car.flat();
-    expect(new Set(flat.map((b) => b.action)).size).toBe(flat.length);
-    for (const b of flat) {
-      const binding = KEY_BINDINGS.find((k) => k.action === b.action);
+  it('gives each round button the state it shows', () => {
+    const state = { ...RUNNING, indicators: /** @type {const} */ ('left'), horn: true };
+    for (const action of /** @type {const} */ (['signalLeft', 'signalRight', 'hazard', 'horn', 'lightsCycle', 'flash', 'gearUp', 'gearDown'])) {
+      const b = buttonView(action, state);
+      const binding = KEY_BINDINGS.find((k) => k.action === action);
       expect(b.mode).toBe(binding?.mode);
       expect(b.label).toBe(binding?.label.vi);
     }
-    expect(flat.find((b) => b.action === 'signalLeft')).toMatchObject({ testId: 'hud-indicator-left', on: true, blink: true });
-    expect(flat.find((b) => b.action === 'signalRight')).toMatchObject({ testId: 'hud-indicator-right', on: false });
-    expect(flat.find((b) => b.action === 'horn')).toMatchObject({ testId: 'hud-horn', on: true, blink: false });
-    expect(flat.find((b) => b.action === 'lightsCycle')?.testId).toBeNull();
-    const hazard = arcButtons({ ...RUNNING, indicators: 'hazard' }).flat();
-    expect(hazard.filter((b) => b.on).map((b) => b.action)).toEqual(['signalLeft', 'hazard', 'signalRight']);
+    expect(buttonView('signalLeft', state)).toMatchObject({ testId: 'hud-indicator-left', on: true, blink: true });
+    expect(buttonView('signalRight', state)).toMatchObject({ testId: 'hud-indicator-right', on: false });
+    expect(buttonView('horn', state)).toMatchObject({ testId: 'hud-horn', on: true, blink: false });
+    expect(buttonView('lightsCycle', state).testId).toBeNull();
+    const hazard = { ...RUNNING, indicators: /** @type {const} */ ('hazard') };
+    expect(['signalLeft', 'hazard', 'signalRight'].map((a) => buttonView(/** @type {never} */ (a), hazard).on)).toEqual([true, true, true]);
+    expect(() => buttonView('throttle', state)).toThrow(RangeError);
   });
 
-  it('covers every action once across the arc, the pedals, the slider and pause', () => {
-    const actions = [
-      ...arcButtons(RUNNING).flat().map((b) => b.action),
-      ...pedalControls(RUNNING.controls, true, 'simple').map((c) => c.action),
-      'steerLeft',
-      'steerRight',
-      'pause',
-    ].sort();
-    expect(actions).toEqual(KEY_BINDINGS.map((b) => b.action).sort());
+  it('lays the controls out in cabin order: stalk, lever, steering, horn, pedals, console', () => {
+    const car = controlLayout('car', 'simple');
+    expect(car).toMatchObject({
+      steering: 'wheel',
+      stalk: [
+        ['lightsCycle', 'flash'],
+        ['signalLeft', 'signalRight'],
+      ],
+      lever: [],
+      horn: ['horn'],
+      pedals: ['brake', 'throttle'],
+      console: ['hazard', 'gearUp', 'gearDown', 'handbrake'],
+      consoleOverThrottle: false,
+      top: ['camera', 'pause'],
+    });
+    expect(controlLayout('car', 'real')).toBe(car);
+    const real = controlLayout('motorbike', 'real');
+    expect(real).toMatchObject({
+      steering: 'handlebar',
+      stalk: [
+        ['lightsCycle', 'flash'],
+        ['signalLeft', 'signalRight', 'horn'],
+      ],
+      lever: ['brakeRear'],
+      horn: [],
+      console: ['hazard'],
+      consoleOverThrottle: true,
+    });
+    expect(controlLayout('motorbike', 'simple').lever).toEqual([]);
+    expect(controlLayout('moped', 'real')).toBe(real);
+  });
+
+  it('gives every action one control per vehicle: the car has no rear lever, the motorbike no gears or handbrake', () => {
+    const all = KEY_BINDINGS.map((b) => b.action);
+    const car = layoutActions(controlLayout('car', 'real'));
+    expect(new Set(car).size).toBe(car.length);
+    expect([...car].sort()).toEqual(all.filter((a) => a !== 'brakeRear').sort());
+    const bike = layoutActions(controlLayout('motorbike', 'real'));
+    expect(new Set(bike).size).toBe(bike.length);
+    expect([...bike].sort()).toEqual(all.filter((a) => !['gearUp', 'gearDown', 'handbrake'].includes(a)).sort());
+    expect(layoutActions(controlLayout('motorbike', 'simple'))).not.toContain('brakeRear');
+  });
+
+  it('turns the drawn wheel further than the handlebar', () => {
+    expect(steeringTurnDeg(1, 'wheel')).toBe(120);
+    expect(steeringTurnDeg(-0.5, 'handlebar')).toBe(-12.5);
+    expect(steeringTurnDeg(3, 'wheel')).toBe(120);
+    expect(steeringTurnDeg(Number.NaN, 'wheel')).toBe(0);
   });
 
   it('turns the slider offset into steering and names actions and presets', () => {
@@ -90,14 +135,7 @@ describe('HUD view helpers', () => {
     expect(actionLabel('horn')).toBe('Còi');
     expect(() => actionLabel(/** @type {never} */ ('jump'))).toThrow(RangeError);
     expect(PRESET_NAMES).toEqual({ simple: 'Đơn giản', real: 'Thực tế' });
-  });
-
-  it('maps steering onto the slider with the centre at 0.5', () => {
-    expect(steerPosition(-1)).toBe(0);
-    expect(steerPosition(0)).toBe(0.5);
-    expect(steerPosition(0.5)).toBe(0.75);
-    expect(steerPosition(3)).toBe(1);
-    expect(steerPosition(Number.NaN)).toBe(0.5);
+    expect(CAMERA_NAMES).toEqual({ chase: 'Thứ ba (sau xe)', cockpit: 'Thứ nhất (trong xe)' });
   });
 
   it('keys notices by contact tick, counting contacts on the same tick', () => {

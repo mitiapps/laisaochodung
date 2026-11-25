@@ -226,10 +226,12 @@ async function exerciseControls(page, isCar) {
     await expect.poll(async () => check(await value(id)), { message: `${key} on ${id}` }).toBe(true);
     await page.keyboard.up(key);
   }
-  await page.keyboard.down(KEY.handbrake);
+  // The car's handbrake and the scooter's rear brake, each on its own shown key.
+  const lever = isCar ? KEY.handbrake : KEY.brakeRear;
+  await page.keyboard.down(lever);
   if (isCar) await expect(on('hud-handbrake')).toHaveAttribute('data-on', 'true');
   else await expect.poll(() => value('hud-brake-rear')).toBeGreaterThan(0);
-  await page.keyboard.up(KEY.handbrake);
+  await page.keyboard.up(lever);
   if (isCar) await expect(on('hud-handbrake')).toHaveAttribute('data-on', 'false');
 
   for (const [key, id] of [

@@ -5,7 +5,7 @@
 
 export { DT, TICK_HZ, EARTH_RADIUS_M, MINUTES_PER_DAY, kmhToMps, mpsToKmh, tickTime } from './units.js';
 export { LEGAL_CLASSES, DECREE_GROUPS, GEARBOXES, decreeGroupOf } from './vehicle.js';
-export { KEY_BINDINGS, CONTROL_PRESETS, neutralInput } from './controls.js';
+export { KEY_BINDINGS, CONTROL_PRESETS, CAMERA_MODES, neutralInput } from './controls.js';
 export {
   GEARS,
   INDICATORS,
@@ -56,6 +56,7 @@ export { assertMap, checkMap } from './assert-map.js';
 
 /** @typedef {import('./controls.js').ControlInput} ControlInput */
 /** @typedef {import('./controls.js').ControlAction} ControlAction */
+/** @typedef {import('./controls.js').CameraMode} CameraMode */
 /** @typedef {import('./controls.js').KeyBinding} KeyBinding */
 /** @typedef {import('./controls.js').ControlPreset} ControlPreset */
 /** @typedef {import('./controls.js').ControlAssists} ControlAssists */

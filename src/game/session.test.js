@@ -5,6 +5,7 @@ import { assertFrame } from '../contracts/assert-frame.js';
 import { assertMap } from '../contracts/assert-map.js';
 import { createScorer, scoreRun } from '../scoring/index.js';
 import { DT } from '../contracts/units.js';
+import { KEY_BINDINGS } from '../contracts/controls.js';
 import { createSim, sanitizeInput } from '../sim/index.js';
 import { buildFrames } from '../testing/index.js';
 import { parseDevRunQuery } from './browser.js';
@@ -245,7 +246,8 @@ describe('session with the real sim (dev build checks)', () => {
     const h = harness({ createSim, dev: true, assertFrame, assertMap, scoreRun });
     await h.game.start('map-minimal', 'car-sedan');
     const down = (/** @type {string} */ code) => h.keys.dispatchEvent(Object.assign(new Event('keydown', { cancelable: true }), { code, repeat: false }));
-    down('KeyE'); // N → 1
+    const gearUpKey = KEY_BINDINGS.find((b) => b.action === 'gearUp')?.keys[0] ?? '';
+    down(gearUpKey); // N → 1
     down('KeyW');
     h.frames.tick(0);
     for (let i = 0; i < 180; i += 1) h.frames.tick(1000 / 60);

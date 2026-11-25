@@ -1,8 +1,8 @@
 /**
  * The input mixer: the keyboard (`KEY_BINDINGS`) and the on-screen controls feed one held set and
  * one press path. Held actions become ramped analogue values, `press` actions become edge commands
- * delivered once by the next `sample()`, and the pause action is handled outside the sim step
- * through `onPause`, so it keeps working while the run is paused.
+ * delivered once by the next `sample()`, and the pause and camera actions are handled outside the
+ * sim step through `onPause` and `onCamera`, so they keep working while the run is paused.
  *
  * - Holds are kept per source, a key code or the on-screen control of an action, and an action is
  *   held while any source holds it, so a key and a finger on the same action release correctly.
@@ -13,6 +13,10 @@
  *   takes over from that value and returns it to centre.
  * - While input is enabled, bound keys have their default action prevented, so Space does not
  *   click a focused button and the arrows do not scroll.
+ * - `handbrake` and `brakeRear` are one control: either applies the handbrake on a car and the
+ *   rear brake on a motorbike, so each vehicle shows its own key and a habit key still works.
+ * - A motorbike has no gear selector to drive: the gear keys send no `gearCmd` for it. The rule
+ *   goes by legal class because every catalog motorbike is automatic (see `ControlAction`).
  * - Throttle ramps 0 → 1 in `THROTTLE_RAMP_S`; steering ramps to full lock in `STEER_RAMP_S` and
  *   returns to centre in `STEER_RETURN_S`. Brakes are not ramped.
  */
@@ -81,6 +85,8 @@ function bindingFor(action, mode) {
  * @property {{visibilityState: string} & EventTarget} [visibility] Releases every source when it
  *   reports `hidden` (the document).
  * @property {() => void} [onPause] Called on a pause press while input is enabled.
+ * @property {() => void} [onCamera] Called on a camera press while input is enabled, running or
+ *   paused.
  * @property {number} [combinedRearPerGrip] Motorbike: the rear brake the brake action adds, per unit
  *   of surface grip, next to the front brake. 0 (default) keeps the brakes separate.
  */
@@ -105,7 +111,7 @@ function bindingFor(action, mode) {
  * @param {InputOptions} options Options.
  * @returns {Input} Input.
  */
-export function createInput({ legalClass, surfaceGrip, target, visibility, onPause, combinedRearPerGrip = 0 }) {
+export function createInput({ legalClass, surfaceGrip, target, visibility, onPause, onCamera, combinedRearPerGrip = 0 }) {
   if (!Number.isFinite(surfaceGrip) || surfaceGrip <= 0) throw new RangeError('createInput needs a positive surfaceGrip');
   if (!Number.isFinite(combinedRearPerGrip) || combinedRearPerGrip < 0) throw new RangeError('createInput needs a combinedRearPerGrip ≥ 0');
   const motorbike = legalClass !== 'car';
@@ -146,9 +152,13 @@ export function createInput({ legalClass, surfaceGrip, target, visibility, onPau
       onPause?.();
       return;
     }
+    if (action === 'camera') {
+      onCamera?.();
+      return;
+    }
     if (!driving) return;
-    if (action === 'gearUp') edges.gearCmd = 'up';
-    else if (action === 'gearDown') edges.gearCmd = 'down';
+    if (action === 'gearUp') edges.gearCmd = motorbike ? null : 'up';
+    else if (action === 'gearDown') edges.gearCmd = motorbike ? null : 'down';
     else if (action === 'signalLeft') edges.signalCmd = 'left';
     else if (action === 'signalRight') edges.signalCmd = 'right';
     else if (action === 'hazard') edges.signalCmd = 'hazard';
@@ -197,13 +207,13 @@ export function createInput({ legalClass, surfaceGrip, target, visibility, onPau
         steer = approach(steer, steerTarget, rate);
       }
       const brake = held('brake');
-      const space = held('handbrake');
+      const lever = held('handbrake') || held('brakeRear');
       const input = neutralInput();
       input.throttle = throttle;
       input.steer = steer;
       input.brakeFront = brake ? frontBrake : 0;
-      input.brakeRear = motorbike ? Math.max(space ? 1 : 0, brake ? combinedRear : 0) : 0;
-      input.handbrake = !motorbike && space;
+      input.brakeRear = motorbike ? Math.max(lever ? 1 : 0, brake ? combinedRear : 0) : 0;
+      input.handbrake = !motorbike && lever;
       input.horn = held('horn');
       input.gearCmd = edges.gearCmd;
       input.signalCmd = edges.signalCmd;

@@ -302,6 +302,21 @@ describe('instanced traffic view', () => {
     expect(Math.abs(new Vector3(0, 1, 0).applyQuaternion(q).y)).toBeLessThan(1e-6);
     view.dispose();
   });
+
+  it('clears the debris with the wreck: once the traffic removes it, nothing of it is drawn', async () => {
+    const view = createActorViews(fixture, assets);
+    const car = agent('npc-1', 'car', 10, { state: 'crashed', speed: 0 });
+    const other = agent('npc-2', 'bus', 40);
+    view.update(null, frameWith(1, [car, other]), 1, true);
+    await settle();
+    view.update(null, frameWith(2, [car, other]), 1, true);
+    const debrisCount = () => drawn(view.group).filter((m) => m.name.startsWith('debris:')).reduce((n, m) => n + m.count, 0);
+    expect(debrisCount()).toBe(3);
+    view.update(null, frameWith(3, [other]), 1, true);
+    expect(debrisCount()).toBe(0);
+    expect(drawn(view.group).filter((m) => m.name.startsWith('kenney:')).reduce((n, m) => n + m.count, 0)).toBe(0);
+    view.dispose();
+  });
 });
 
 describe('pedestrians', () => {

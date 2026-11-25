@@ -19,15 +19,16 @@ function key(target, type, code, extra = {}) {
 
 /**
  * @param {Partial<import('./input.js').InputOptions>} [options] Options.
- * @returns {{input: import('./input.js').Input, target: EventTarget, pauses: () => number}} Driving input.
+ * @returns {{input: import('./input.js').Input, target: EventTarget, pauses: () => number, cameras: () => number}} Driving input.
  */
 function setup(options = {}) {
   const target = new EventTarget();
   let pauses = 0;
-  const input = createInput({ legalClass: 'car', surfaceGrip: 1, target, onPause: () => (pauses += 1), ...options });
+  let cameras = 0;
+  const input = createInput({ legalClass: 'car', surfaceGrip: 1, target, onPause: () => (pauses += 1), onCamera: () => (cameras += 1), ...options });
   input.setEnabled(true);
   input.setDriving(true);
-  return { input, target, pauses: () => pauses };
+  return { input, target, pauses: () => pauses, cameras: () => cameras };
 }
 
 /**
@@ -69,18 +70,82 @@ describe('createInput ramps', () => {
 describe('createInput commands', () => {
   it('emits a press once, ignores key repeat and drops edges while not driving', () => {
     const { input, target } = setup();
-    key(target, 'keydown', 'KeyE');
-    key(target, 'keydown', 'KeyE', { repeat: true });
+    key(target, 'keydown', 'KeyI');
+    key(target, 'keydown', 'KeyI', { repeat: true });
     expect(input.sample().gearCmd).toBe('up');
     expect(input.sample().gearCmd).toBeNull();
     input.setDriving(false);
-    key(target, 'keydown', 'KeyZ');
+    key(target, 'keydown', 'KeyQ');
     input.setDriving(true);
     expect(input.sample().signalCmd).toBeNull();
-    key(target, 'keydown', 'KeyL');
-    key(target, 'keydown', 'KeyF');
+    key(target, 'keydown', 'KeyZ');
+    key(target, 'keydown', 'KeyX');
     expect(input.sample().lightsCmd).toBe('cycle');
     expect(input.sample().lightsCmd).toBe('flash');
+  });
+
+  it('maps every key of the cabin layout to its command', () => {
+    /** @type {[string, Partial<import('../contracts/controls.js').ControlInput>][]} */
+    const presses = [
+      ['KeyQ', { signalCmd: 'left' }],
+      ['KeyE', { signalCmd: 'right' }],
+      ['KeyH', { signalCmd: 'hazard' }],
+      ['KeyZ', { lightsCmd: 'cycle' }],
+      ['KeyI', { gearCmd: 'up' }],
+      ['PageUp', { gearCmd: 'up' }],
+      ['KeyK', { gearCmd: 'down' }],
+      ['PageDown', { gearCmd: 'down' }],
+    ];
+    for (const [code, want] of presses) {
+      const { input, target } = setup();
+      key(target, 'keydown', code);
+      expect(input.sample(), code).toMatchObject(want);
+    }
+    /** @type {[string, Partial<import('../contracts/controls.js').ControlInput>][]} */
+    const holds = [
+      ['KeyW', { throttle: 1 }],
+      ['ArrowUp', { throttle: 1 }],
+      ['KeyS', { brakeFront: 1 }],
+      ['ArrowDown', { brakeFront: 1 }],
+      ['KeyA', { steer: -1 }],
+      ['ArrowLeft', { steer: -1 }],
+      ['KeyD', { steer: 1 }],
+      ['ArrowRight', { steer: 1 }],
+      ['KeyX', { lightsCmd: 'flash' }],
+      ['KeyF', { horn: true }],
+      ['KeyL', { handbrake: true }],
+      ['Space', { handbrake: true }],
+    ];
+    for (const [code, want] of holds) {
+      const { input, target } = setup();
+      key(target, 'keydown', code);
+      expect(sampleN(input, 60), code).toMatchObject(want);
+    }
+  });
+
+  it('motorbike: the gear keys send no gear command, since a scooter has no selector to drive', () => {
+    const { input, target } = setup({ legalClass: 'motorbike' });
+    for (const code of ['KeyI', 'KeyK', 'PageUp', 'PageDown']) {
+      key(target, 'keydown', code);
+      expect(input.sample().gearCmd, code).toBeNull();
+    }
+    input.press('gearUp');
+    expect(input.sample().gearCmd).toBeNull();
+  });
+
+  it('calls onCamera on V, also while not driving, and not while disabled', () => {
+    const { input, target, cameras } = setup();
+    key(target, 'keydown', 'KeyV');
+    input.setDriving(false);
+    key(target, 'keydown', 'KeyV');
+    key(target, 'keydown', 'KeyV', { repeat: true });
+    input.press('camera');
+    expect(cameras()).toBe(3);
+    expect(input.sample()).toMatchObject({ gearCmd: null, signalCmd: null, lightsCmd: null });
+    input.setEnabled(false);
+    key(target, 'keydown', 'KeyV');
+    input.press('camera');
+    expect(cameras()).toBe(3);
   });
 
   it('prevents the default of bound keys only while enabled, and leaves shortcuts alone', () => {
@@ -123,22 +188,41 @@ describe('createInput commands', () => {
 });
 
 describe('createInput brake mapping', () => {
-  it('car: S is the foot brake, Space the handbrake', () => {
-    const { input, target } = setup();
-    key(target, 'keydown', 'KeyS');
-    key(target, 'keydown', 'Space');
-    expect(input.sample()).toMatchObject({ brakeFront: 1, brakeRear: 0, handbrake: true });
+  it('car: S is the foot brake, L the handbrake, and Space works as the handbrake too', () => {
+    for (const lever of ['KeyL', 'Space']) {
+      const { input, target } = setup();
+      key(target, 'keydown', 'KeyS');
+      key(target, 'keydown', lever);
+      expect(input.sample(), lever).toMatchObject({ brakeFront: 1, brakeRear: 0, handbrake: true });
+      key(target, 'keyup', lever);
+      expect(input.sample(), lever).toMatchObject({ handbrake: false });
+    }
   });
 
-  it('motorbike: S is the front brake scaled by grip, Space the rear brake', () => {
+  it('the handbrake and rear-brake controls are aliases on both vehicles', () => {
+    for (const action of /** @type {const} */ (['handbrake', 'brakeRear'])) {
+      const car = setup();
+      car.input.hold(action, true);
+      expect(car.input.sample(), action).toMatchObject({ handbrake: true, brakeRear: 0 });
+      const bike = setup({ legalClass: 'motorbike' });
+      bike.input.hold(action, true);
+      expect(bike.input.sample(), action).toMatchObject({ handbrake: false, brakeRear: 1 });
+      bike.input.hold(action, false);
+      expect(bike.input.sample(), action).toMatchObject({ brakeRear: 0 });
+    }
+  });
+
+  it('motorbike: S is the front brake scaled by grip, Space (or L) the rear brake', () => {
     for (const grip of [1, 0.7]) {
-      const { input, target } = setup({ legalClass: 'motorbike', surfaceGrip: grip });
-      key(target, 'keydown', 'KeyS');
-      key(target, 'keydown', 'Space');
-      const s = input.sample();
-      expect(s.brakeFront).toBeCloseTo(SCOOTER_FRONT_BRAKE_PER_GRIP * grip, 10);
-      expect(s.brakeRear).toBe(1);
-      expect(s.handbrake).toBe(false);
+      for (const lever of ['Space', 'KeyL']) {
+        const { input, target } = setup({ legalClass: 'motorbike', surfaceGrip: grip });
+        key(target, 'keydown', 'KeyS');
+        key(target, 'keydown', lever);
+        const s = input.sample();
+        expect(s.brakeFront).toBeCloseTo(SCOOTER_FRONT_BRAKE_PER_GRIP * grip, 10);
+        expect(s.brakeRear).toBe(1);
+        expect(s.handbrake).toBe(false);
+      }
     }
   });
 });
@@ -149,6 +233,7 @@ describe('createInput on-screen controls', () => {
     ['throttle', 20],
     ['brake', 5],
     ['handbrake', 5],
+    ['brakeRear', 5],
     ['steerLeft', 30],
     ['steerRight', 10],
     ['horn', 3],
@@ -177,6 +262,8 @@ describe('createInput on-screen controls', () => {
       }
       expect(ui.pauses()).toBe(1);
       expect(keys.pauses()).toBe(1);
+      expect(ui.cameras()).toBe(1);
+      expect(keys.cameras()).toBe(1);
     }
   });
 

@@ -18,6 +18,8 @@ const MAP = JSON.parse(readFileSync(new URL('../../../tests/fixtures/map-junctio
 /** @type {import('../../contracts/traffic.js').TrafficParams} */
 // The lawful population: these suites check what drivers who keep the rules never do.
 const PARAMS = { ...lawfulParams(JSON.parse(readFileSync(new URL('../../generated/traffic-params.json', import.meta.url), 'utf8'))), preRollS: 0 };
+/** Parameters for tests that use a wreck as an obstacle standing longer than any run. */
+const STANDING_WRECK_PARAMS = { ...PARAMS, wreckClearS: 60 };
 const EGO = Object.freeze({ pos: { x: -60, z: 20 }, heading: 0, speed: 0, lengthM: 4.5, widthM: 1.8 });
 const BOX = MAP.junctions[0].polygon;
 /** Yellow go margin of the shipped params, seconds. */
@@ -139,7 +141,8 @@ describe('priority', () => {
 describe('keep-clear', () => {
   it('never stops an agent inside the junction box while the exit lane is blocked by a wreck', () => {
     const map = junctionMap('signal');
-    const st = createTraffic(map, PARAMS, 2);
+    // The wreck is a standing obstacle here, so it must outlast the run.
+    const st = createTraffic(map, STANDING_WRECK_PARAMS, 2);
     const wreck = spawnAgent(st, /** @type {number} */ (st.graph.edgeIndex.get('re-e0')), 9, 0, st.modelKeys.indexOf('car'));
     st.wreck[wreck] = 1;
     // One car fits between the junction and the wreck; the rest must wait at the stop line.
@@ -162,7 +165,8 @@ describe('keep-clear', () => {
 
   it('makes an agent that already holds its claim give it back and stop at the line when a wreck appears in its way', () => {
     const map = junctionMap('signal');
-    const st = createTraffic(map, PARAMS, 11);
+    // The wreck is a standing obstacle here, so it must outlast the run.
+    const st = createTraffic(map, STANDING_WRECK_PARAMS, 11);
     const k = place(st, 'rw-e1', 120, 9, 'car', 'c-rw-e1-re-e0');
     const conn = /** @type {number} */ (st.graph.edgeIndex.get('c-rw-e1-re-e0'));
     const lane = st.graph.edges[/** @type {number} */ (st.graph.edgeIndex.get('rw-e1'))];

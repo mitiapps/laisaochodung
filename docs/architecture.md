@@ -35,6 +35,17 @@ rules JSON (rules + clauses + collisionPolicy) ─► scorer
   hide it. In SwiftShader at 1280 × 720, `osm-pasteur` runs at about 34 frames per second and
   tutorial 01 at about 58. A hardware GPU keeps antialiasing, standard materials, the device pixel
   ratio (at most 2), shadows and the 300 m far plane.
+- **Camera.** The renderer draws one of two views (`CameraMode`, `src/contracts/controls.js`): a
+  smoothed chase camera high behind the vehicle, or a rigid cockpit camera at the driver's or
+  rider's eyes, where the body, the rider and the lamp lenses hide (the headlight spots stay) and
+  a two-draw-call dash and wheel or handlebar (`src/render/cockpit.js`) show instead. The rig
+  numbers are `CHASE_RIG` and `COCKPIT_RIG` in `src/render/scene.js`. The mode lives outside the
+  session in one camera control (`src/game/camera-control.js`), which the key, the HUD button and
+  the home page share. `src/main.js` builds it over the `localStorage` store
+  (`src/ui/lib/camera-mode-store.js`) and passes it in, so the control holds no storage code, and
+  hands each run's renderer the mode before its first frame; `setCameraMode` redraws the last
+  frame so a switch shows while paused. It never reaches a frame, the scorer, the HUD state or the
+  replay.
 - **Chunk budgets.** The production build fails when a chunk passes its budget (`chunkBudget` in
   `vite.config.js`): 500 kB of minified code for every chunk, 900 kB for `render` (three.js and
   the scene code) and 4600 kB for `rapier` (the compat build, wasm inlined). Both large chunks
@@ -70,9 +81,11 @@ run with a fresh random run seed. `createSim` defaults to traffic off, so tests 
   `v · m_npc / (m_npc + m_ego)` instead of following the agent, so a light rider cannot launch a
   car. The touched agent becomes a wreck on the next traffic step and stops dead; a car wrecked
   by another agent slides on, and its body follows the slide until it stops. A wreck no longer
-  raises `red-light` or `no-yield`: the latch carries them for `LATCH_S`, then the wreck stands
-  unflagged. Wrecks clear after `wreckClearS`. With traffic running, each `collision` event carries the striker, whether the
-  other party came from behind, its latched violations and its model.
+  raises `red-light` or `no-yield`: the latch carries them for `LATCH_S` (3 s). The wreck leaves
+  `wreckClearS` (3 s) after the contact, when its latch runs out, or earlier once it is more than
+  `wreckClearDistM` (120 m) from the player and not ahead of it. With traffic running, each
+  `collision` event carries the striker, whether the other party came from behind, its latched
+  violations and its model.
 - **NPC incidents.** Contacts between agents make wrecks and a `TrafficIncident`
   (`{t, agentIds, causes}`, `src/world/traffic/contacts.js`); every incident names at least one
   latched violation as its cause. The rate is tuned into `incidentBand`.

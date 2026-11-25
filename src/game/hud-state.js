@@ -13,8 +13,12 @@ import { mpsToKmh } from '../contracts/units.js';
 
 /** Most recent breaches resent with every HUD state; the toast stack drops ones already shown. */
 export const HUD_TOAST_WINDOW = 8;
-/** A notice stays in the HUD state this long after its contact, in seconds of run time. */
-export const HUD_NOTICE_S = 6;
+/**
+ * A notice stays in the HUD state this long after its contact, in seconds of run time. Shorter
+ * than a breach toast (which carries the legal text), since a notice only says who was at fault
+ * and a wreck clears from the road soon after.
+ */
+export const HUD_NOTICE_S = 4;
 /** Most notices sent at once. */
 export const HUD_NOTICE_MAX = 3;
 

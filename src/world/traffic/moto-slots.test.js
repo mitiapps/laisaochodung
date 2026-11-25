@@ -84,7 +84,8 @@ describe('motorbike slots', () => {
 
   it('filters past a stopped car in its lane without touching it', () => {
     const map = emptyMap();
-    const st = createTraffic(map, LAWFUL, 22);
+    // The wreck stands in for a broken-down car, so it must outlast the run.
+    const st = createTraffic(map, { ...LAWFUL, wreckClearS: 60 }, 22);
     const car = place(st, 'rw-e1', 80, 0, 'car');
     // A car broken down in the lane: it never moves again.
     st.wreck[car] = 1;

@@ -456,7 +456,7 @@ incidentBand:
 mirrorRadiusM: 30
 maxMirrored: 24
 strikerShare: 0.65
-wreckClearS: 20
+wreckClearS: 3
 wreckClearDistM: 120
 sourceMinEgoDistM: 60
 despawnBehindM: 120

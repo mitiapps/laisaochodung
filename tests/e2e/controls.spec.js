@@ -1,13 +1,16 @@
 import { expect, test } from '@playwright/test';
 import { KEY_BINDINGS } from '../../src/contracts/controls.js';
+import { CAMERA_MODE_STORAGE_KEY } from '../../src/ui/lib/camera-mode-store.js';
 import { CONTROL_PRESET_STORAGE_KEY } from '../../src/ui/lib/control-preset-store.js';
+import { controlLayout, layoutActions } from '../../src/ui/lib/hud-view.js';
 import { badgeFor } from '../../src/ui/lib/key-label.js';
 import { readToastFit } from './toast-fit.js';
 
 /**
- * Control presets and the on-screen controls on the shipped build: Đơn giản is the default, every
- * action has a working on-screen control with its key badge, touch drives the same input as the
- * keys, and the controls fit a desktop window and a landscape phone without overlapping.
+ * Control presets, camera modes and the on-screen controls on the shipped build: Đơn giản is the
+ * default, every action of the vehicle has a working on-screen control with its key badge in cabin
+ * order, touch drives the same input as the keys, the camera switches by key and button, and the
+ * controls fit a desktop window and a landscape phone without overlapping.
  */
 
 /** Keys of one action, from the game's own bindings. */
@@ -83,17 +86,23 @@ test('Đơn giản is the default: the car starts in D, W drives it, and the sco
   expect(problems).toEqual([]);
 });
 
-test('desktop: every action has exactly one visible key badge, and a mouse click on a button keeps a held key', async ({ page }) => {
+test('desktop: every control of the vehicle has exactly one visible key badge, other actions none, and a mouse click on a button keeps a held key', async ({ page }) => {
   const problems = watchProblems(page);
-  await startRun(page, 'car-sedan');
-  for (const binding of KEY_BINDINGS) {
-    const badges = page.locator(`[data-badge="${binding.action}"]:visible`);
-    await expect(badges, binding.action).toHaveCount(1);
-    await expect(badges).toHaveText(badgeFor(binding.action));
+  for (const [vehicleId, legalClass] of /** @type {const} */ ([
+    ['scooter', 'motorbike'],
+    ['car-sedan', 'car'],
+  ])) {
+    await startRun(page, vehicleId);
+    const shown = new Set(layoutActions(controlLayout(legalClass, 'simple')));
+    for (const binding of KEY_BINDINGS) {
+      const badges = page.locator(`[data-badge="${binding.action}"]:visible`);
+      await expect(badges, `${vehicleId} ${binding.action}`).toHaveCount(shown.has(binding.action) ? 1 : 0);
+      if (shown.has(binding.action)) await expect(badges).toHaveText(badgeFor(binding.action));
+    }
   }
 
-  // Hold W, then press the horn with the mouse: the button never takes focus, so nothing blurs
-  // and the throttle stays held.
+  // Hold the throttle key, then press the horn with the mouse: the button never takes focus, so
+  // nothing blurs and the throttle stays held.
   await page.keyboard.down(KEY.throttle);
   await expect.poll(() => value(page, 'hud-throttle')).toBe(1);
   const horn = await centre(page.locator('[data-action="horn"]'));
@@ -106,6 +115,50 @@ test('desktop: every action has exactly one visible key badge, and a mouse click
   expect(await value(page, 'hud-throttle')).toBe(1);
   await page.keyboard.up(KEY.throttle);
   expect(problems).toEqual([]);
+});
+
+test('the camera switches by key and by button, while driving and while paused, and the choice survives a reload and a restart', async ({ page }) => {
+  const problems = watchProblems(page);
+  await page.goto('/#/');
+  await expect(page.getByTestId('camera-chase')).toBeChecked();
+  await startRun(page, 'car-sedan');
+  const camera = page.getByTestId('hud-camera');
+  await expect(camera).toHaveAttribute('data-value', 'chase');
+  await page.keyboard.press(KEY.camera);
+  await expect(camera).toHaveAttribute('data-value', 'cockpit');
+  await camera.click();
+  await expect(camera).toHaveAttribute('data-value', 'chase');
+
+  // Paused: the overlay covers the run, but the key and the button still switch the camera.
+  await page.keyboard.press(KEY.pause);
+  await expect(page.getByTestId('pause-overlay')).toBeVisible();
+  await page.keyboard.press(KEY.camera);
+  await expect(camera).toHaveAttribute('data-value', 'cockpit');
+  await camera.click();
+  await expect(camera).toHaveAttribute('data-value', 'chase');
+  await camera.click();
+  await expect(camera).toHaveAttribute('data-value', 'cockpit');
+  await expect(page.getByTestId('pause-overlay')).toBeVisible();
+
+  await page.getByTestId('pause-restart').click();
+  await expect(page.getByTestId('pause-overlay')).toHaveCount(0);
+  await expect(camera).toHaveAttribute('data-value', 'cockpit');
+  await page.reload();
+  await expect(page.getByTestId('hud-camera')).toHaveAttribute('data-value', 'cockpit');
+  await page.goto('/#/');
+  await expect(page.getByTestId('camera-cockpit')).toBeChecked();
+  await page.getByTestId('camera-chase').check();
+  await startRun(page, 'scooter');
+  await expect(page.getByTestId('hud-camera')).toHaveAttribute('data-value', 'chase');
+  expect(problems).toEqual([]);
+});
+
+test('an unknown stored camera mode gives the chase camera', async ({ page }) => {
+  await page.addInitScript(([key]) => localStorage.setItem(key, 'drone'), [CAMERA_MODE_STORAGE_KEY]);
+  await page.goto('/#/');
+  await expect(page.getByTestId('camera-chase')).toBeChecked();
+  await startRun(page, 'car-sedan');
+  await expect(page.getByTestId('hud-camera')).toHaveAttribute('data-value', 'chase');
 });
 
 test('the preset chosen on the home page survives a reload and a restart', async ({ page }) => {
@@ -133,7 +186,7 @@ test('the preset chosen on the home page survives a reload and a restart', async
 test.describe('touch', () => {
   test.use({ hasTouch: true });
 
-  test('tapping the throttle, the left indicator and the lights does what W, Z and L do, and hides the badges', async ({ page }) => {
+  test('tapping the throttle, the left indicator and the lights does what their keys do, and hides the badges', async ({ page }) => {
     const problems = watchProblems(page);
     await startRun(page, 'car-sedan');
     const cdp = await page.context().newCDPSession(page);
@@ -241,59 +294,163 @@ test.describe('touch', () => {
   });
 });
 
+/**
+ * @typedef {{x: number, y: number, w: number, h: number}} Box
+ */
+
+/**
+ * Whether two boxes share some area.
+ * @param {Box} a Box.
+ * @param {Box} b Box.
+ * @returns {boolean} Overlap.
+ */
+const overlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+/**
+ * Reads the boxes of the on-screen controls, the speed panel and the toast stack at its reserved
+ * size (its width and its capped height).
+ * @param {import('@playwright/test').Page} page Page.
+ * @returns {Promise<{controls: ({actions: string[]} & Box)[], speed: Box, toasts: Box, viewport: {w: number, h: number}}>} Layout.
+ */
+function readLayout(page) {
+  return page.evaluate(() => {
+    /**
+     * @param {Element} el Element.
+     * @returns {{x: number, y: number, w: number, h: number}} Box.
+     */
+    const boxOf = (el) => {
+      const r = el.getBoundingClientRect();
+      return { x: r.left, y: r.top, w: r.width, h: r.height };
+    };
+    const stack = /** @type {Element} */ (document.querySelector('[data-testid="toast-stack"]'));
+    return {
+      controls: [...document.querySelectorAll('[data-action]')].map((el) => ({
+        actions: /** @type {string} */ (el.getAttribute('data-action')).split(' '),
+        ...boxOf(el),
+      })),
+      speed: boxOf(/** @type {Element} */ (document.querySelector('[data-testid="hud-speed-panel"]'))),
+      toasts: { ...boxOf(stack), h: Number.parseFloat(getComputedStyle(stack).maxHeight) },
+      viewport: { w: window.innerWidth, h: window.innerHeight },
+    };
+  });
+}
+
+/** Width from which a desktop window centres the steering (the `desk` variant in `app.css`). */
+const DESK_MIN_WIDTH = 1100;
+
+for (const viewport of [
+  { width: 1280, height: 720 },
+  { width: DESK_MIN_WIDTH, height: 600 },
+  { width: 844, height: 390 },
+]) {
+  const desk = viewport.width >= DESK_MIN_WIDTH;
+  test.describe(`layout at ${viewport.width} × ${viewport.height}`, () => {
+    test.use({ viewport });
+
+    for (const [vehicleId, legalClass] of /** @type {const} */ ([
+      ['car-sedan', 'car'],
+      ['scooter', 'motorbike'],
+    ])) {
+      for (const preset of /** @type {const} */ (['simple', 'real'])) {
+        test(`${vehicleId} on ${preset}: the controls of the layout, at least 56 px, overlapping nothing, in cabin order`, async ({ page }) => {
+          await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [CONTROL_PRESET_STORAGE_KEY, preset]);
+          await startRun(page, vehicleId);
+          const zones = controlLayout(legalClass, preset);
+          const layout = await readLayout(page);
+          expect(Number.isFinite(layout.toasts.h) && layout.toasts.h > 0).toBe(true);
+          // Exactly the controls of the layout, each action once.
+          const drawn = layout.controls.flatMap((c) => c.actions);
+          expect([...drawn].sort()).toEqual([...layoutActions(zones)].sort());
+          for (const c of layout.controls) {
+            const name = c.actions.join(' ');
+            expect(c.x, name).toBeGreaterThanOrEqual(0);
+            expect(c.y, name).toBeGreaterThanOrEqual(0);
+            expect(c.x + c.w, name).toBeLessThanOrEqual(layout.viewport.w);
+            expect(c.y + c.h, name).toBeLessThanOrEqual(layout.viewport.h);
+            expect(c.w, name).toBeGreaterThanOrEqual(56);
+            expect(c.h, name).toBeGreaterThanOrEqual(56);
+            expect(overlap(c, layout.speed), `${name} on the speed panel`).toBe(false);
+            expect(overlap(c, layout.toasts), `${name} on the toast stack`).toBe(false);
+          }
+          for (let i = 0; i < layout.controls.length; i += 1) {
+            for (let j = i + 1; j < layout.controls.length; j += 1) {
+              const [a, b] = [layout.controls[i], layout.controls[j]];
+              expect(overlap(a, b), `${a.actions.join(' ')} on ${b.actions.join(' ')}`).toBe(false);
+            }
+          }
+
+          /**
+           * @param {string} action Action.
+           * @returns {Box} Box of its control.
+           */
+          const boxOf = (action) => {
+            const c = layout.controls.find((x) => x.actions.includes(action));
+            if (!c) throw new Error(`no control for ${action}`);
+            return c;
+          };
+          const cx = (/** @type {Box} */ b) => b.x + b.w / 2;
+          const steering = boxOf('steerLeft');
+          const stalkLeft = Math.min(...zones.stalk.flat().map((a) => cx(boxOf(a))));
+          const stalkRight = Math.max(...zones.stalk.flat().map((a) => boxOf(a).x + boxOf(a).w));
+          // Left to right as in a cabin: stalk, steering, brake, throttle, console.
+          expect(stalkLeft).toBeLessThan(cx(steering));
+          for (const lever of zones.lever) expect(cx(boxOf(lever))).toBeLessThan(cx(steering));
+          expect(cx(steering)).toBeLessThan(cx(boxOf('brake')));
+          expect(cx(boxOf('brake'))).toBeLessThan(cx(boxOf('throttle')));
+          for (const c of zones.console) {
+            if (zones.consoleOverThrottle) {
+              expect(Math.abs(cx(boxOf(c)) - cx(boxOf('throttle')))).toBeLessThanOrEqual(1);
+              expect(boxOf(c).y + boxOf(c).h).toBeLessThanOrEqual(boxOf('throttle').y);
+            } else {
+              expect(cx(boxOf(c))).toBeGreaterThan(cx(boxOf('throttle')));
+            }
+          }
+          for (const horn of zones.horn) expect(cx(boxOf(horn))).toBeGreaterThan(cx(steering));
+          if (desk) {
+            // The wheel in the middle of a desktop window, the stalk on its left, the horn on its right.
+            expect(Math.abs(cx(steering) - layout.viewport.w / 2)).toBeLessThanOrEqual(2);
+            expect(stalkRight).toBeLessThanOrEqual(steering.x);
+            for (const horn of zones.horn) expect(boxOf(horn).x).toBeGreaterThanOrEqual(steering.x + steering.w);
+          } else {
+            // Phone: the steering in the left thumb zone, under the stalk.
+            expect(cx(steering)).toBeLessThan(layout.viewport.w / 3);
+            const stalkBottom = Math.max(...zones.stalk.flat().map((a) => boxOf(a).y + boxOf(a).h));
+            expect(stalkBottom).toBeLessThanOrEqual(steering.y);
+          }
+          await expect(page.getByTestId('hud-steer')).toHaveAttribute('data-shape', legalClass === 'car' ? 'wheel' : 'handlebar');
+        });
+      }
+    }
+  });
+}
+
 for (const viewport of [
   { width: 1280, height: 720 },
   { width: 844, height: 390 },
 ]) {
-  test.describe(`layout at ${viewport.width} × ${viewport.height}`, () => {
+  test.describe(`the map attribution at ${viewport.width} × ${viewport.height}`, () => {
     test.use({ viewport });
 
     for (const vehicleId of /** @type {const} */ (['car-sedan', 'scooter'])) {
-      test(`every control of the ${vehicleId} fits, is at least 56 px and overlaps nothing`, async ({ page }) => {
-        await startRun(page, vehicleId);
-        const layout = await page.evaluate(() => {
-          /**
-           * @param {Element} el Element.
-           * @returns {{x: number, y: number, w: number, h: number}} Box.
-           */
-          const boxOf = (el) => {
-            const r = el.getBoundingClientRect();
-            return { x: r.left, y: r.top, w: r.width, h: r.height };
-          };
-          const stack = /** @type {Element} */ (document.querySelector('[data-testid="toast-stack"]'));
-          // The toast stack is checked at its reserved size: its width and its capped height.
-          const reserved = { ...boxOf(stack), h: Number.parseFloat(getComputedStyle(stack).maxHeight) };
-          return {
-            controls: [...document.querySelectorAll('[data-action]')].map((el) => ({ action: /** @type {string} */ (el.getAttribute('data-action')), ...boxOf(el) })),
-            speed: boxOf(/** @type {Element} */ (document.querySelector('[data-testid="hud-speed-panel"]'))),
-            toasts: reserved,
-            viewport: { w: window.innerWidth, h: window.innerHeight },
-          };
-        });
-        /**
-         * @param {{x: number, y: number, w: number, h: number}} a Box.
-         * @param {{x: number, y: number, w: number, h: number}} b Box.
-         * @returns {boolean} The boxes share some area.
-         */
-        const overlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-        expect(Number.isFinite(layout.toasts.h) && layout.toasts.h > 0).toBe(true);
-        const expected = KEY_BINDINGS.length - 1; // the slider holds two actions
-        expect(layout.controls).toHaveLength(expected);
-        for (const c of layout.controls) {
-          expect(c.x, c.action).toBeGreaterThanOrEqual(0);
-          expect(c.y, c.action).toBeGreaterThanOrEqual(0);
-          expect(c.x + c.w, c.action).toBeLessThanOrEqual(layout.viewport.w);
-          expect(c.y + c.h, c.action).toBeLessThanOrEqual(layout.viewport.h);
-          expect(c.w, c.action).toBeGreaterThanOrEqual(56);
-          expect(c.h, c.action).toBeGreaterThanOrEqual(56);
-          expect(overlap(c, layout.speed), `${c.action} on the speed panel`).toBe(false);
-          expect(overlap(c, layout.toasts), `${c.action} on the toast stack`).toBe(false);
-        }
-        for (let i = 0; i < layout.controls.length; i += 1) {
-          for (let j = i + 1; j < layout.controls.length; j += 1) {
-            expect(overlap(layout.controls[i], layout.controls[j]), `${layout.controls[i].action} on ${layout.controls[j].action}`).toBe(false);
-          }
-        }
+      test(`stays readable under the ${vehicleId} controls on osm-pasteur`, async ({ page }) => {
+        await page.addInitScript(([key]) => localStorage.setItem(key, 'real'), [CONTROL_PRESET_STORAGE_KEY]);
+        await page.goto('/#/');
+        await page.getByTestId(`vehicle-${vehicleId}`).check();
+        await page.getByTestId('map-osm-pasteur').check();
+        await page.getByTestId('start-button').click();
+        // osm-pasteur with its traffic loads in about 2 s on an idle host and 9 s with the CPU
+        // shared under software GL, past the default 5 s.
+        await expect(page.getByTestId('hud')).toBeVisible({ timeout: 20_000 });
+        const link = page.getByTestId('osm-attribution').locator('a');
+        await expect(link).toBeVisible();
+        const box = /** @type {Box} */ (await link.boundingBox().then((b) => (b ? { x: b.x, y: b.y, w: b.width, h: b.height } : null)));
+        expect(box).not.toBeNull();
+        const layout = await readLayout(page);
+        for (const c of layout.controls) expect(overlap(c, box), `${c.actions.join(' ')} on the attribution`).toBe(false);
+        expect(overlap(layout.speed, box), 'the speed panel on the attribution').toBe(false);
+        // Nothing drawn over the link's centre either.
+        const onTop = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('a')?.href ?? null, { x: box.x + box.w / 2, y: box.y + box.h / 2 });
+        expect(onTop).toContain('openstreetmap.org');
       });
     }
   });
