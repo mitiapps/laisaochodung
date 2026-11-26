@@ -17,8 +17,8 @@
   let { control, showBadges, onhold } = $props();
 
   const isThrottle = $derived(control.action === 'throttle');
-  /** The rear brake is the left hand lever, so its handlebar end is on its right; the front lever's on its left. */
-  const pivotRight = $derived(control.action === 'brakeRear');
+  /** A left hand lever has its handlebar end on its right; a right hand lever's is on its left. */
+  const pivotRight = $derived(control.hand === 'left');
 
   /** Size and corners of each shape. */
   const SIZE = /** @type {const} */ ({

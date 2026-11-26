@@ -44,8 +44,7 @@
    * handlebar). The speed panel has a fixed width, so a faster readout never grows it: the car's
    * sits left of the stalk, the motorbike's right of the grip column. The clamp bounds are the
    * widest extent of each side from the anchor: car, 64 + 120 + 8 + 148 px on the left and 64 + 344
-   * px on the right; motorbike, 92 + 264 px on the left (92 + 184 px without the rear-brake lever)
-   * and 92 + 72 + 8 + 148 px on the right.
+   * px on the right; motorbike, 92 + 264 px on the left and 92 + 72 + 8 + 148 px on the right.
    * Every group's bottom edge is 40 px above the padded bottom, so the map attribution under it
    * stays readable.
    */
@@ -58,7 +57,7 @@
           speed: 'right-[calc(100%-var(--hud-cx)+192px)]',
         }
       : {
-          cx: layout.leftLever.length > 0 ? 'clamp(356px, 50%, calc(100% - 320px))' : 'clamp(276px, 50%, calc(100% - 320px))',
+          cx: 'clamp(356px, 50%, calc(100% - 320px))',
           left: 'right-[calc(100%-var(--hud-cx)+92px)]',
           right: 'left-[calc(var(--hud-cx)+92px)]',
           speed: 'left-[calc(var(--hud-cx)+172px)]',
@@ -143,7 +142,8 @@
           </div>
 
           <!-- Left of the steering: the stalk, or a motorbike's switch cluster (lights and hazard
-               above the indicators and horn), then the motorbike's left hand lever. -->
+               above the indicators and horn), then the motorbike's left hand lever: the rear brake
+               on Thực tế, the one brake on Đơn giản. -->
           <div class="absolute bottom-10 flex items-start gap-2 {place.left}" data-zone="left">
             <div class="flex flex-col gap-2" data-zone="stalk">
               {#each layout.stalk as row, i (i)}
@@ -155,7 +155,7 @@
               {/each}
             </div>
             {#each layout.leftLever as action (action)}
-              <Pedal control={pedalControl(/** @type {'brakeRear'} */ (action), hud.controls, isCar, hud.controlPreset)} {showBadges} onhold={holdOf(action)} />
+              <Pedal control={pedalControl(/** @type {'brake' | 'brakeRear'} */ (action), hud.controls, isCar, hud.controlPreset)} {showBadges} onhold={holdOf(action)} />
             {/each}
           </div>
 
@@ -164,7 +164,7 @@
           </div>
 
           <!-- Right of the steering: the car's horn, pedals, gear lever and console (hazard over the
-               handbrake), or the motorbike's front brake lever over its throttle grip. -->
+               handbrake), or the motorbike's throttle grip, under the front brake lever on Thực tế. -->
           <div class="absolute bottom-10 flex items-end gap-2 {place.right}" data-zone="right">
             {#each layout.horn as action (action)}
               <div class="mb-7" data-zone="horn">

@@ -253,6 +253,20 @@ test.describe('touch', () => {
     expect(problems).toEqual([]);
   });
 
+  test('holding the Đơn giản scooter brake lever by touch applies both brakes, as S does', async ({ page }) => {
+    const problems = watchProblems(page);
+    await startRun(page, 'scooter');
+    const cdp = await page.context().newCDPSession(page);
+    const { x, y } = await centre(page.locator('[data-action="brake"]'));
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }] });
+    await expect.poll(() => value(page, 'hud-brake-front')).toBeGreaterThan(0);
+    await expect.poll(() => value(page, 'hud-brake-rear')).toBeGreaterThan(0);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await expect.poll(() => value(page, 'hud-brake-front')).toBe(0);
+    await expect.poll(() => value(page, 'hud-brake-rear')).toBe(0);
+    expect(problems).toEqual([]);
+  });
+
   test('tapping Số − and Số + on the car steps the selector down and up, as K and I do', async ({ page }) => {
     const problems = watchProblems(page);
     // Đơn giản: the car starts in D on the selector R, N, D.
@@ -386,15 +400,17 @@ function readFastSpeedPanel(page) {
 const CAR_SPEED_PANEL_MAX_W = 218;
 
 /**
- * Viewports of the layout test. On the narrower landscape phone the HUD box is too narrow for the
- * car's groups on both sides of a centred wheel, so the row shifts left and only containment is
- * checked there.
+ * Viewports of the layout test. On the narrower ones the HUD box is too narrow for the car's
+ * groups on both sides of a centred wheel, so the row shifts left and only containment is checked
+ * there. At 774 × 390 the HUD box is 750 px, the box a notched 844 px phone leaves inside its
+ * safe-area insets, with 2 px to spare for the car: it pins that tight case.
  */
 const LAYOUT_VIEWPORTS = [
   { width: 1280, height: 720, centred: true },
   { width: 1100, height: 600, centred: true },
   { width: 844, height: 390, centred: true },
   { width: 800, height: 360, centred: false },
+  { width: 774, height: 390, centred: false },
 ];
 
 for (const { centred, ...viewport } of LAYOUT_VIEWPORTS) {
@@ -459,7 +475,12 @@ for (const { centred, ...viewport } of LAYOUT_VIEWPORTS) {
           expect(fastSpeed.inside, 'a three-digit speed inside the speed panel').toBe(true);
           expect(stalkLeft).toBeLessThan(cx(steering));
           expect(stalkRight).toBeLessThanOrEqual(steering.x);
-          for (const lever of zones.leftLever) expect(cx(boxOf(lever))).toBeLessThan(cx(steering));
+          // The left hand lever sits next to the left end of the steering.
+          for (const lever of zones.leftLever) {
+            expect(cx(boxOf(lever))).toBeLessThan(cx(steering));
+            expect(right(boxOf(lever))).toBeLessThanOrEqual(steering.x);
+            expect(steering.x - right(boxOf(lever))).toBeLessThanOrEqual(16);
+          }
           for (const horn of zones.horn) {
             expect(cx(boxOf(horn))).toBeGreaterThan(cx(steering));
             expect(boxOf(horn).x).toBeGreaterThanOrEqual(right(steering));
@@ -480,12 +501,18 @@ for (const { centred, ...viewport } of LAYOUT_VIEWPORTS) {
             await expect(page.getByTestId('hud-gear-lever')).toHaveText(await page.getByTestId('hud-gear').innerText());
             if (viewport.width === 844) expect(layout.speed.w, 'the car speed panel width').toBeLessThanOrEqual(CAR_SPEED_PANEL_MAX_W);
           } else {
-            // The right end of the handlebar: the front brake lever over the throttle grip.
-            const [brake, throttle] = [boxOf('brake'), boxOf('throttle')];
+            // The right end of the handlebar starts with the throttle grip; on Thực tế the front brake
+            // lever sits over it, on Đơn giản the grip is alone, since the one brake is the left lever.
+            const throttle = boxOf('throttle');
             expect(throttle.x).toBeGreaterThanOrEqual(right(steering));
             expect(throttle.x - right(steering)).toBeLessThanOrEqual(16);
-            expect(Math.abs(cx(brake) - cx(throttle))).toBeLessThanOrEqual(1);
-            expect(brake.y + brake.h).toBeLessThanOrEqual(throttle.y);
+            if (preset === 'real') {
+              const brake = boxOf('brake');
+              expect(Math.abs(cx(brake) - cx(throttle))).toBeLessThanOrEqual(1);
+              expect(brake.y + brake.h).toBeLessThanOrEqual(throttle.y);
+            } else {
+              expect(zones.rightGrip).toEqual(['throttle']);
+            }
             // The hazard switch in the top row of the switch cluster, left of the handlebar.
             expect(cx(boxOf('hazard'))).toBeLessThan(cx(steering));
             expect(Math.abs(boxOf('hazard').y - boxOf('lightsCycle').y)).toBeLessThanOrEqual(1);

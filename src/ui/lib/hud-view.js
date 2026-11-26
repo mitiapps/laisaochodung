@@ -91,12 +91,13 @@ export function actionLabel(action) {
  * gear lever and the right-hand console; the game buttons sit at the top right.
  * @property {'wheel' | 'handlebar'} steering Steering control: a round wheel (car) or a handlebar.
  * @property {readonly (readonly ControlAction[])[]} stalk Stalk or switch-cluster rows, top row first.
- * @property {readonly ControlAction[]} leftLever Left hand lever: an automatic scooter's rear brake,
- *   on Thực tế only.
+ * @property {readonly ControlAction[]} leftLever Left hand lever of an automatic scooter: the rear
+ *   brake on Thực tế, the one brake that applies both on Đơn giản.
  * @property {readonly ControlAction[]} horn Horn immediately right of the wheel (car).
  * @property {readonly ControlAction[]} pedals Car pedals, brake then throttle, left to right.
  * @property {readonly ControlAction[]} rightGrip Right end of the handlebar, top to bottom: the front
- *   brake lever in front of the throttle grip (motorbike).
+ *   brake lever in front of the throttle grip on Thực tế, the throttle grip alone on Đơn giản
+ *   (motorbike).
  * @property {readonly ControlAction[]} gears Gear lever, Số + over Số − (car).
  * @property {readonly ControlAction[]} console Right-hand console, top to bottom: hazard over the
  *   handbrake (car).
@@ -122,9 +123,10 @@ const CAR_LAYOUT = Object.freeze({
 
 /**
  * Motorbike zones: the left switch cluster holds the lights, the hazard, the indicators and the
- * horn; the right end of the handlebar holds the front brake lever and the throttle grip. The
- * rear-brake lever, the left hand lever of an automatic scooter, shows only on Thực tế, since the
- * Đơn giản brake applies both brakes.
+ * horn. On Thực tế the left hand lever is the rear brake and the right end of the handlebar holds
+ * the front brake lever over the throttle grip. On Đơn giản the one brake applies both brakes, so
+ * it is the left hand lever, as on a combined-brake scooter, and the right end holds the throttle
+ * grip alone.
  */
 const MOTORBIKE_ZONES = Object.freeze({
   steering: /** @type {const} */ ('handlebar'),
@@ -134,13 +136,20 @@ const MOTORBIKE_ZONES = Object.freeze({
   ]),
   horn: NONE,
   pedals: NONE,
-  rightGrip: Object.freeze(/** @type {ControlAction[]} */ (['brake', 'throttle'])),
   gears: NONE,
   console: NONE,
   top: TOP,
 });
-const MOTORBIKE_REAL = Object.freeze({ ...MOTORBIKE_ZONES, leftLever: Object.freeze(/** @type {ControlAction[]} */ (['brakeRear'])) });
-const MOTORBIKE_SIMPLE = Object.freeze({ ...MOTORBIKE_ZONES, leftLever: NONE });
+const MOTORBIKE_REAL = Object.freeze({
+  ...MOTORBIKE_ZONES,
+  leftLever: Object.freeze(/** @type {ControlAction[]} */ (['brakeRear'])),
+  rightGrip: Object.freeze(/** @type {ControlAction[]} */ (['brake', 'throttle'])),
+});
+const MOTORBIKE_SIMPLE = Object.freeze({
+  ...MOTORBIKE_ZONES,
+  leftLever: Object.freeze(/** @type {ControlAction[]} */ (['brake'])),
+  rightGrip: Object.freeze(/** @type {ControlAction[]} */ (['throttle'])),
+});
 
 /**
  * The on-screen controls of a vehicle class and preset, by zone. The HUD draws these zones and the
@@ -236,6 +245,9 @@ export function buttonView(action, state) {
  * @property {boolean} on Applied at all.
  * @property {'handbrake' | 'lever' | 'grip' | 'pedal'} shape How it is drawn: the car's handbrake
  *   lever, a motorbike's hand lever, its throttle grip, or a car's tall pedal.
+ * @property {'left' | 'right' | null} hand The hand of a motorbike's hand lever: left for the rear
+ *   brake and for the Đơn giản brake, right for the Thực tế front brake; null for every other
+ *   control.
  * @property {{testId: 'hud-brake-rear', fraction: number} | null} rear The rear brake the
  *   motorbike's Đơn giản brake applies with it, shown as a second fill; null elsewhere.
  */
@@ -253,9 +265,9 @@ export function pedalControl(action, controls, isCar, preset) {
   /** @type {Omit<PedalControl, 'on'>} */
   let c;
   if (action === 'handbrake') {
-    c = { action, testId: 'hud-handbrake', label: 'Phanh tay', fraction: controls.handbrake ? 1 : 0, shape: 'handbrake', rear: null };
+    c = { action, testId: 'hud-handbrake', label: 'Phanh tay', fraction: controls.handbrake ? 1 : 0, shape: 'handbrake', hand: null, rear: null };
   } else if (action === 'brakeRear') {
-    c = { action, testId: 'hud-brake-rear', label: 'Phanh sau', fraction: unit(controls.brakeRear), shape: 'lever', rear: null };
+    c = { action, testId: 'hud-brake-rear', label: 'Phanh sau', fraction: unit(controls.brakeRear), shape: 'lever', hand: 'left', rear: null };
   } else if (action === 'brake') {
     const combined = !isCar && preset === 'simple';
     const label = isCar ? 'Phanh chân' : combined ? 'Phanh' : 'Phanh trước';
@@ -265,10 +277,11 @@ export function pedalControl(action, controls, isCar, preset) {
       label,
       fraction: unit(controls.brakeFront),
       shape: isCar ? 'pedal' : 'lever',
+      hand: isCar ? null : combined ? 'left' : 'right',
       rear: combined ? { testId: 'hud-brake-rear', fraction: unit(controls.brakeRear) } : null,
     };
   } else if (action === 'throttle') {
-    c = { action, testId: 'hud-throttle', label: 'Ga', fraction: unit(controls.throttle), shape: isCar ? 'pedal' : 'grip', rear: null };
+    c = { action, testId: 'hud-throttle', label: 'Ga', fraction: unit(controls.throttle), shape: isCar ? 'pedal' : 'grip', hand: null, rear: null };
   } else {
     throw new RangeError(`"${String(action)}" is not a pedal or lever action`);
   }

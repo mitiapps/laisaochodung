@@ -120,29 +120,37 @@ says what happens and where.
   touch; they have never been run on a real phone.
 - **No live mirrors in the cockpit view.** The mirror heads are drawn dark; switch to the chase
   view to look behind.
-- **Narrow screens.** Below a 748 px HUD box for the car, or 676 px for the scooter on Thực tế
-  (596 px on Đơn giản), the outermost controls run off the screen: the car's hazard and Phanh tay
-  first. The HUD box is the screen less 12 px of padding or the safe-area inset on each side,
-  whichever is larger. Between that width and the width a centred wheel needs (816 px for the
-  car, 712 px for the scooter on Thực tế), the row shifts and the wheel sits off centre. An 844 px
-  wide notched iPhone in landscape, with insets of about 47 px, leaves about 750 px: the car fits,
-  with its wheel about 33 px left of the screen's centre. A 667 px wide iPhone SE leaves 643 px:
-  too narrow for the car and for the scooter on Thực tế. The browser tests check only screens
-  without insets.
-- **The automatic gear lever moves the other way from a real one.** Số + sits on top and steps the
-  selector R → N → D; on a real P-R-N-D gate R is at the front, so pushing the lever up gives R.
-- **On Đơn giản the scooter's one brake is the right lever.** It applies both brakes, as the left
-  lever of a combined-brake (CBS) automatic scooter does; on such a scooter the right lever is the
-  front brake alone.
+- **Narrow screens.** Below a 748 px HUD box for the car, or 676 px for the scooter on either
+  preset, the outermost controls run off the screen: the car's hazard and Phanh tay first. The
+  HUD box is the screen less 12 px of padding or the safe-area inset on each side, whichever is
+  larger. Between that width and the width a centred wheel needs (816 px for the car, 712 px for
+  the scooter on either preset), the row shifts and the wheel sits off centre. An 844 px wide
+  notched iPhone in landscape, with insets of about 47 px, leaves about 750 px: the car fits, with
+  its wheel about 33 px left of the screen's centre. This is the chosen behaviour: the controls
+  stay inside the safe area and the wheel gives way. An 852 px wide phone with insets of about
+  59 px leaves 734 px, below the car's 748 px, so its hazard switch and Phanh tay reach about
+  14 px into the right inset, still on the screen (computed, not measured). A 667 px wide iPhone
+  SE leaves 643 px: too narrow for the car and for the scooter on either preset. The browser
+  tests check only screens without insets; 774 × 390 stands in for the notched 844 px phone's
+  box width.
+- **The gear lever is a plus/minus lever on both presets.** Số + sits on top and steps up the
+  ladder R → N → D on Đơn giản (R → N → 1–5 on Thực tế). It does not follow a real automatic's
+  P-R-N-D order, where R is at the front; this is kept so one lever and one pair of keys serve
+  both presets.
+- **The Đơn giản scooter brake is front-led.** It sits on the left hand lever, as the combined
+  brake of a CBS automatic scooter does, but applies full front brake plus a rear brake scaled by
+  grip, while a real combined-brake lever is rear-led.
 - **Some scooter keys sit on the other side of the keyboard from their control.** The hazard and
-  the horn are in the left switch cluster but use H and F; the throttle and the front brake are on
-  the right grip but use W and S; the left-lever rear brake is Space. The keys follow the car's
-  layout, so both vehicles share one set.
+  the horn are in the left switch cluster but use H and F; the throttle is on the right grip but
+  uses W; on Thực tế the front brake beside it uses S and the left-lever rear brake uses Space.
+  The keys follow the car's layout, so both vehicles share one set.
 - **The chase camera sits closer behind the car than behind a real sedan.** The drawn sedan is
   taller than its `heightM`, so the camera is moved in to keep the road just ahead of the bumper
   visible over the roof (`CHASE_RIG` in `src/render/scene.js` gives the reasoning).
 - **The centred steering control and the stalk cover the lower edge of the car** in the chase
   view, on every screen. The steering's background is see-through, so the car shows through it.
+  This is kept, since the row cannot go lower without covering the map attribution and the camera
+  cannot pitch down without losing the road ahead; the HUD repeats the indicators and the brake.
 
 ## Traffic
 

@@ -54,26 +54,27 @@ them stays readable.
 | Zone | Car | Scooter |
 | --- | --- | --- |
 | Left stalk, or the left switch cluster | Đèn, Nháy above ←, → | Đèn, Nháy, hazard above ←, →, Còi |
-| Left hand lever | — | Phanh sau, on Thực tế only |
+| Left hand lever | — | Phanh sau on Thực tế, Phanh (both brakes) on Đơn giản |
 | Steering, at the bottom centre | a round wheel | a handlebar |
 | Horn | Còi, immediately right of the wheel | in the switch cluster |
 | Pedals | Phanh chân, Ga, next to the horn | — |
-| Right end of the handlebar | — | the front brake lever (Phanh trước on Thực tế, Phanh on Đơn giản) over the Ga twist grip |
-| Gear lever | Số + over Số −, with the gear on the knob between them | — |
+| Right end of the handlebar | — | Phanh trước over the Ga twist grip on Thực tế, Ga alone on Đơn giản |
+| Gear lever | Số + over Số −, with the gear on the knob between them; a plus/minus lever, not a P-R-N-D gate, so one lever serves both presets | — |
 | Right-hand console | hazard over Phanh tay | — |
 | Speed panel | left of the stalk, with the gear and the rpm bar | right of the grip, no gear |
 | Top right | Góc nhìn, Tạm dừng | the same |
 
-- The layout is checked at 1280 × 720, 1100 × 600, 844 × 390 and 800 × 360. Every control is at
+- The layout is checked at 1280 × 720, 1100 × 600, 844 × 390, 800 × 360 and 774 × 390 (the HUD
+  box of a notched 844 px phone). Every control is at
   least 56 px and overlaps nothing, and the speed panel has a fixed width, so a three-digit speed
   never grows it.
-- The narrowest HUD box that fits every control is 748 px for the car, and for the scooter 676 px
-  on Thực tế and 596 px on Đơn giản (no rear-brake lever): a 772, 700 or 620 px wide screen with
-  no safe-area insets. The anchor and its bounds are `place`
+- The narrowest HUD box that fits every control is 748 px for the car and 676 px for the scooter
+  on either preset: a 772 or 700 px wide screen with no safe-area insets. The anchor and its bounds are `place`
   in `src/ui/hud/hud.svelte`.
 - The scooter is an automatic ("Xe tay ga"), so its rear brake is the left hand lever, not a foot
-  pedal, and it has no gear to show. On Đơn giản its one brake lever applies both brakes and shows
-  the rear brake it applies; Space still applies the rear alone, with no on-screen button.
+  pedal, and it has no gear to show. On Đơn giản its one brake is the left hand lever, as on a
+  combined-brake scooter: it applies both brakes and shows the rear brake it applies; Space still
+  applies the rear alone, with no on-screen button.
 - Dragging the steering sideways steers and letting go centres it; the drawing turns with the
   steering applied. Its background is mostly see-through, so the vehicle shows through it in the
   chase view. The pedals, levers and grip fill to show how far they are applied; the grip's ribs
@@ -103,7 +104,7 @@ and Page Down beside the arrows for the gears.
 | Action | Keys | Mode | Cabin position |
 | --- | --- | --- | --- |
 | Ga (throttle) | W, ↑ | hold | right grip (scooter) / pedal |
-| Phanh chân (ô tô) / phanh trước (xe máy) | S, ↓ | hold | right lever (scooter) / pedal |
+| Phanh chân (ô tô) / phanh trước (xe máy) | S, ↓ | hold | right lever on Thực tế, left lever on Đơn giản (scooter) / pedal |
 | Lái sang trái | A, ← | hold | wheel |
 | Lái sang phải | D, → | hold | wheel |
 | Xi nhan trái | Q | press | left stalk |
@@ -115,7 +116,7 @@ and Page Down beside the arrows for the gears.
 | Lên số (ô tô) | I, Page Up | press | gear lever |
 | Xuống số (ô tô) | K, Page Down | press | gear lever |
 | Phanh tay (ô tô) | L | hold | right of the gear lever |
-| Phanh sau (xe máy) | Space | hold | left hand lever |
+| Phanh sau (xe máy) | Space | hold | left hand lever on Thực tế |
 | Đổi góc nhìn | V | press | — |
 | Tạm dừng / tiếp tục | Esc, P | press | — |
 

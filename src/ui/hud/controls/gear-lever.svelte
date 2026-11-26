@@ -3,8 +3,9 @@
   import KeyBadge from './key-badge.svelte';
 
   /**
-   * The car's gear lever, drawn as a shift gate: a dark slot with Số + at its top and Số − at its
-   * bottom, two press controls of their own, and between them the knob, which shows the gear.
+   * The car's gear lever, a plus/minus lever: a dark slot with Số + at its top and Số − at its
+   * bottom, two press controls of their own, and between them the knob, which shows the gear. Số +
+   * on top steps up the ladder R, N, D (Đơn giản) or R, N, 1–5 (Thực tế).
    * @type {{
    *   up: import('../../lib/hud-view.js').ButtonView,
    *   down: import('../../lib/hud-view.js').ButtonView,
