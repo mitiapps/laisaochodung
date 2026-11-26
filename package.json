@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:data && vite build",
+    "build": "npm run build:data && npm run release:check && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",

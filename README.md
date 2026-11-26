@@ -29,7 +29,7 @@ npm test           # Vitest (Node); TRAFFIC_LONG=1 runs the full traffic seed sw
 
 | Script | Does |
 | --- | --- |
-| `npm run build` | Builds rules and map data, then the Vite bundle into `dist/` |
+| `npm run build` | Builds rules and map data, runs the release gate, then the Vite bundle into `dist/` |
 | `npm run build:rules` / `build:traffic` / `build:maps` | Compiles `data/` YAML into JSON (`src/generated/`, `public/maps/`) |
 | `npm run test:e2e` | Builds, then runs the Playwright tests (smoke, controls, full car and scooter runs of tutorial 01, traffic on `osm-pasteur`, the toast stack on the dev UI preview; about 6 min) against a fresh `vite preview` on port 5179 and, for the traffic diagnostics and the UI preview, `vite` dev on 5180 (both must be free; `E2E_PORT`, `E2E_DEV_PORT` and `E2E_SERVERS` in `playwright.config.js` move or split them) |
 | `npm run fetch:osm` | Refreshes the raw OpenStreetMap extracts (manual) |

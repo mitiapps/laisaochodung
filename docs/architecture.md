@@ -146,14 +146,14 @@ applies the same file, so the Playwright smoke test runs under the policy. The b
 legal data, unchecked sign figures, missing contact channels or donate QR (`src/config/site.js`),
 uncredited files in `public/models/` or `public/signs/`, a traffic model key with neither a
 credited model file nor a procedural builder, an OSM map without attribution, or a missing
-`data/maps/LICENSE-ODbL.md`. Every deploy runs it after the build.
+`data/maps/LICENSE-ODbL.md`. `npm run build` runs it after the data build and before the Vite
+bundle, so no build, and no deploy, gets past a failing gate.
 
 Two hosts serve the same build:
 
 - **Cloudflare Pages**, at the root path, through its Git integration: build command
-  `npm run build && npm run release:check`, output directory `dist`, Node from `.node-version`.
+  `npm run build`, output directory `dist`, Node from `.node-version`.
   It applies `public/_headers`.
 - **GitHub Pages**, at `/<repo>/`: the `pages` jobs in `.github/workflows/ci.yml` run after the
-  `check` job passes on a push to `main`, build with `SITE_BASE=/<repo>/` (Vite's `base`), run the
-  release gate and publish `dist/`. GitHub Pages ignores `_headers`, so the security headers
-  apply on Cloudflare only.
+  `check` job passes on a push to `main`, build with `SITE_BASE=/<repo>/` (Vite's `base`) and publish
+  `dist/`. GitHub Pages ignores `_headers`, so the security headers apply on Cloudflare only.

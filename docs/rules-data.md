@@ -60,7 +60,7 @@ old record once nothing cites it.
 - **`verified`** (clauses, speed defaults, sign meanings): `true` only when the value was read
   from an official text, or from two copies of which at least one is official. Unverified data
   is built and shown with the "chưa kiểm chứng" badge; the release gate
-  (`scripts/release-check.js`, run by every deploy) blocks a deploy while any is left. Every
+  (`scripts/release-check.js`, run by `npm run build`) blocks a deploy while any is left. Every
   clause, speed default and sign meaning is verified at the moment. A breach detected against an
   unverified default limit carries `basisVerified: false`, so its toast shows the badge even
   though its clause is verified.
