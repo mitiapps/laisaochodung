@@ -4,7 +4,7 @@ import map from '../../tests/fixtures/map-minimal.json' with { type: 'json' };
 import frames from '../../tests/fixtures/frames-straight.json' with { type: 'json' };
 import vehicles from '../../data/vehicles/vehicles.json' with { type: 'json' };
 import { KERB_HEIGHT_M } from '../contracts/units.js';
-import { LAYER_Y, buildRoadMeshes } from './road-mesh.js';
+import { GROUND_TILE_M, LAYER_Y, buildRoadMeshes, mapBounds } from './road-mesh.js';
 import { buildScenery } from './scenery/index.js';
 import { SIGN_BOTTOM_M, buildSigns, plateOutline } from './signs.js';
 import { LENS_M, LOWEST_LAMP_Y_M, buildTrafficLights, countdown, digitCells, headCentreY, lampLit } from './traffic-lights.js';
@@ -53,6 +53,53 @@ describe('static map meshes', () => {
     const normals = asphalt?.geometry.getAttribute('normal');
     if (!normals) throw new Error('no normals');
     for (let i = 0; i < normals.count; i += 1) expect(normals.getY(i)).toBeCloseTo(1, 6);
+    road.dispose();
+  });
+
+  it('draws the ground in tiles no larger than GROUND_TILE_M, all facing up, under the road', () => {
+    const road = buildRoadMeshes(fixture);
+    const ground = meshes(road.group).find((m) => m.name === 'static-ground');
+    const pos = ground?.geometry.getAttribute('position');
+    const normals = ground?.geometry.getAttribute('normal');
+    if (!pos || !normals) throw new Error('no ground geometry');
+    expect(LAYER_Y.ground).toBeLessThan(LAYER_Y.road);
+    // Every asphalt vertex lies above the ground plane, so the ground never wins the depth test.
+    const asphalt = meshes(road.group).find((m) => m.name === 'static-asphalt')?.geometry.getAttribute('position');
+    if (!asphalt) throw new Error('no asphalt geometry');
+    let lowestAsphalt = Infinity;
+    for (let i = 0; i < asphalt.count; i += 1) lowestAsphalt = Math.min(lowestAsphalt, asphalt.getY(i));
+    expect(lowestAsphalt - LAYER_Y.ground).toBeGreaterThan(0.02);
+    for (let t = 0; t < pos.count; t += 3) {
+      const xs = [pos.getX(t), pos.getX(t + 1), pos.getX(t + 2)];
+      const zs = [pos.getZ(t), pos.getZ(t + 1), pos.getZ(t + 2)];
+      expect(Math.max(...xs) - Math.min(...xs)).toBeLessThanOrEqual(GROUND_TILE_M + 1e-9);
+      expect(Math.max(...zs) - Math.min(...zs)).toBeLessThanOrEqual(GROUND_TILE_M + 1e-9);
+      for (let k = 0; k < 3; k += 1) {
+        expect(pos.getY(t + k)).toBeCloseTo(LAYER_Y.ground, 6);
+        expect(normals.getY(t + k)).toBeCloseTo(1, 6);
+      }
+    }
+    // The tiles cover the map's bounds without a gap: their areas add up to the whole rectangle.
+    let area = 0;
+    for (let t = 0; t < pos.count; t += 3) {
+      const ax = pos.getX(t + 1) - pos.getX(t);
+      const az = pos.getZ(t + 1) - pos.getZ(t);
+      const bx = pos.getX(t + 2) - pos.getX(t);
+      const bz = pos.getZ(t + 2) - pos.getZ(t);
+      area += Math.abs(ax * bz - az * bx) / 2;
+    }
+    const b = mapBounds(fixture);
+    const xs = [];
+    const zs = [];
+    for (let i = 0; i < pos.count; i += 1) {
+      xs.push(pos.getX(i));
+      zs.push(pos.getZ(i));
+    }
+    const w = Math.max(...xs) - Math.min(...xs);
+    const d = Math.max(...zs) - Math.min(...zs);
+    expect(w).toBeGreaterThan(b.maxX - b.minX);
+    expect(d).toBeGreaterThan(b.maxZ - b.minZ);
+    expect(Math.abs(area - w * d) / (w * d)).toBeLessThan(1e-9);
     road.dispose();
   });
 

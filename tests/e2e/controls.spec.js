@@ -10,7 +10,8 @@ import { readToastFit } from './toast-fit.js';
  * Control presets, camera modes and the on-screen controls on the shipped build: Đơn giản is the
  * default, every action of the vehicle has a working on-screen control with its key badge in cabin
  * order, touch drives the same input as the keys, the camera switches by key and button, and the
- * controls fit a desktop window and a landscape phone without overlapping.
+ * one layout fits a desktop window and landscape phones without overlapping, centred where the
+ * screen is wide enough.
  */
 
 /** Keys of one action, from the game's own bindings. */
@@ -27,7 +28,7 @@ async function startRun(page, vehicleId) {
   await page.getByTestId('map-tutorial-01-co-ban').check();
   await page.getByTestId('start-button').click();
   await expect(page.getByTestId('hud')).toBeVisible();
-  await expect(page.getByTestId('hud-gear')).not.toHaveText('');
+  await expect(page.getByTestId('hud-speed')).not.toHaveText('');
 }
 
 /**
@@ -74,11 +75,17 @@ test('Đơn giản is the default: the car starts in D, W drives it, and the sco
 
   await startRun(page, 'car-sedan');
   await expect(page.getByTestId('hud-gear')).toHaveText('D');
+  // The gear lever's knob shows the same gear.
+  await expect(page.getByTestId('hud-gear-lever')).toHaveText('D');
+  await expect(page.getByTestId('hud-gear-lever')).toHaveAttribute('data-value', 'D');
   await page.keyboard.down(KEY.throttle);
   await expect.poll(async () => Number(await page.getByTestId('hud-speed').innerText()), { timeout: 15_000 }).toBeGreaterThan(0);
   await page.keyboard.up(KEY.throttle);
 
   await startRun(page, 'scooter');
+  // An automatic scooter has no gear to show.
+  await expect(page.getByTestId('hud-gear')).toHaveCount(0);
+  await expect(page.getByTestId('hud-gear-lever')).toHaveCount(0);
   await page.keyboard.down(KEY.brake);
   await expect.poll(() => value(page, 'hud-brake-front')).toBeGreaterThan(0);
   await expect.poll(() => value(page, 'hud-brake-rear')).toBeGreaterThan(0);
@@ -246,6 +253,28 @@ test.describe('touch', () => {
     expect(problems).toEqual([]);
   });
 
+  test('tapping Số − and Số + on the car steps the selector down and up, as K and I do', async ({ page }) => {
+    const problems = watchProblems(page);
+    // Đơn giản: the car starts in D on the selector R, N, D.
+    await startRun(page, 'car-sedan');
+    const knob = page.getByTestId('hud-gear-lever');
+    await expect(knob).toHaveText('D');
+    const tap = async (/** @type {'gearUp' | 'gearDown'} */ action) => {
+      const { x, y } = await centre(page.locator(`[data-action="${action}"]`));
+      await page.touchscreen.tap(x, y);
+    };
+    await tap('gearDown');
+    await expect(knob).toHaveText('N');
+    await tap('gearDown');
+    await expect(knob).toHaveText('R');
+    await expect(page.getByTestId('hud-gear')).toHaveText('R');
+    await tap('gearUp');
+    await expect(knob).toHaveText('N');
+    await tap('gearUp');
+    await expect(knob).toHaveText('D');
+    expect(problems).toEqual([]);
+  });
+
   test('the throttle takes a touch hold after a restart, even with a finger still down from the last run', async ({ page }) => {
     const problems = watchProblems(page);
     await startRun(page, 'scooter');
@@ -335,15 +364,40 @@ function readLayout(page) {
   });
 }
 
-/** Width from which a desktop window centres the steering (the `desk` variant in `app.css`). */
-const DESK_MIN_WIDTH = 1100;
+/**
+ * Box of the speed panel with a three-digit speed written into its readout, read before the next
+ * render can rewrite it, and whether the readout still lies inside the panel with nothing spilling out.
+ * @param {import('@playwright/test').Page} page Page.
+ * @returns {Promise<Box & {inside: boolean}>} Box and fit.
+ */
+function readFastSpeedPanel(page) {
+  return page.evaluate(() => {
+    const readout = /** @type {Element} */ (document.querySelector('[data-testid="hud-speed"]'));
+    readout.textContent = '188';
+    const panel = /** @type {Element} */ (document.querySelector('[data-testid="hud-speed-panel"]'));
+    const r = panel.getBoundingClientRect();
+    const t = readout.getBoundingClientRect();
+    const inside = t.left >= r.left && t.right <= r.right && panel.scrollWidth <= panel.clientWidth;
+    return { x: r.left, y: r.top, w: r.width, h: r.height, inside };
+  });
+}
 
-for (const viewport of [
-  { width: 1280, height: 720 },
-  { width: DESK_MIN_WIDTH, height: 600 },
-  { width: 844, height: 390 },
-]) {
-  const desk = viewport.width >= DESK_MIN_WIDTH;
+/** Widest the car's speed panel may be on a landscape phone, so it fits left of the stalk. */
+const CAR_SPEED_PANEL_MAX_W = 218;
+
+/**
+ * Viewports of the layout test. On the narrower landscape phone the HUD box is too narrow for the
+ * car's groups on both sides of a centred wheel, so the row shifts left and only containment is
+ * checked there.
+ */
+const LAYOUT_VIEWPORTS = [
+  { width: 1280, height: 720, centred: true },
+  { width: 1100, height: 600, centred: true },
+  { width: 844, height: 390, centred: true },
+  { width: 800, height: 360, centred: false },
+];
+
+for (const { centred, ...viewport } of LAYOUT_VIEWPORTS) {
   test.describe(`layout at ${viewport.width} × ${viewport.height}`, () => {
     test.use({ viewport });
 
@@ -352,7 +406,7 @@ for (const viewport of [
       ['scooter', 'motorbike'],
     ])) {
       for (const preset of /** @type {const} */ (['simple', 'real'])) {
-        test(`${vehicleId} on ${preset}: the controls of the layout, at least 56 px, overlapping nothing, in cabin order`, async ({ page }) => {
+        test(`${vehicleId} on ${preset}: the controls of the layout, at least 56 px, overlapping nothing, in cabin order around the steering`, async ({ page }) => {
           await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [CONTROL_PRESET_STORAGE_KEY, preset]);
           await startRun(page, vehicleId);
           const zones = controlLayout(legalClass, preset);
@@ -389,33 +443,53 @@ for (const viewport of [
             return c;
           };
           const cx = (/** @type {Box} */ b) => b.x + b.w / 2;
+          const right = (/** @type {Box} */ b) => b.x + b.w;
           const steering = boxOf('steerLeft');
           const stalkLeft = Math.min(...zones.stalk.flat().map((a) => cx(boxOf(a))));
-          const stalkRight = Math.max(...zones.stalk.flat().map((a) => boxOf(a).x + boxOf(a).w));
-          // Left to right as in a cabin: stalk, steering, brake, throttle, console.
+          const stalkRight = Math.max(...zones.stalk.flat().map((a) => right(boxOf(a))));
+          // The steering in the middle of the screen, the stalk immediately on its left.
+          if (centred) expect(Math.abs(cx(steering) - layout.viewport.w / 2)).toBeLessThanOrEqual(2);
+          else expect(cx(steering)).toBeLessThanOrEqual(layout.viewport.w / 2);
+          // The speed panel inside the screen, and as wide with a three-digit speed as at a standstill.
+          expect(layout.speed.x, 'the speed panel left edge').toBeGreaterThanOrEqual(0);
+          expect(layout.speed.x + layout.speed.w, 'the speed panel right edge').toBeLessThanOrEqual(layout.viewport.w);
+          const fastSpeed = await readFastSpeedPanel(page);
+          expect(fastSpeed.w, 'the speed panel width at three digits').toBe(layout.speed.w);
+          expect(fastSpeed.x, 'the speed panel left edge at three digits').toBe(layout.speed.x);
+          expect(fastSpeed.inside, 'a three-digit speed inside the speed panel').toBe(true);
           expect(stalkLeft).toBeLessThan(cx(steering));
-          for (const lever of zones.lever) expect(cx(boxOf(lever))).toBeLessThan(cx(steering));
-          expect(cx(steering)).toBeLessThan(cx(boxOf('brake')));
-          expect(cx(boxOf('brake'))).toBeLessThan(cx(boxOf('throttle')));
-          for (const c of zones.console) {
-            if (zones.consoleOverThrottle) {
-              expect(Math.abs(cx(boxOf(c)) - cx(boxOf('throttle')))).toBeLessThanOrEqual(1);
-              expect(boxOf(c).y + boxOf(c).h).toBeLessThanOrEqual(boxOf('throttle').y);
-            } else {
-              expect(cx(boxOf(c))).toBeGreaterThan(cx(boxOf('throttle')));
-            }
+          expect(stalkRight).toBeLessThanOrEqual(steering.x);
+          for (const lever of zones.leftLever) expect(cx(boxOf(lever))).toBeLessThan(cx(steering));
+          for (const horn of zones.horn) {
+            expect(cx(boxOf(horn))).toBeGreaterThan(cx(steering));
+            expect(boxOf(horn).x).toBeGreaterThanOrEqual(right(steering));
           }
-          for (const horn of zones.horn) expect(cx(boxOf(horn))).toBeGreaterThan(cx(steering));
-          if (desk) {
-            // The wheel in the middle of a desktop window, the stalk on its left, the horn on its right.
-            expect(Math.abs(cx(steering) - layout.viewport.w / 2)).toBeLessThanOrEqual(2);
-            expect(stalkRight).toBeLessThanOrEqual(steering.x);
-            for (const horn of zones.horn) expect(boxOf(horn).x).toBeGreaterThanOrEqual(steering.x + steering.w);
+          if (legalClass === 'car') {
+            // Left to right as in a cabin: steering, brake, throttle, then the gear lever and console.
+            expect(cx(steering)).toBeLessThan(cx(boxOf('brake')));
+            expect(cx(boxOf('brake'))).toBeLessThan(cx(boxOf('throttle')));
+            // The pedals sit next to the wheel: the brake pedal starts just right of the horn.
+            for (const horn of zones.horn) expect(boxOf('brake').x - right(boxOf(horn))).toBeLessThanOrEqual(16);
+            for (const c of [...zones.gears, ...zones.console]) expect(cx(boxOf(c))).toBeGreaterThan(cx(boxOf('throttle')));
+            // The gear lever: Số + over Số − in one column, the handbrake right of it.
+            const [up, down] = [boxOf('gearUp'), boxOf('gearDown')];
+            expect(Math.abs(cx(up) - cx(down))).toBeLessThanOrEqual(1);
+            expect(up.y + up.h).toBeLessThanOrEqual(down.y);
+            expect(cx(boxOf('handbrake'))).toBeGreaterThan(cx(up));
+            await expect(page.getByTestId('hud-gear')).toBeVisible();
+            await expect(page.getByTestId('hud-gear-lever')).toHaveText(await page.getByTestId('hud-gear').innerText());
+            if (viewport.width === 844) expect(layout.speed.w, 'the car speed panel width').toBeLessThanOrEqual(CAR_SPEED_PANEL_MAX_W);
           } else {
-            // Phone: the steering in the left thumb zone, under the stalk.
-            expect(cx(steering)).toBeLessThan(layout.viewport.w / 3);
-            const stalkBottom = Math.max(...zones.stalk.flat().map((a) => boxOf(a).y + boxOf(a).h));
-            expect(stalkBottom).toBeLessThanOrEqual(steering.y);
+            // The right end of the handlebar: the front brake lever over the throttle grip.
+            const [brake, throttle] = [boxOf('brake'), boxOf('throttle')];
+            expect(throttle.x).toBeGreaterThanOrEqual(right(steering));
+            expect(throttle.x - right(steering)).toBeLessThanOrEqual(16);
+            expect(Math.abs(cx(brake) - cx(throttle))).toBeLessThanOrEqual(1);
+            expect(brake.y + brake.h).toBeLessThanOrEqual(throttle.y);
+            // The hazard switch in the top row of the switch cluster, left of the handlebar.
+            expect(cx(boxOf('hazard'))).toBeLessThan(cx(steering));
+            expect(Math.abs(boxOf('hazard').y - boxOf('lightsCycle').y)).toBeLessThanOrEqual(1);
+            await expect(page.getByTestId('hud-gear')).toHaveCount(0);
           }
           await expect(page.getByTestId('hud-steer')).toHaveAttribute('data-shape', legalClass === 'car' ? 'wheel' : 'handlebar');
         });
@@ -426,7 +500,9 @@ for (const viewport of [
 
 for (const viewport of [
   { width: 1280, height: 720 },
+  { width: 1100, height: 600 },
   { width: 844, height: 390 },
+  { width: 800, height: 360 },
 ]) {
   test.describe(`the map attribution at ${viewport.width} × ${viewport.height}`, () => {
     test.use({ viewport });

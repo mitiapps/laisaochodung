@@ -6,7 +6,8 @@
    * Floating one-axis steering control, drawn as a round wheel (car) or a handlebar (motorbike).
    * The first pointer down anchors it: the steering follows the pointer's horizontal offset from
    * that point, and lifting it hands the steering back to the ramp, which centres it. The drawing
-   * turns with the steering the sim applied, from keys or this control.
+   * turns with the steering the sim applied, from keys or this control. Its background is mostly
+   * see-through, since at the bottom centre it sits over the player's own vehicle in the chase view.
    * @type {{
    *   steer: number,
    *   shape: 'wheel' | 'handlebar',
@@ -55,7 +56,7 @@
 </script>
 
 <div
-  class="relative touch-none select-none border-2 bg-white/85 shadow-md {shape === 'wheel' ? 'h-28 w-28 rounded-full' : 'h-[72px] w-[168px] rounded-full'} {pointerId !== null
+  class="relative touch-none select-none border-2 bg-white/35 shadow-md {shape === 'wheel' ? 'h-28 w-28 rounded-full' : 'h-[72px] w-[168px] rounded-full'} {pointerId !== null
     ? 'border-police-600'
     : 'border-white/70'}"
   role="slider"

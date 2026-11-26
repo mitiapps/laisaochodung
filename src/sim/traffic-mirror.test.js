@@ -138,6 +138,7 @@ function harness(vehicleId, opts = {}) {
       mirror.update(poses, pre);
       vehicle.prepare({ ...neutralInput(), ...input });
       world.step(queue);
+      mirror.limitEgo(vehicle.body, vehicle.collider);
       const drained = drainCollisions(queue, memory, {
         tick,
         egoHandle: vehicle.collider.handle,
@@ -412,5 +413,138 @@ describe('collision attribution', () => {
     expect(strikerOf({ x: 1, z: 0 }, { x: 5, z: 0 }, { x: -5, z: 0 }, 0.65)).toBe('both');
     expect(strikerOf({ x: 1, z: 0 }, { x: 0, z: 0 }, { x: 0, z: 0 }, 0.65)).toBe('both');
     expect(strikerOf({ x: 0, z: 0 }, { x: 5, z: 0 }, { x: 0, z: 0 }, 0.65)).toBe('both');
+  });
+});
+
+/**
+ * The ego drives at `egoSpeed` into an agent coming the other way in its lane, coasting. Returns
+ * the largest ego velocity along the agent's travel direction from the contact step on, for 2 s,
+ * and the perfectly inelastic common velocity along that direction from the pre-contact speeds.
+ * @param {'car-sedan' | 'scooter'} vehicleId Ego.
+ * @param {string} model Agent model.
+ * @param {number} npcSpeed Agent speed, towards the ego.
+ * @param {number} egoSpeed Ego forward speed.
+ * @returns {{events: CollisionEvent[], maxAlong: number, common: number}} Result.
+ */
+function headOn(vehicleId, model, npcSpeed, egoSpeed) {
+  const h = harness(vehicleId);
+  const len = PARAMS.models[model].lengthM;
+  const a = agent({ id: 'npc-h', model, x: START.x + 30 + len / 2, z: START.z, heading: Math.PI, speed: npcSpeed });
+  h.vehicle.setForwardSpeed(egoSpeed);
+  const mNpc = PARAMS.models[model].massKg;
+  const mEgo = vehicleTuning(vehicleId).massKg;
+  // The agent travels towards -x: the ego's velocity along it is -vx.
+  /** @type {CollisionEvent[]} */
+  const events = [];
+  let eventStep = -1;
+  let maxAlong = -Infinity;
+  let common = NaN;
+  for (let k = 0; k < 60 * 10; k += 1) {
+    const vBefore = -h.vehicle.pose().velocity.x;
+    const ev = h.step([a]);
+    if (ev.length > 0 && eventStep < 0) {
+      eventStep = k;
+      common = (mNpc * npcSpeed + mEgo * vBefore) / (mNpc + mEgo);
+    }
+    events.push(...ev);
+    if (eventStep >= 0) maxAlong = Math.max(maxAlong, -h.vehicle.pose().velocity.x);
+    if (eventStep >= 0 && k >= eventStep + 120) break;
+  }
+  h.dispose();
+  return { events, maxAlong, common };
+}
+
+describe('head-on contact', () => {
+  it.each([
+    ['car-sedan', 'car', 3, 17.6, 0.2],
+    ['car-sedan', 'car', 8, 17.6, 0.2],
+    ['car-sedan', 'motorbike', 8, 17.6, 0.2],
+    ['car-sedan', 'car', 0, 17.6, 0.2],
+    ['scooter', 'car', 8, 5, 0.3],
+  ])('leaves a %s that hits an oncoming %s at %f m/s, itself at %f m/s, no faster than the common velocity', (egoId, model, npcSpeed, egoSpeed, tol) => {
+    const r = headOn(/** @type {'car-sedan' | 'scooter'} */ (egoId), model, npcSpeed, egoSpeed);
+    expect(r.events.length).toBeGreaterThanOrEqual(1);
+    expect(r.events[0]).toMatchObject({ otherId: 'npc-h' });
+    expect(r.maxAlong).toBeLessThanOrEqual(Math.max(0, r.common) + tol);
+  });
+});
+
+/**
+ * A car at 9 m/s meets an oncoming car crossing its path at an angle, so the first touch is a
+ * corner on a side and the contact normal lies across the agent's travel.
+ * @param {number} turn Agent heading off due west, rad.
+ * @param {number} offsetZ Lateral offset of the meeting point, m.
+ * @returns {{hit: boolean, minForward: number}} Whether they touched, and the ego's lowest signed
+ *   forward speed over the 2 s after the first touch.
+ */
+function obliqueHit(turn, offsetZ) {
+  const h = harness('car-sedan');
+  const [egoSpeed, npcSpeed, meetS] = [9, 4, 2];
+  const heading = Math.PI - turn;
+  const meetX = START.x + egoSpeed * meetS;
+  const a = agent({
+    id: 'npc-o',
+    model: 'car',
+    x: meetX - Math.cos(heading) * npcSpeed * meetS,
+    z: START.z + offsetZ + Math.sin(heading) * npcSpeed * meetS,
+    heading,
+    speed: npcSpeed,
+  });
+  h.vehicle.setForwardSpeed(egoSpeed);
+  let eventStep = -1;
+  let minForward = Infinity;
+  for (let k = 0; k < 600; k += 1) {
+    const ev = h.step([a]);
+    if (ev.length > 0 && eventStep < 0) eventStep = k;
+    if (eventStep >= 0) {
+      const p = h.vehicle.pose();
+      minForward = Math.min(minForward, p.velocity.x * Math.cos(p.heading) - p.velocity.z * Math.sin(p.heading));
+    }
+    if (eventStep >= 0 && k >= eventStep + 120) break;
+  }
+  h.dispose();
+  return { hit: eventStep >= 0, minForward };
+}
+
+describe('oblique head-on contact', () => {
+  it.each([
+    [0.6, -0.8],
+    [0.9, -1.5],
+  ])('does not send a car that drives into an oncoming car turned %f rad, met %f m aside, backwards', (turn, offsetZ) => {
+    const r = obliqueHit(turn, offsetZ);
+    expect(r.hit).toBe(true);
+    // The common velocity is below zero (the ego carries more momentum), so the ego stops.
+    expect(r.minForward).toBeGreaterThanOrEqual(-0.2);
+  });
+});
+
+describe('driving off after a head-on contact', () => {
+  it.each([
+    ['car', 0],
+    ['car', 8],
+  ])('lets a car that drove into a %s at %i m/s reverse away at once', (model, npcSpeed) => {
+    const h = harness('car-sedan');
+    const len = PARAMS.models[model].lengthM;
+    const a = agent({ id: 'npc-h', model, x: START.x + 30 + len / 2, z: START.z, heading: Math.PI, speed: npcSpeed });
+    h.vehicle.setForwardSpeed(17.6);
+    let hit = false;
+    for (let k = 0; k < 600 && !hit; k += 1) hit = h.step([a]).length > 0;
+    expect(hit).toBe(true);
+    for (let k = 0; k < 30; k += 1) h.step([a], BRAKED);
+    // Into reverse and away from the wreck, while its body still stands there.
+    h.step([a], { gearCmd: 'down' });
+    const x0 = h.egoPos().x;
+    for (let k = 0; k < 60; k += 1) h.step([a], { throttle: 0.5 });
+    const free = harness('car-sedan');
+    free.step([], { gearCmd: 'down' });
+    const f0 = free.egoPos().x;
+    for (let k = 0; k < 60; k += 1) free.step([], { throttle: 0.5 });
+    const freeM = f0 - free.egoPos().x;
+    const awayM = x0 - h.egoPos().x;
+    h.dispose();
+    free.dispose();
+    // Within 1 s it reverses about as far as a car reversing on an empty road.
+    expect(freeM).toBeGreaterThan(0.5);
+    expect(awayM).toBeGreaterThan(0.8 * freeM);
   });
 });

@@ -45,17 +45,19 @@ describe('HUD view helpers', () => {
       label: 'Phanh tay',
       fraction: 0,
       on: false,
-      shape: 'lever',
+      shape: 'handbrake',
       rear: null,
     });
     expect(pedalControl('brake', controls, true, 'simple')).toMatchObject({ testId: 'hud-brake-front', label: 'Phanh chân', fraction: 1, on: true, shape: 'pedal', rear: null });
-    expect(pedalControl('throttle', controls, true, 'simple')).toMatchObject({ testId: 'hud-throttle', label: 'Ga', fraction: 0.4, on: true });
+    expect(pedalControl('throttle', controls, true, 'simple')).toMatchObject({ testId: 'hud-throttle', label: 'Ga', fraction: 0.4, on: true, shape: 'pedal' });
+    // A motorbike's throttle is the right grip and its front brake the lever in front of it.
+    expect(pedalControl('throttle', controls, false, 'real')).toMatchObject({ testId: 'hud-throttle', label: 'Ga', shape: 'grip' });
     expect(pedalControl('handbrake', { ...controls, handbrake: true }, true, 'real')).toMatchObject({ fraction: 1, on: true });
     expect(pedalControl('throttle', { ...controls, throttle: Number.NaN }, false, 'real')).toMatchObject({ fraction: 0, on: false });
     expect(pedalControl('brakeRear', controls, false, 'real')).toMatchObject({ testId: 'hud-brake-rear', label: 'Phanh sau', fraction: 0.3, shape: 'lever' });
-    expect(pedalControl('brake', controls, false, 'real')).toMatchObject({ label: 'Phanh trước', rear: null });
+    expect(pedalControl('brake', controls, false, 'real')).toMatchObject({ label: 'Phanh trước', shape: 'lever', rear: null });
     // Đơn giản: one brake for both, which also shows the rear brake it applies.
-    expect(pedalControl('brake', controls, false, 'simple')).toMatchObject({ label: 'Phanh', rear: { testId: 'hud-brake-rear', fraction: 0.3 } });
+    expect(pedalControl('brake', controls, false, 'simple')).toMatchObject({ label: 'Phanh', shape: 'lever', rear: { testId: 'hud-brake-rear', fraction: 0.3 } });
     expect(() => pedalControl(/** @type {never} */ ('horn'), controls, true, 'simple')).toThrow(RangeError);
   });
 
@@ -76,7 +78,7 @@ describe('HUD view helpers', () => {
     expect(() => buttonView('throttle', state)).toThrow(RangeError);
   });
 
-  it('lays the controls out in cabin order: stalk, lever, steering, horn, pedals, console', () => {
+  it('lays the controls out in cabin order: stalk, left lever, steering, horn, pedals or right grip, gears, console', () => {
     const car = controlLayout('car', 'simple');
     expect(car).toMatchObject({
       steering: 'wheel',
@@ -84,27 +86,32 @@ describe('HUD view helpers', () => {
         ['lightsCycle', 'flash'],
         ['signalLeft', 'signalRight'],
       ],
-      lever: [],
+      leftLever: [],
       horn: ['horn'],
       pedals: ['brake', 'throttle'],
-      console: ['hazard', 'gearUp', 'gearDown', 'handbrake'],
-      consoleOverThrottle: false,
+      rightGrip: [],
+      gears: ['gearUp', 'gearDown'],
+      console: ['hazard', 'handbrake'],
       top: ['camera', 'pause'],
     });
+    expect(car).not.toHaveProperty('consoleOverThrottle');
     expect(controlLayout('car', 'real')).toBe(car);
     const real = controlLayout('motorbike', 'real');
     expect(real).toMatchObject({
       steering: 'handlebar',
       stalk: [
-        ['lightsCycle', 'flash'],
+        ['lightsCycle', 'flash', 'hazard'],
         ['signalLeft', 'signalRight', 'horn'],
       ],
-      lever: ['brakeRear'],
+      leftLever: ['brakeRear'],
       horn: [],
-      console: ['hazard'],
-      consoleOverThrottle: true,
+      pedals: [],
+      // Front brake lever in front of the throttle grip, top to bottom.
+      rightGrip: ['brake', 'throttle'],
+      gears: [],
+      console: [],
     });
-    expect(controlLayout('motorbike', 'simple').lever).toEqual([]);
+    expect(controlLayout('motorbike', 'simple')).toMatchObject({ leftLever: [], rightGrip: ['brake', 'throttle'] });
     expect(controlLayout('moped', 'real')).toBe(real);
   });
 

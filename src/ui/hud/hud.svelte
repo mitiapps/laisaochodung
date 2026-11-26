@@ -4,6 +4,7 @@
   import NoticeToast from './notice-toast.svelte';
   import SpeedLimitSign from './speed-limit-sign.svelte';
   import ControlButton from './controls/control-button.svelte';
+  import GearLever from './controls/gear-lever.svelte';
   import KeyBadge from './controls/key-badge.svelte';
   import Pedal from './controls/pedal.svelte';
   import RoundButton from './controls/round-button.svelte';
@@ -15,9 +16,10 @@
   /**
    * The HUD is a control surface: readouts plus a working on-screen control for every action of
    * the vehicle, each with its key badge, in cabin order from left to right (`controlLayout`): the
-   * stalk, the left lever, the steering, the horn, the pedals and the right-hand console. On a
-   * phone the steering sits in the left thumb zone under the stalk; on a desktop window (the `desk`
-   * variant) it moves to the bottom centre with the stalk on its left and the horn on its right.
+   * stalk or switch cluster, the left lever, the steering, the horn, the pedals or the right grip,
+   * the gear lever and the right-hand console. One layout serves every screen: the steering sits at
+   * the bottom centre with the stalk on its left, unless the screen is too narrow for the groups on
+   * one side, in which case the row shifts towards the other side until both fit.
    * @type {{
    *   state: import('../../contracts/hud.js').HudState,
    *   vehicle: import('../../contracts/vehicle.js').VehicleInfo,
@@ -34,28 +36,32 @@
   const isCar = $derived(vehicle.legalClass === 'car');
   const paused = $derived(hud.runStatus === 'paused');
   const layout = $derived(controlLayout(vehicle.legalClass, hud.controlPreset));
-  const hasLever = $derived(layout.lever.length > 0);
 
   /**
-   * Places of the left zones, phone first and `desk:` for a desktop window. The steering is 112 px
-   * (wheel) or 168 × 72 px (handlebar), buttons 56 px with 8 px gaps; the desktop row sits 40 px
-   * up so the map attribution under it stays readable.
+   * The row of controls hangs off one anchor, `--hud-cx`: the horizontal centre of the steering,
+   * the middle of the HUD box when the box is wide enough, else as near to it as both sides allow.
+   * The left and right groups start 8 px from the steering's edge (a 112 px wheel, a 168 px
+   * handlebar). The speed panel has a fixed width, so a faster readout never grows it: the car's
+   * sits left of the stalk, the motorbike's right of the grip column. The clamp bounds are the
+   * widest extent of each side from the anchor: car, 64 + 120 + 8 + 148 px on the left and 64 + 344
+   * px on the right; motorbike, 92 + 264 px on the left (92 + 184 px without the rear-brake lever)
+   * and 92 + 72 + 8 + 148 px on the right.
+   * Every group's bottom edge is 40 px above the padded bottom, so the map attribution under it
+   * stays readable.
    */
   const place = $derived(
     isCar
       ? {
-          steering: 'bottom-0 left-0 desk:bottom-10 desk:left-1/2 desk:-translate-x-1/2',
-          stalk: 'bottom-[120px] left-0 desk:bottom-10 desk:left-auto desk:right-[calc(50%+64px)]',
-          lever: '',
-          horn: 'bottom-7 left-[120px] desk:bottom-[68px] desk:left-[calc(50%+64px)]',
-          speed: 'desk:bottom-10 desk:left-auto desk:right-[calc(50%+192px)] desk:translate-x-0',
+          cx: 'clamp(340px, 50%, calc(100% - 408px))',
+          left: 'right-[calc(100%-var(--hud-cx)+64px)]',
+          right: 'left-[calc(var(--hud-cx)+64px)]',
+          speed: 'right-[calc(100%-var(--hud-cx)+192px)]',
         }
       : {
-          steering: `bottom-0 ${hasLever ? 'left-16' : 'left-0'} desk:bottom-10 desk:left-1/2 desk:-translate-x-1/2`,
-          stalk: `bottom-20 left-0 desk:bottom-10 desk:left-auto ${hasLever ? 'desk:right-[calc(50%+156px)]' : 'desk:right-[calc(50%+92px)]'}`,
-          lever: 'bottom-2 left-0 desk:bottom-12 desk:left-auto desk:right-[calc(50%+92px)]',
-          horn: '',
-          speed: 'desk:bottom-10 desk:left-[calc(50%+92px)] desk:translate-x-0',
+          cx: layout.leftLever.length > 0 ? 'clamp(356px, 50%, calc(100% - 320px))' : 'clamp(276px, 50%, calc(100% - 320px))',
+          left: 'right-[calc(100%-var(--hud-cx)+92px)]',
+          right: 'left-[calc(var(--hud-cx)+92px)]',
+          speed: 'left-[calc(var(--hud-cx)+172px)]',
         },
   );
   const notices = $derived(noticeItems(hud.notices));
@@ -97,7 +103,7 @@
   <div
     class="absolute inset-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-[max(0.75rem,env(safe-area-inset-top))]"
   >
-    <div class="relative h-full w-full">
+    <div class="relative h-full w-full" style:--hud-cx={place.cx}>
       <!-- The control layer: the only part of the HUD that takes pointers. A restart (a new
            `runKey`) rebuilds it, so no control keeps pointers from the last run. -->
       {#key runKey}
@@ -136,49 +142,49 @@
             </ControlButton>
           </div>
 
-          <!-- Left stalk, or a motorbike's left switch cluster: lights above, indicators below. -->
-          <div class="absolute flex flex-col items-start gap-2 desk:items-end {place.stalk}" data-zone="stalk">
-            {#each layout.stalk as row, i (i)}
-              <div class="flex gap-2">
-                {#each row as action (action)}
-                  <RoundButton button={buttonView(action, hud)} lights={hud.lights} {showBadges} onhold={holdOf(action)} onpress={pressOf(action)} />
-                {/each}
-              </div>
+          <!-- Left of the steering: the stalk, or a motorbike's switch cluster (lights and hazard
+               above the indicators and horn), then the motorbike's left hand lever. -->
+          <div class="absolute bottom-10 flex items-start gap-2 {place.left}" data-zone="left">
+            <div class="flex flex-col gap-2" data-zone="stalk">
+              {#each layout.stalk as row, i (i)}
+                <div class="flex gap-2">
+                  {#each row as action (action)}
+                    <RoundButton button={buttonView(action, hud)} lights={hud.lights} {showBadges} onhold={holdOf(action)} onpress={pressOf(action)} />
+                  {/each}
+                </div>
+              {/each}
+            </div>
+            {#each layout.leftLever as action (action)}
+              <Pedal control={pedalControl(/** @type {'brakeRear'} */ (action), hud.controls, isCar, hud.controlPreset)} {showBadges} onhold={holdOf(action)} />
             {/each}
           </div>
 
-          {#each layout.lever as action (action)}
-            <div class="absolute {place.lever}" data-zone="lever">
-              <Pedal control={pedalControl(/** @type {'brakeRear'} */ (action), hud.controls, isCar, hud.controlPreset)} {showBadges} onhold={holdOf(action)} />
-            </div>
-          {/each}
-
-          <div class="absolute {place.steering}" data-zone="steering">
+          <div class="absolute bottom-10 left-(--hud-cx) -translate-x-1/2" data-zone="steering">
             <SteeringSlider steer={hud.controls.steer} shape={layout.steering} {showBadges} onsteer={(v) => controls.steer(v)} />
           </div>
 
-          {#each layout.horn as action (action)}
-            <div class="absolute {place.horn}" data-zone="horn">
-              <RoundButton button={buttonView(action, hud)} lights={hud.lights} {showBadges} onhold={holdOf(action)} onpress={pressOf(action)} />
-            </div>
-          {/each}
-
-          <!-- Right cluster: brake, throttle, then the console at the screen edge (a motorbike's
-               lone hazard switch stands above the throttle instead). -->
-          <div class="absolute bottom-0 right-0 flex items-end gap-2" data-zone="right">
-            {#each layout.pedals as action (action)}
-              {#if action === 'throttle' && layout.consoleOverThrottle}
-                <div class="flex flex-col items-center gap-2" data-zone="console">
-                  {#each layout.console as c (c)}
-                    <RoundButton button={buttonView(c, hud)} lights={hud.lights} {showBadges} onhold={holdOf(c)} onpress={pressOf(c)} />
-                  {/each}
-                  <Pedal control={pedalControl('throttle', hud.controls, isCar, hud.controlPreset)} {showBadges} onhold={holdOf(action)} />
-                </div>
-              {:else}
-                <Pedal control={pedalControl(/** @type {'brake' | 'throttle'} */ (action), hud.controls, isCar, hud.controlPreset)} {showBadges} onhold={holdOf(action)} />
-              {/if}
+          <!-- Right of the steering: the car's horn, pedals, gear lever and console (hazard over the
+               handbrake), or the motorbike's front brake lever over its throttle grip. -->
+          <div class="absolute bottom-10 flex items-end gap-2 {place.right}" data-zone="right">
+            {#each layout.horn as action (action)}
+              <div class="mb-7" data-zone="horn">
+                <RoundButton button={buttonView(action, hud)} lights={hud.lights} {showBadges} onhold={holdOf(action)} onpress={pressOf(action)} />
+              </div>
             {/each}
-            {#if !layout.consoleOverThrottle}
+            {#each layout.pedals as action (action)}
+              <Pedal control={pedalControl(/** @type {'brake' | 'throttle'} */ (action), hud.controls, isCar, hud.controlPreset)} {showBadges} onhold={holdOf(action)} />
+            {/each}
+            {#if layout.rightGrip.length > 0}
+              <div class="flex flex-col gap-2" data-zone="right-grip">
+                {#each layout.rightGrip as action (action)}
+                  <Pedal control={pedalControl(/** @type {'brake' | 'throttle'} */ (action), hud.controls, isCar, hud.controlPreset)} {showBadges} onhold={holdOf(action)} />
+                {/each}
+              </div>
+            {/if}
+            {#if layout.gears.length === 2}
+              <GearLever up={buttonView(layout.gears[0], hud)} down={buttonView(layout.gears[1], hud)} gearText={formatGear(hud.gear)} {showBadges} onpress={(a) => controls.press(a)} />
+            {/if}
+            {#if layout.console.length > 0}
               <div class="flex flex-col gap-2" data-zone="console">
                 {#each layout.console as c (c)}
                   {#if c === 'handbrake'}
@@ -204,37 +210,44 @@
         </div>
       </div>
 
+      <!-- The speed panel: the limit sign and a readout three digits wide on top, then the car's
+           gear and the skid lamp, then the car's rpm bar. Every column has a fixed width. -->
       <div
-        class="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-end gap-2 rounded-lg border border-white/60 bg-white/90 p-2 shadow-md backdrop-blur {place.speed}"
+        class="absolute bottom-10 flex w-[148px] flex-col gap-2 rounded-lg border border-white/60 bg-white/90 p-2 shadow-md backdrop-blur {place.speed}"
         data-testid="hud-speed-panel"
       >
-        <SpeedLimitSign limitKmh={hud.speedLimitKmh} verified={hud.speedLimitVerified} />
-        <div class="text-center">
-          <p class="text-4xl font-bold tabular-nums leading-none" data-testid="hud-speed">{formatSpeed(hud.speedKmh)}</p>
-          <p class="text-xs text-stone-600">km/h</p>
+        <div class="flex items-end gap-2">
+          <div class="w-16 shrink-0">
+            <SpeedLimitSign limitKmh={hud.speedLimitKmh} verified={hud.speedLimitVerified} />
+          </div>
+          <div class="text-center">
+            <p class="min-w-[3ch] text-4xl font-bold tabular-nums leading-none" data-testid="hud-speed">{formatSpeed(hud.speedKmh)}</p>
+            <p class="text-xs text-stone-600">km/h</p>
+          </div>
         </div>
-        <div class="text-center">
-          <p class="text-xs text-stone-600">Số</p>
-          <p class="text-3xl font-bold leading-none" data-testid="hud-gear">{formatGear(hud.gear)}</p>
-        </div>
-        <div class="flex flex-col items-start gap-1">
+        <div class="flex items-center gap-2">
           {#if isCar}
-            <div class="w-20" data-testid="hud-rpm">
-              <p class="text-[10px] text-stone-600">Vòng tua</p>
-              <div class="h-2 overflow-hidden rounded bg-stone-200">
-                <div class="h-full bg-police-700" style:width="{rpmFraction(hud.rpm) * 100}%"></div>
-              </div>
-              <p class="text-[10px] tabular-nums text-stone-700">{Math.round(hud.rpm)} v/ph</p>
-            </div>
+            <p class="flex items-baseline gap-1">
+              <span class="text-xs text-stone-600">Số</span>
+              <span class="text-2xl font-bold leading-none" data-testid="hud-gear">{formatGear(hud.gear)}</span>
+            </p>
           {/if}
           <p
-            class={hud.skid ? 'rounded bg-kepi-500 px-1.5 py-0.5 text-[10px] font-semibold text-white' : 'rounded px-1.5 py-0.5 text-[10px] text-stone-500'}
+            class="ml-auto whitespace-nowrap rounded px-0.5 py-0.5 text-[10px] tracking-tight {hud.skid ? 'bg-kepi-500 font-medium text-white' : 'text-stone-500'}"
             data-testid="hud-skid"
             data-on={hud.skid}
           >
             Trượt bánh
           </p>
         </div>
+        {#if isCar}
+          <div data-testid="hud-rpm">
+            <div class="h-2 overflow-hidden rounded bg-stone-200">
+              <div class="h-full bg-police-700" style:width="{rpmFraction(hud.rpm) * 100}%"></div>
+            </div>
+            <p class="whitespace-nowrap text-[10px] tabular-nums text-stone-700">Vòng tua {Math.round(hud.rpm)} v/ph</p>
+          </div>
+        {/if}
       </div>
 
       <!-- Toasts: top centre, height capped clear of the controls and the top-right buttons; the

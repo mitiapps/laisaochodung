@@ -79,11 +79,14 @@ run with a fresh random run seed. `createSim` defaults to traffic off, so tests 
   the ego into a fixed pool of `maxMirrored` kinematic Rapier bodies (`src/sim/traffic-mirror.js`).
   When an agent's swept footprint reaches the ego, its body moves at the momentum-share velocity
   `v · m_npc / (m_npc + m_ego)` instead of following the agent, so a light rider cannot launch a
-  car. The touched agent becomes a wreck on the next traffic step and stops dead; a car wrecked
-  by another agent slides on, and its body follows the slide until it stops. A wreck no longer
-  raises `red-light` or `no-yield`: the latch carries them for `LATCH_S` (3 s). The wreck leaves
-  `wreckClearS` (3 s) after the contact, when its latch runs out, or earlier once it is more than
-  `wreckClearDistM` (120 m) from the player and not ahead of it. With traffic running, each
+  car. When the ego itself drives into the body, the push is capped at the perfectly inelastic
+  common velocity of the two, and the contact sends the ego back no faster than that, so it does
+  not bounce off an oncoming or standing agent and can still reverse away. The touched agent becomes a wreck on the next
+  traffic step and stops dead; a car wrecked by another agent slides on, and its body follows the
+  slide until it stops. A wreck no longer raises `red-light` or `no-yield`: the latch carries
+  them for `LATCH_S` (`src/world/traffic/violations.js`). The wreck leaves `wreckClearS` after
+  the contact, or earlier once it is more than `wreckClearDistM` from the player and not ahead of
+  it, out of view in both cameras (both in `data/traffic/params.yaml`). With traffic running, each
   `collision` event carries the striker, whether the other party came from behind, its latched
   violations and its model.
 - **NPC incidents.** Contacts between agents make wrecks and a `TrafficIncident`

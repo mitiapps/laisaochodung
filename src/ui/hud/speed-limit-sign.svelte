@@ -14,7 +14,7 @@
     </div>
     {#if !verified}
       <span
-        class="rounded bg-police-100 px-1 text-[10px] text-police-800"
+        class="max-w-16 rounded bg-police-100 px-1 text-center text-[10px] leading-tight text-police-800"
         title="Tốc độ tối đa mặc định theo Thông tư 38 chưa được đối chiếu với văn bản chính thức."
         data-testid="hud-limit-unverified"
       >

@@ -67,10 +67,10 @@ export const CONTROL_PRESETS = Object.freeze(['simple', 'real']);
 export const CAMERA_MODES = Object.freeze(['chase', 'cockpit']);
 
 /**
- * The key table, in cabin order: pedals and wheel under the left hand (W A S D, or the arrows),
- * the indicator and light stalk left of the wheel (Q E Z X), the horn on the wheel hub (F), the
- * hazard switch on the centre dash (H), and the gear lever and handbrake under the right hand
- * (I K L, or Page Up and Page Down beside the arrows).
+ * The key table, in the car's cabin order: pedals and wheel under the left hand (W A S D, or the
+ * arrows), the indicator and light stalk left of the wheel (Q E Z X), the horn right of the wheel
+ * (F), the hazard switch beside the gear lever (H), and the gear lever and handbrake under the
+ * right hand (I K L, or Page Up and Page Down beside the arrows). A motorbike shares the same keys.
  * @type {readonly KeyBinding[]}
  */
 export const KEY_BINDINGS = Object.freeze([

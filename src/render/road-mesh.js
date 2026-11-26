@@ -31,6 +31,43 @@ export const PAVEMENT_TILE_M = 1.2;
 
 /** Margin of ground drawn around the map, in metres. */
 const GROUND_MARGIN_M = 150;
+/**
+ * Largest ground tile side, metres. With one quad over the whole map (about a kilometre on
+ * `osm-pasteur`), headless Chrome drew the ground in front of the road 3 cm above it in the
+ * scooter's cockpit view: the depth of such a large near-clipped triangle came out wrong by more
+ * than the layer gap. With tiles of this size it draws correctly.
+ */
+export const GROUND_TILE_M = 32;
+
+/**
+ * Square-ish tiles covering a rectangle, none wider or deeper than `GROUND_TILE_M`.
+ * @param {number} x0 Minimum x.
+ * @param {number} z0 Minimum z.
+ * @param {number} x1 Maximum x.
+ * @param {number} z1 Maximum z.
+ * @returns {[Vec2, Vec2, Vec2, Vec2][]} Quads in ring order.
+ */
+export function groundTiles(x0, z0, x1, z1) {
+  const nx = Math.max(1, Math.ceil((x1 - x0) / GROUND_TILE_M));
+  const nz = Math.max(1, Math.ceil((z1 - z0) / GROUND_TILE_M));
+  /** @type {[Vec2, Vec2, Vec2, Vec2][]} */
+  const quads = [];
+  for (let i = 0; i < nx; i += 1) {
+    const ax = x0 + ((x1 - x0) * i) / nx;
+    const bx = i === nx - 1 ? x1 : x0 + ((x1 - x0) * (i + 1)) / nx;
+    for (let j = 0; j < nz; j += 1) {
+      const az = z0 + ((z1 - z0) * j) / nz;
+      const bz = j === nz - 1 ? z1 : z0 + ((z1 - z0) * (j + 1)) / nz;
+      quads.push([
+        [ax, az],
+        [bx, az],
+        [bx, bz],
+        [ax, bz],
+      ]);
+    }
+  }
+  return quads;
+}
 
 /** Colours of the static materials. */
 const COLORS = Object.freeze({
@@ -86,13 +123,8 @@ export function buildRoadMeshes(map) {
   const soup = (key) => (soups[key] ??= new TriangleSoup());
 
   const b = mapBounds(map);
-  soup('ground').addGroundPolygon(
-    [
-      [b.minX - GROUND_MARGIN_M, b.minZ - GROUND_MARGIN_M],
-      [b.maxX + GROUND_MARGIN_M, b.minZ - GROUND_MARGIN_M],
-      [b.maxX + GROUND_MARGIN_M, b.maxZ + GROUND_MARGIN_M],
-      [b.minX - GROUND_MARGIN_M, b.maxZ + GROUND_MARGIN_M],
-    ],
+  soup('ground').addGroundQuads(
+    groundTiles(b.minX - GROUND_MARGIN_M, b.minZ - GROUND_MARGIN_M, b.maxX + GROUND_MARGIN_M, b.maxZ + GROUND_MARGIN_M),
     LAYER_Y.ground,
   );
 

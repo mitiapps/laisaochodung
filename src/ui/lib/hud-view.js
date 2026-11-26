@@ -86,50 +86,61 @@ export function actionLabel(action) {
 /**
  * @typedef {object} ControlLayout
  * The on-screen controls of a vehicle and preset, by cabin zone, left to right as in a cabin: the
- * indicator and light stalk (a motorbike's left switch cluster), the left lever, the steering, the
- * horn beside the wheel, the pedals, the right-hand console, and the game buttons at the top right.
+ * indicator and light stalk (a motorbike's left switch cluster), the left hand lever, the steering
+ * at the bottom centre, then right of it the horn, the pedals or the motorbike's right grip, the
+ * gear lever and the right-hand console; the game buttons sit at the top right.
  * @property {'wheel' | 'handlebar'} steering Steering control: a round wheel (car) or a handlebar.
  * @property {readonly (readonly ControlAction[])[]} stalk Stalk or switch-cluster rows, top row first.
- * @property {readonly ControlAction[]} lever Left-hand lever: the motorbike's rear brake on Thực tế.
- * @property {readonly ControlAction[]} horn Horn beside the wheel, on its right (car).
- * @property {readonly ControlAction[]} pedals Brake then throttle; the throttle sits nearest the edge.
- * @property {readonly ControlAction[]} console Right-hand console, top to bottom: hazard, then the
- *   car's gear lever and handbrake.
- * @property {boolean} consoleOverThrottle The console stands above the throttle at the screen edge
- *   (a motorbike's lone hazard switch) instead of in its own column beside it.
+ * @property {readonly ControlAction[]} leftLever Left hand lever: an automatic scooter's rear brake,
+ *   on Thực tế only.
+ * @property {readonly ControlAction[]} horn Horn immediately right of the wheel (car).
+ * @property {readonly ControlAction[]} pedals Car pedals, brake then throttle, left to right.
+ * @property {readonly ControlAction[]} rightGrip Right end of the handlebar, top to bottom: the front
+ *   brake lever in front of the throttle grip (motorbike).
+ * @property {readonly ControlAction[]} gears Gear lever, Số + over Số − (car).
+ * @property {readonly ControlAction[]} console Right-hand console, top to bottom: hazard over the
+ *   handbrake (car).
  * @property {readonly ControlAction[]} top Game buttons at the top right.
  */
+
+/** @type {readonly ControlAction[]} */
+const NONE = Object.freeze([]);
+const TOP = Object.freeze(/** @type {ControlAction[]} */ (['camera', 'pause']));
 
 /** Car zones; the stalk carries indicators and lights, the horn sits on the wheel's right. */
 const CAR_LAYOUT = Object.freeze({
   steering: /** @type {const} */ ('wheel'),
   stalk: Object.freeze([Object.freeze(/** @type {ControlAction[]} */ (['lightsCycle', 'flash'])), Object.freeze(/** @type {ControlAction[]} */ (['signalLeft', 'signalRight']))]),
-  lever: Object.freeze(/** @type {ControlAction[]} */ ([])),
+  leftLever: NONE,
   horn: Object.freeze(/** @type {ControlAction[]} */ (['horn'])),
   pedals: Object.freeze(/** @type {ControlAction[]} */ (['brake', 'throttle'])),
-  console: Object.freeze(/** @type {ControlAction[]} */ (['hazard', 'gearUp', 'gearDown', 'handbrake'])),
-  consoleOverThrottle: false,
-  top: Object.freeze(/** @type {ControlAction[]} */ (['camera', 'pause'])),
+  rightGrip: NONE,
+  gears: Object.freeze(/** @type {ControlAction[]} */ (['gearUp', 'gearDown'])),
+  console: Object.freeze(/** @type {ControlAction[]} */ (['hazard', 'handbrake'])),
+  top: TOP,
 });
 
 /**
- * Motorbike zones: the left switch cluster holds the lights, the indicators and the horn; the
- * rear-brake lever shows only on Thực tế, since the Đơn giản brake applies both brakes.
+ * Motorbike zones: the left switch cluster holds the lights, the hazard, the indicators and the
+ * horn; the right end of the handlebar holds the front brake lever and the throttle grip. The
+ * rear-brake lever, the left hand lever of an automatic scooter, shows only on Thực tế, since the
+ * Đơn giản brake applies both brakes.
  */
 const MOTORBIKE_ZONES = Object.freeze({
   steering: /** @type {const} */ ('handlebar'),
   stalk: Object.freeze([
-    Object.freeze(/** @type {ControlAction[]} */ (['lightsCycle', 'flash'])),
+    Object.freeze(/** @type {ControlAction[]} */ (['lightsCycle', 'flash', 'hazard'])),
     Object.freeze(/** @type {ControlAction[]} */ (['signalLeft', 'signalRight', 'horn'])),
   ]),
-  horn: Object.freeze(/** @type {ControlAction[]} */ ([])),
-  pedals: Object.freeze(/** @type {ControlAction[]} */ (['brake', 'throttle'])),
-  console: Object.freeze(/** @type {ControlAction[]} */ (['hazard'])),
-  consoleOverThrottle: true,
-  top: Object.freeze(/** @type {ControlAction[]} */ (['camera', 'pause'])),
+  horn: NONE,
+  pedals: NONE,
+  rightGrip: Object.freeze(/** @type {ControlAction[]} */ (['brake', 'throttle'])),
+  gears: NONE,
+  console: NONE,
+  top: TOP,
 });
-const MOTORBIKE_REAL = Object.freeze({ ...MOTORBIKE_ZONES, lever: Object.freeze(/** @type {ControlAction[]} */ (['brakeRear'])) });
-const MOTORBIKE_SIMPLE = Object.freeze({ ...MOTORBIKE_ZONES, lever: Object.freeze(/** @type {ControlAction[]} */ ([])) });
+const MOTORBIKE_REAL = Object.freeze({ ...MOTORBIKE_ZONES, leftLever: Object.freeze(/** @type {ControlAction[]} */ (['brakeRear'])) });
+const MOTORBIKE_SIMPLE = Object.freeze({ ...MOTORBIKE_ZONES, leftLever: NONE });
 
 /**
  * The on-screen controls of a vehicle class and preset, by zone. The HUD draws these zones and the
@@ -151,11 +162,13 @@ export function controlLayout(legalClass, preset) {
 export function layoutActions(layout) {
   return [
     ...layout.stalk.flat(),
-    ...layout.lever,
+    ...layout.leftLever,
     'steerLeft',
     'steerRight',
     ...layout.horn,
     ...layout.pedals,
+    ...layout.rightGrip,
+    ...layout.gears,
     ...layout.console,
     ...layout.top,
   ];
@@ -221,13 +234,14 @@ export function buttonView(action, state) {
  * @property {string} label Vietnamese label.
  * @property {number} fraction Applied value 0..1.
  * @property {boolean} on Applied at all.
- * @property {'lever' | 'pedal'} shape A round lever button or a tall pedal.
+ * @property {'handbrake' | 'lever' | 'grip' | 'pedal'} shape How it is drawn: the car's handbrake
+ *   lever, a motorbike's hand lever, its throttle grip, or a car's tall pedal.
  * @property {{testId: 'hud-brake-rear', fraction: number} | null} rear The rear brake the
  *   motorbike's Đơn giản brake applies with it, shown as a second fill; null elsewhere.
  */
 
 /**
- * A pedal or a lever with the value it shows. On Đơn giản the motorbike's one brake applies both
+ * A pedal, a lever or the throttle grip with the value it shows. On Đơn giản the motorbike's one brake applies both
  * brakes, so its pedal reads "Phanh" and also shows the rear brake.
  * @param {'handbrake' | 'brakeRear' | 'brake' | 'throttle'} action Action.
  * @param {import('../../contracts/hud.js').HudControls} controls Applied controls.
@@ -239,7 +253,7 @@ export function pedalControl(action, controls, isCar, preset) {
   /** @type {Omit<PedalControl, 'on'>} */
   let c;
   if (action === 'handbrake') {
-    c = { action, testId: 'hud-handbrake', label: 'Phanh tay', fraction: controls.handbrake ? 1 : 0, shape: 'lever', rear: null };
+    c = { action, testId: 'hud-handbrake', label: 'Phanh tay', fraction: controls.handbrake ? 1 : 0, shape: 'handbrake', rear: null };
   } else if (action === 'brakeRear') {
     c = { action, testId: 'hud-brake-rear', label: 'Phanh sau', fraction: unit(controls.brakeRear), shape: 'lever', rear: null };
   } else if (action === 'brake') {
@@ -250,11 +264,11 @@ export function pedalControl(action, controls, isCar, preset) {
       testId: 'hud-brake-front',
       label,
       fraction: unit(controls.brakeFront),
-      shape: 'pedal',
+      shape: isCar ? 'pedal' : 'lever',
       rear: combined ? { testId: 'hud-brake-rear', fraction: unit(controls.brakeRear) } : null,
     };
   } else if (action === 'throttle') {
-    c = { action, testId: 'hud-throttle', label: 'Ga', fraction: unit(controls.throttle), shape: 'pedal', rear: null };
+    c = { action, testId: 'hud-throttle', label: 'Ga', fraction: unit(controls.throttle), shape: isCar ? 'pedal' : 'grip', rear: null };
   } else {
     throw new RangeError(`"${String(action)}" is not a pedal or lever action`);
   }

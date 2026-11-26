@@ -21,6 +21,20 @@
  *      imparts about the momentum-share velocity and a light NPC cannot launch the ego. The agent
  *      becomes a wreck on the traffic step after the contact and its body then holds still; until
  *      then the body trails its agent's pose by a few steps of the lost travel.
+ * 4. When the ego itself closes on the body (its pre-step velocity along the push direction is
+ *    below `-CLOSING_MPS`), the first touch latches a push cap: the perfectly inelastic common
+ *    speed `(m_npc · v_npc + m_ego · v_ego_along) / (m_npc + m_ego)`, clamped between 0 and the
+ *    momentum-share speed. The body then pushes at that speed, and `limitEgo`, called after
+ *    `world.step`, caps on every step the two still touch what the contact impulse added to the
+ *    ego velocity along the push direction and along the contact normal: the ego leaves no faster
+ *    than the body moves that way, while the velocity it has without the impulse (backing away
+ *    under its own drive) stands. A body the swept-touch rule never moved (a standing agent)
+ *    latches its cap at its first contact, pushing along its heading towards the ego. Without the
+ *    cap Rapier's
+ *    zero-restitution contact against a kinematic body sends the ego back at the body's speed
+ *    plus about 0.3 to 0.7 m/s from the chassis pitch and suspension. The cap lasts until the
+ *    slot is parked or reassigned. An ego that is not closing never takes this path, so its
+ *    results are those of the plain momentum-share push.
  *
  * Contacts read the agent's true velocity from its pose (`motionOf`), never the body's motion.
  */
@@ -46,7 +60,11 @@ const TOUCH_BISECT_STEPS = 12;
  * Rapier's contact prediction distance, so no contact starts during a free-travel step.
  */
 const APPROACH_MARGIN_M = 0.02;
-
+/**
+ * The ego closes on an agent when its velocity along the agent's push direction is below minus
+ * this, m/s (design). A braked ego at rest reads about ±1e-5 m/s, so it never counts as closing.
+ */
+const CLOSING_MPS = 0.05;
 
 /**
  * @typedef {object} MirrorConfig
@@ -59,16 +77,21 @@ const APPROACH_MARGIN_M = 0.02;
  */
 
 /**
- * The ego as the mirror sees it: its pre-step pose.
+ * The ego as the mirror sees it: its pre-step pose and velocity.
  * @typedef {object} MirrorEgo
  * @property {{x: number, z: number}} pos Centre.
  * @property {number} heading Heading.
+ * @property {{x: number, z: number}} velocity World velocity.
  */
 
 /**
  * @typedef {object} TrafficMirror
  * @property {(poses: ActorPose[], ego: MirrorEgo) => void} update Assign slots and set
  *   the kinematic targets for the coming `world.step`.
+ * @property {(egoBody: RigidBody, egoCollider: Collider) => void} limitEgo After `world.step`,
+ *   before the ego is read: for every body the ego closed on and still touches, caps what the
+ *   contact impulse added to the ego velocity along the push direction at that contact's
+ *   common velocity.
  * @property {() => void} parkAll Park every body (before the ego is placed back at a checkpoint).
  * @property {(handle: number) => ActorMotion | null} motionOf Centre, true velocity and pose of
  *   the agent that owns a collider, or null.
@@ -86,6 +109,17 @@ const APPROACH_MARGIN_M = 0.02;
  * @property {number} z Body centre z as last commanded.
  * @property {boolean} sliding The last pose was a wreck still sliding, so the body follows the
  *   pose once more, to where the slide ended.
+ * @property {PushCap | null} cap Latched at the first contact the ego closed into; kept until the
+ *   slot is parked or reassigned.
+ */
+
+/**
+ * What a body may give an ego that drove into it: the unit push direction and the perfectly
+ * inelastic common speed along it, clamped between 0 and the momentum-share speed.
+ * @typedef {object} PushCap
+ * @property {number} ux Push direction x.
+ * @property {number} uz Push direction z.
+ * @property {number} speed Common speed, m/s.
  */
 
 /**
@@ -122,7 +156,7 @@ export function createTrafficMirror(R, world, tags, cfg) {
     const body = world.createRigidBody(R.RigidBodyDesc.kinematicPositionBased().setEnabled(false));
     const collider = world.createCollider(R.ColliderDesc.cuboid(0.5, 0.5, 0.5).setCollisionGroups(groups), body);
     /** @type {Slot} */
-    const slot = { body, collider, id: null, pose: null, x: 0, z: 0, sliding: false };
+    const slot = { body, collider, id: null, pose: null, x: 0, z: 0, sliding: false, cap: null };
     slots.push(slot);
     slotByHandle.set(collider.handle, slot);
   }
@@ -138,6 +172,7 @@ export function createTrafficMirror(R, world, tags, cfg) {
     slot.id = null;
     slot.pose = null;
     slot.sliding = false;
+    slot.cap = null;
   };
 
   /**
@@ -159,6 +194,26 @@ export function createTrafficMirror(R, world, tags, cfg) {
     slot.x = p.pos.x;
     slot.z = p.pos.z;
     slot.sliding = false;
+    slot.cap = null;
+  };
+
+  /** Ego velocity before the coming `world.step`. */
+  let egoVel = { x: 0, z: 0 };
+
+  /**
+   * The push cap of an ego closing on a body along `u`, or null when the ego is not closing.
+   * @param {ActorPose} p Agent pose.
+   * @param {number} ux Push direction x, unit.
+   * @param {number} uz Push direction z, unit.
+   * @returns {PushCap | null} Cap.
+   */
+  const capFor = (p, ux, uz) => {
+    const egoAlong = egoVel.x * ux + egoVel.z * uz;
+    if (!(egoAlong < -CLOSING_MPS)) return null;
+    const mNpc = cfg.massOf(p.model);
+    const v = Math.abs(p.speed);
+    const common = (mNpc * v + cfg.egoMassKg * egoAlong) / (mNpc + cfg.egoMassKg);
+    return { ux, uz, speed: Math.min(Math.max(common, 0), (v * mNpc) / (mNpc + cfg.egoMassKg)) };
   };
 
   /**
@@ -189,8 +244,11 @@ export function createTrafficMirror(R, world, tags, cfg) {
     // contact, and it sees one only between bodies that are about touching at the start of a step.
     // So the body travels freely to `margin` short of the touch, and from there moves at the
     // momentum-share speed: the step that starts the contact always pushes at that speed.
+    // An ego that drives into the body takes no more than the common velocity of the two: the
+    // first touch latches it, so later steps keep the ego's momentum in the push.
+    if (slot.cap === null) slot.cap = capFor(p, dx / d, dz / d);
     const share = cfg.massOf(p.model) / (cfg.massOf(p.model) + cfg.egoMassKg);
-    const push = Math.min(d, Math.abs(p.speed) * cfg.dt) * share;
+    const push = slot.cap === null ? Math.min(d, Math.abs(p.speed) * cfg.dt) * share : Math.min(d, slot.cap.speed * cfg.dt);
     const margin = Math.max(push, APPROACH_MARGIN_M);
     let lo = 0;
     if (!polygonsIntersect(at(0), egoFp)) {
@@ -207,6 +265,7 @@ export function createTrafficMirror(R, world, tags, cfg) {
 
   return {
     update(poses, ego) {
+      egoVel = { x: ego.velocity.x, z: ego.velocity.z };
       const egoFp = footprint(ego.pos, ego.heading, cfg.egoSize.lengthM, cfg.egoSize.widthM);
       /** @type {{pose: ActorPose, dist: number}[]} */
       const inRange = [];
@@ -248,6 +307,68 @@ export function createTrafficMirror(R, world, tags, cfg) {
         const p = c.pose;
         if (polygonsIntersect(footprint(p.pos, p.heading, p.lengthM, p.widthM), egoFp)) continue;
         assign(slots[free], p);
+      }
+    },
+
+    limitEgo(egoBody, egoCollider) {
+      for (const slot of slots) {
+        if (slot.id === null || slot.pose === null) continue;
+        let touching = false;
+        // Impulse the contact gave the ego this step, world frame.
+        let jx = 0;
+        let jz = 0;
+        world.contactPair(egoCollider, slot.collider, (m, flipped) => {
+          const n = m.numContacts();
+          if (n === 0) return;
+          touching = true;
+          let j = 0;
+          for (let i = 0; i < n; i += 1) j += m.contactImpulse(i);
+          // The normal points from the first collider to the second; the ego is pushed against it.
+          const normal = m.normal();
+          const sign = flipped ? 1 : -1;
+          jx += sign * j * normal.x;
+          jz += sign * j * normal.z;
+        });
+        if (!touching) continue;
+        if (slot.cap === null) {
+          // A body the swept-touch rule never moved (a standing agent): push along its heading,
+          // signed towards the ego.
+          const p = slot.pose;
+          const [hx, hz] = headingVector(p.heading);
+          const t = egoBody.translation();
+          const towards = (t.x - slot.x) * hx + (t.z - slot.z) * hz >= 0 ? 1 : -1;
+          const moving = Math.abs(p.speed) > 0;
+          const sign = moving ? Math.sign(p.speed) : towards;
+          slot.cap = capFor(p, hx * sign, hz * sign);
+          if (slot.cap === null) continue;
+        }
+        // Only what the contact added is capped: the velocity the ego would have without the
+        // contact impulse (its own drive, when it backs away) always stands. The cap holds along
+        // the push direction and along the contact normal, so an oblique hit, whose normal lies
+        // across the agent's travel, cannot send the ego away faster than the body moves there.
+        const { ux, uz, speed } = slot.cap;
+        const mass = egoBody.mass();
+        const v0 = egoBody.linvel();
+        let vx = v0.x;
+        let vz = v0.z;
+        const along = vx * ux + vz * uz;
+        const excess = along - Math.max(speed, along - (jx * ux + jz * uz) / mass);
+        if (excess > 0) {
+          vx -= excess * ux;
+          vz -= excess * uz;
+        }
+        const jn = Math.hypot(jx, jz);
+        if (jn > 0) {
+          const nx = jx / jn;
+          const nz = jz / jn;
+          const own = v0.x * nx + v0.z * nz - jn / mass;
+          const excessN = vx * nx + vz * nz - Math.max(speed * (ux * nx + uz * nz), own);
+          if (excessN > 0) {
+            vx -= excessN * nx;
+            vz -= excessN * nz;
+          }
+        }
+        if (vx !== v0.x || vz !== v0.z) egoBody.setLinvel({ x: vx, y: v0.y, z: vz }, true);
       }
     },
 

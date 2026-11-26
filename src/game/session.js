@@ -32,6 +32,7 @@ import { DT } from '../contracts/units.js';
 import { vehicleTuning as physicsVehicleTuning } from '../physics/vehicles/index.js';
 import { resolveControlPreset } from './control-presets.js';
 import { hudStateOf } from './hud-state.js';
+import { createWreckLog } from './wreck-log.js';
 
 /** @typedef {import('../contracts/hud.js').GameApi} GameApi */
 /** @typedef {import('../contracts/hud.js').HudState} HudState */
@@ -186,7 +187,8 @@ function meanAndP95(samples) {
  * @property {number} tick Tick of the latest frame, −1 before the first.
  * @property {{x: number, z: number, heading: number, speed: number} | null} ego Latest ego pose,
  *   for browser automation.
- * @property {Array<{id: string, kind: 'pedestrian' | 'car' | 'motorbike', x: number, z: number, speed: number, active: boolean}>} actors
+ * @property {Array<{id: string, kind: 'pedestrian' | 'car' | 'motorbike', x: number, z: number, speed: number, active: boolean,
+ *   state: import('../contracts/telemetry.js').ActorPose['state']}>} actors
  *   Latest actor poses (scripted, then traffic), so browser automation can yield to them.
  * @property {'map' | 'off' | null} traffic Whether traffic runs in the current run: `off` also on a
  *   map without a traffic block.
@@ -205,6 +207,8 @@ function meanAndP95(samples) {
  * @property {number} keptFrames Frames kept (dev builds).
  * @property {ReplayCheck | null} replayCheck Result of the last finished run (dev builds).
  * @property {number[]} frameWorkMs Step-and-render time of recent animation frames (dev builds).
+ * @property {import('./wreck-log.js').WreckEntry[]} wrecks The last traffic agents of the current
+ *   run seen as wrecks, oldest first, with how long each stood (dev builds).
  */
 
 /**
@@ -264,6 +268,9 @@ export function createSession(deps) {
   const simStepMs = [];
   /** @type {number[]} */
   const trafficStepMs = [];
+  /** Wrecks of the current run (dev builds). */
+  /** @type {import('./wreck-log.js').WreckLog | null} */
+  let wreckLog = null;
 
   /** @param {HudState} state State. */
   const emit = (state) => {
@@ -355,6 +362,7 @@ export function createSession(deps) {
       }
       deps.assertFrame?.(frame);
       r.frames.push(frame);
+      if (r.traffic === 'map' && r.map) wreckLog?.observe(frame, r.map.actors.length);
     }
     const res = scorer.step(r.scorerState, frame);
     r.scorerState = res.state;
@@ -517,6 +525,7 @@ export function createSession(deps) {
         lastHudMs: 0,
       };
       run = r;
+      wreckLog = dev ? createWreckLog(DT) : null;
       /** @type {[GameMap, RulesBundle, unknown, TrafficParams | null, void]} */
       let loaded;
       const wantsParams = trafficOption === 'map' && deps.loadTrafficParams !== undefined;
@@ -677,7 +686,7 @@ export function createSession(deps) {
         status: run ? run.status : null,
         tick: curr ? curr.tick : -1,
         ego: curr ? { x: curr.ego.pos.x, z: curr.ego.pos.z, heading: curr.ego.heading, speed: curr.ego.speed } : null,
-        actors: curr ? curr.actors.map((a) => ({ id: a.id, kind: a.kind, x: a.pos.x, z: a.pos.z, speed: a.speed, active: a.active })) : [],
+        actors: curr ? curr.actors.map((a) => ({ id: a.id, kind: a.kind, x: a.pos.x, z: a.pos.z, speed: a.speed, active: a.active, state: a.state })) : [],
         traffic: run && run.status !== 'loading' ? run.traffic : null,
         runSeed: run ? run.runSeed : null,
         controlPreset: run ? run.controlPreset : null,
@@ -689,6 +698,7 @@ export function createSession(deps) {
         keptFrames: run ? run.frames.length : 0,
         replayCheck,
         frameWorkMs: [...frameWorkMs],
+        wrecks: wreckLog ? wreckLog.entries() : [],
       };
     },
   };

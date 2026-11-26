@@ -12,8 +12,9 @@
  *    (`traffic-mirror.js`).
  * 3. With the auto-cancel assist, `stepSignalCancel` on the pre-step pose, which may switch the
  *    indicator off; then electrics, `vehicle.prepare` (gearbox, steering, wheels, `updateVehicle`), `world.step`.
- * 4. Drain contact forces into `collision` events and the touched actors fed to traffic next
- *    step; read the ego; a scripted fall emits `fall` and schedules the reset for the next step.
+ * 4. With traffic, `mirror.limitEgo` caps the ego velocity after a contact it drove into; drain
+ *    contact forces into `collision` events and the touched actors fed to traffic next step;
+ *    read the ego; a scripted fall emits `fall` and schedules the reset for the next step.
  * 5. `stepRoute` and `clockAt` at `t = tick · DT`; build the frame with the scripted poses, then
  *    the traffic poses.
  *
@@ -273,6 +274,7 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
 
       vehicle.prepare(input);
       world.step(queue);
+      mirror?.limitEgo(vehicle.body, vehicle.collider);
       const drained = drainCollisions(queue, contacts, {
         tick,
         egoHandle,

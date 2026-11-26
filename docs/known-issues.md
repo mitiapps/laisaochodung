@@ -11,15 +11,15 @@ says what happens and where.
 
 - **Red light (`data/rules/red-light.yaml`).** Both stages cite the signal clause 6.9.b / 7.7.c
   (QCVN 41 6.3.3: red means stop before the stop line), even for a front that stops just past
-  the line. The split into a lighter and a heavier tier (going `entryToleranceM`, 1 m, into the
-  crosswalk or junction) is a `design` score split only. Explainer articles disagree and file a
+  the line. The split into a lighter and a heavier tier (going `entryToleranceM` into the
+  crosswalk or junction, `data/rules/red-light.yaml`) is a `design` score split only. Explainer articles disagree and file a
   stop past the line under 6.1.a / 7.1.a; the Cục CSGT reading the game follows is known from
   press reports, not an official document. Cục CSGT has proposed a lighter treatment for a
   vehicle that stops past the line, which is not law; a decree that adopts it is a data change to
   the first tier.
 - **Yellow-light leniency (design).** Law 36 Điều 11 khoản 4 điểm b lets only a vehicle already on
   or past the stop line go on at yellow. The game also excuses a vehicle that could not stop
-  at 3 m/s² from where it first saw yellow (`yellowDecelMps2`).
+  at `yellowDecelMps2` (`data/rules/red-light.yaml`) from where it first saw yellow.
 - **Inferred crosswalk tier (`data/rules/crosswalk-yield.yaml`).** Going straight onto an occupied
   zebra has no điểm of its own and cites the catch-all 6.1.a / 7.1.a by inference. Turning cites
   6.5.l / 7.5.b.
@@ -31,7 +31,7 @@ says what happens and where.
   `nonContributingRules` active within `crashCauseWindowS` (a contributing episode), running into the vehicle ahead in the
   same lane, or striking a vehicle that carries no excusing violation (`red-light`, `wrong-way`,
   `no-yield`, `unsafe-lane-change`) that the player did not speed up into (a speed at contact more
-  than `excuseMaxSpeedGainMps`, 0.5 m/s, above the speed when it showed). Speed gain stands in for
+  than `excuseMaxSpeedGainMps` above the speed when it showed, `data/scoring/collision-policy.yaml`). Speed gain stands in for
   "could have avoided it" and is a game threshold. A `red-light` or `no-yield` vehicle that was
   still moving at the contact and not ahead in the player's lane keeps excusing a player who gained
   speed (`rightOfWayViolations`), so pulling away on green into a red-light runner is a notice.
@@ -44,13 +44,14 @@ says what happens and where.
 - **A notice is a game ruling, not a legal one.** The notice text says the game records no fault;
   it never says the player had none. Law 36 Điều 12 khoản 3 still asks every driver to watch the
   road and slow down, and only the police decide fault.
-- **A stopped player is never charged** for a contact (`contactMinEgoSpeed`, 0.5 m/s), even while
+- **A stopped player is never charged** for a contact (below `contactMinEgoSpeed`,
+  `data/scoring/scoring.yaml`), even while
   an episode that would count as contributing is active, such as stopping in a junction
   (6.10.a "dừng xe"): a contact the fault table would charge below the speed gate gives a notice
   instead. A pedestrian touched below that speed gives a notice too and never ends the run; a
   static object or kerb touched below it gives nothing.
 - **Va chạm and tai nạn split (design).** A charged contact with an NPC car is an accident
-  (10.a / 10.b) from a closing speed of `accidentRelSpeed` (4.2 m/s). Closing speed is measured
+  (10.a / 10.b) from a closing speed of `accidentRelSpeed` (`data/scoring/scoring.yaml`). Closing speed is measured
   along the contact normal, so a fast sideswipe counts as a light contact.
 - **High beam and anti-glare medians.** ND 168 excepts oncoming traffic behind "dải phân cách có
   khả năng chống chói". Maps record only `road.divided`, so on a divided road oncoming cars never
@@ -85,9 +86,10 @@ says what happens and where.
   its fine and its cause from the report; the score deduction rises.
 - **Steep centre-line crossings** (`src/scoring/detectors/against-lane-dir.js`). A crossing counts
   as into the opposing lane at more than 90° off it, but the `unlawful` flag is kept only when
-  `inOpposing` holds (more than `againstAngleDeg`, 120°). A crossing steeper than about 60° off
-  the ego's own lane drops the flag, so a solid centre line crossed steeply is caught only by the
-  10 s `maxOpposingS` rule or a junction entry, or not at all if the ego returns sooner.
+  `inOpposing` holds (more than `againstAngleDeg` off the lane, `data/rules/wrong-side.yaml`). A
+  crossing steeper than 180° minus that off the ego's own lane drops the flag, so a solid centre
+  line crossed steeply is caught only by the `maxOpposingS` rule (same file) or a junction entry,
+  or not at all if the ego returns sooner.
 - **Red light outside the bound lanes** (`src/scoring/detectors/stop-line-on-red.js`). Stop-line
   segments cover their own lanes only. Driving through the opposing lane on red scores wrong-side
   (6.5.b) but no red-light breach, a lower penalty than running the light in lane.
@@ -118,12 +120,29 @@ says what happens and where.
   touch; they have never been run on a real phone.
 - **No live mirrors in the cockpit view.** The mirror heads are drawn dark; switch to the chase
   view to look behind.
-- **The speed panel covers the bottom centre on a phone**, including the scooter's cockpit cowl.
+- **Narrow screens.** Below a 748 px HUD box for the car, or 676 px for the scooter on Thực tế
+  (596 px on Đơn giản), the outermost controls run off the screen: the car's hazard and Phanh tay
+  first. The HUD box is the screen less 12 px of padding or the safe-area inset on each side,
+  whichever is larger. Between that width and the width a centred wheel needs (816 px for the
+  car, 712 px for the scooter on Thực tế), the row shifts and the wheel sits off centre. An 844 px
+  wide notched iPhone in landscape, with insets of about 47 px, leaves about 750 px: the car fits,
+  with its wheel about 33 px left of the screen's centre. A 667 px wide iPhone SE leaves 643 px:
+  too narrow for the car and for the scooter on Thực tế. The browser tests check only screens
+  without insets.
+- **The automatic gear lever moves the other way from a real one.** Số + sits on top and steps the
+  selector R → N → D; on a real P-R-N-D gate R is at the front, so pushing the lever up gives R.
+- **On Đơn giản the scooter's one brake is the right lever.** It applies both brakes, as the left
+  lever of a combined-brake (CBS) automatic scooter does; on such a scooter the right lever is the
+  front brake alone.
+- **Some scooter keys sit on the other side of the keyboard from their control.** The hazard and
+  the horn are in the left switch cluster but use H and F; the throttle and the front brake are on
+  the right grip but use W and S; the left-lever rear brake is Space. The keys follow the car's
+  layout, so both vehicles share one set.
 - **The chase camera sits closer behind the car than behind a real sedan.** The drawn sedan is
-  1.89 m tall (Car Kit proportions, not the 1.45 m `heightM`), so the camera is moved in to keep
-  the road 4 m ahead of the bumper visible over the roof.
-- **On a desktop the centred steering control covers the lower edge of the car** in the chase
-  view.
+  taller than its `heightM`, so the camera is moved in to keep the road just ahead of the bumper
+  visible over the roof (`CHASE_RIG` in `src/render/scene.js` gives the reasoning).
+- **The centred steering control and the stalk cover the lower edge of the car** in the chase
+  view, on every screen. The steering's background is see-through, so the car shows through it.
 
 ## Traffic
 
@@ -142,14 +161,16 @@ says what happens and where.
 - **Procedural motorbikes and bus.** The player's scooter, traffic motorbikes and the bus are
   built from code, not from model files; cars, taxis, trucks, riders and pedestrians use Kenney
   models.
-- **Wrecks leave 3 s after the contact.** Every wrecked traffic vehicle, whether the player or
-  another agent struck it, is removed `wreckClearS` (3 s) after the contact, sliding car wrecks
-  included; the player drives on from where the contact left them. A wreck's `red-light` or
-  `no-yield` latch lasts as long (`LATCH_S`), so a wreck standing unflagged in the road no longer
-  happens in a run; the fault rows for it stay, for scripted actors and tests. The clearing
-  check accepts the step that lands within half a step (`DT / 2`) of 3 s, because step times are
-  float sums of `DT`; that slack is a rounding guard, not a tuning value, so retune
-  `wreckClearS` and leave the slack alone.
+- **Wrecks leave a fixed time after the contact.** Every wrecked traffic vehicle, whether the
+  player or another agent struck it, is removed `wreckClearS` (`data/traffic/params.yaml`) after
+  the contact, sliding car wrecks included, or sooner once it lies more than `wreckClearDistM`
+  behind the player, out of view; the player drives on from where the contact left them. A
+  wreck's `red-light` or `no-yield` latch lasts `LATCH_S` (`src/world/traffic/violations.js`),
+  set to match, so a wreck standing unflagged in the road no longer happens in a run; the fault
+  rows for it stay, for scripted actors and tests. The clearing check accepts the step that lands
+  within half a step (`DT / 2`) of `wreckClearS`, because step times are float sums of `DT`; that
+  slack is a rounding guard, not a tuning value, so retune `wreckClearS` and leave the slack
+  alone.
 - **A wreck vanishes in view.** It is removed in one step, with no fade or blink first.
 - **NPCs cannot wreck scripted actors.** Traffic agents stop for scripted actors (perceived
   exactly), and a scripted actor holds for anything in its path, so neither ever strikes the other.
@@ -163,12 +184,17 @@ says what happens and where.
 
 - The scooter rig locks rotations on world axes, so it is valid on flat maps only
   ([physics.md](physics.md)).
+- **Driving into a scripted actor rolls the player back slowly.** A car that drives at about
+  60 km/h into a parked scripted car leaves the contact backwards at about 0.3 m/s, from Rapier's
+  rigid contact against an immovable body (the chassis pitch and suspension unwind). Contacts
+  with traffic agents cap this at the common velocity (`src/sim/traffic-mirror.js`); scripted
+  actor bodies (`src/sim/actors.js`) do not.
 - Replays are deterministic on one machine and build only; the deterministic Rapier build is not
   used, so a recorded run replays only on the same engine build.
 - Frame time has been measured only in headless software rendering, not on a real GPU.
-- **Below 12 frames per second the game runs in slow motion.** The loop takes at most 5 fixed
-  60 Hz steps per rendered frame (`src/game/loop.js`), so at a lower frame rate simulated time
-  falls behind the clock.
+- **A low frame rate runs the game in slow motion.** The loop takes at most
+  `MAX_STEPS_PER_FRAME` fixed steps per rendered frame (`src/game/loop.js`), so below
+  `1 / (MAX_STEPS_PER_FRAME · DT)` frames per second simulated time falls behind the clock.
 - In software GL (SwiftShader, 1280 x 720, production build) the low-cost path draws osm-pasteur at
   about 35 frames per second and tutorial 01 at about 57.
 - The straight side of a T-junction has no pavement or kerb: corner pavements fill only real

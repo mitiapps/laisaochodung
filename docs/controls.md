@@ -14,7 +14,7 @@ applies from the next run. An empty or unknown stored value gives Đơn giản, 
 | | Đơn giản (`simple`, default) | Thực tế (`real`) |
 | --- | --- | --- |
 | Car gearbox | Automatic: the gear keys move the selector R ← N ← D, the ratios shift by themselves | Manual: the gear keys step through R, N and 1–5 |
-| Scooter brakes | The brake key applies both brakes (front plus rear, scaled by grip); Space still applies the rear alone, a key with no on-screen button, since the Phanh pedal already applies both | Separate front (brake key) and rear (Space) brakes |
+| Scooter brakes | The brake key applies both brakes (front plus rear, scaled by grip); Space still applies the rear alone, a key with no on-screen button, since the Phanh lever already applies both | Separate front (brake key) and rear (Space) brakes |
 | Indicator | Cancels itself after a signalled junction turn, once no junction lies ahead within the `turn-signal` rule's distance | Stays on until the same key is pressed again |
 
 `resolveControlPreset` (`src/game/control-presets.js`) turns a preset into the sim's
@@ -33,11 +33,8 @@ top right; the home page has the same choice. The choice is stored in `localStor
 
 - **Thứ ba (sau xe)**, `chase`, the default: behind and above the vehicle, pitched down so the
   vehicle sits in the lower half of the screen and the road shows from a few metres ahead of it.
-  It is the way to see a vehicle beside or behind, which lane changes and turns need. The camera
-  sits 6.5 m behind and 4.5 m above a car, looking at the ground 6.5 m ahead of its centre, and
-  5.5 m behind and 3.6 m above a scooter, looking 5 m ahead (`CHASE_RIG` in
-  `src/render/scene.js`). The drawn sedan is 1.89 m tall, the proportions of its Car Kit model,
-  not a real sedan's 1.45 m, so the car's camera sits closer than its height alone would need.
+  It is the way to see a vehicle beside or behind, which lane changes and turns need. Its distance,
+  height and aim for each vehicle class are `CHASE_RIG` in `src/render/scene.js`.
 - **Thứ nhất (trong xe)**, `cockpit`: from the driver's seat of a left-hand-drive car, over a dash,
   a low bonnet and a steering wheel; or from the rider's eyes over the handlebar, mirrors and dash
   cowl, rolling with half the bike's lean. The mirrors are dark: there are no live mirrors.
@@ -47,32 +44,46 @@ The view never changes the run: it is not part of a frame, the score or the repl
 ## On-screen layout
 
 The controls follow a cabin from left to right (`controlLayout` in `src/ui/lib/hud-view.js`, which
-the HUD draws and the browser tests read):
+the HUD draws and the browser tests read). One layout serves every screen: the wheel or the
+handlebar sits at the bottom centre, everything left of it in one group against its left edge and
+everything right of it in one group against its right edge. On a screen too narrow for both sides
+of a centred wheel, the whole row shifts towards the narrower side until both fit, so the wheel
+sits a little off centre. The groups sit a little above the bottom so the map attribution under
+them stays readable.
 
 | Zone | Car | Scooter |
 | --- | --- | --- |
-| Left stalk, or the left switch cluster | Đèn, Nháy above ←, → | Đèn, Nháy above ←, →, Còi |
-| Left lever | — | Phanh sau, on Thực tế only |
-| Steering | a round wheel | a handlebar |
-| Horn | Còi, right of the wheel | in the switch cluster |
-| Pedals | Phanh chân, Ga | Phanh (Đơn giản) or Phanh trước (Thực tế), Ga |
-| Right console, at the right edge | hazard, Số +, Số −, Phanh tay, top to bottom | hazard, above Ga |
+| Left stalk, or the left switch cluster | Đèn, Nháy above ←, → | Đèn, Nháy, hazard above ←, →, Còi |
+| Left hand lever | — | Phanh sau, on Thực tế only |
+| Steering, at the bottom centre | a round wheel | a handlebar |
+| Horn | Còi, immediately right of the wheel | in the switch cluster |
+| Pedals | Phanh chân, Ga, next to the horn | — |
+| Right end of the handlebar | — | the front brake lever (Phanh trước on Thực tế, Phanh on Đơn giản) over the Ga twist grip |
+| Gear lever | Số + over Số −, with the gear on the knob between them | — |
+| Right-hand console | hazard over Phanh tay | — |
+| Speed panel | left of the stalk, with the gear and the rpm bar | right of the grip, no gear |
 | Top right | Góc nhìn, Tạm dừng | the same |
 
-- **Phone or touch screen** (checked at 844 × 390): the steering sits at the bottom left in the
-  left thumb's reach, with the stalk rows above it; the pedals and the console sit at the bottom
-  right. Two thumbs cannot reach the middle of a phone while one holds a pedal.
-- **Desktop window** (a mouse or trackpad and at least 1100 × 560, checked at 1280 × 720 and
-  1100 × 600): the steering moves to the bottom centre, 40 px up so the map attribution stays
-  readable under it, with the stalk on its left and the car's horn on its right. The speed panel
-  sits beside that group.
-- Every control is at least 56 px and overlaps nothing. Dragging the steering sideways steers and
-  letting go centres it; the drawing turns with the steering applied. The pedals and levers fill to
-  show how far they are applied; on Đơn giản the scooter's brake also shows the rear brake it
-  applies. The indicator and hazard buttons blink while on.
-- **Top centre:** breach and notice toasts, newest first. A notice shows for 4 s, a breach for
-  6 s. Below 480 px of viewport height (a landscape phone) only the newest one shows, with a "+N"
-  count of the others; the result screen lists them all.
+- The layout is checked at 1280 × 720, 1100 × 600, 844 × 390 and 800 × 360. Every control is at
+  least 56 px and overlaps nothing, and the speed panel has a fixed width, so a three-digit speed
+  never grows it.
+- The narrowest HUD box that fits every control is 748 px for the car, and for the scooter 676 px
+  on Thực tế and 596 px on Đơn giản (no rear-brake lever): a 772, 700 or 620 px wide screen with
+  no safe-area insets. The anchor and its bounds are `place`
+  in `src/ui/hud/hud.svelte`.
+- The scooter is an automatic ("Xe tay ga"), so its rear brake is the left hand lever, not a foot
+  pedal, and it has no gear to show. On Đơn giản its one brake lever applies both brakes and shows
+  the rear brake it applies; Space still applies the rear alone, with no on-screen button.
+- Dragging the steering sideways steers and letting go centres it; the drawing turns with the
+  steering applied. Its background is mostly see-through, so the vehicle shows through it in the
+  chase view. The pedals, levers and grip fill to show how far they are applied; the grip's ribs
+  roll as it opens, and the handbrake's handle tilts up and turns red while applied. The throttle
+  grip is held, not twisted: pressing it applies full throttle. The indicator and hazard buttons
+  blink while on.
+- **Top centre:** breach and notice toasts, newest first. A notice shows for `HUD_NOTICE_S`
+  (`src/game/hud-state.js`), a breach for `TOAST_MS` (`src/ui/lib/toast-stack.js`). On a short
+  viewport (a landscape phone) only the newest one shows, with a "+N" count of the others; the
+  result screen lists them all.
 
 A `hold` button acts from the first pointer down until the last pointer lifts; a `press` button
 fires once when the pointer is lifted inside it. Buttons never take focus, so a held key keeps
@@ -84,27 +95,27 @@ the next key or mouse input.
 
 ## Keys
 
-The keys sit where the controls sit in a cabin: the wheel and pedals under the left hand (W A S
-D), the stalk just above and left of them (Q E Z X), and the gear lever and handbrake under the
-right hand (I K L). A player on the arrow keys has the left hand free for the stalk, and Page Up
+The keys sit where the controls sit on screen, by relative position: the wheel and pedals under
+the left hand (W A S D), the stalk just above and left of them (Q E Z X), the horn just right of
+the wheel keys (F), and the hazard, gear lever and handbrake further right (H, I K L). A player on the arrow keys has the left hand free for the stalk, and Page Up
 and Page Down beside the arrows for the gears.
 
 | Action | Keys | Mode | Cabin position |
 | --- | --- | --- | --- |
-| Ga (throttle) | W, ↑ | hold | pedal |
-| Phanh chân (ô tô) / phanh trước (xe máy) | S, ↓ | hold | pedal |
+| Ga (throttle) | W, ↑ | hold | right grip (scooter) / pedal |
+| Phanh chân (ô tô) / phanh trước (xe máy) | S, ↓ | hold | right lever (scooter) / pedal |
 | Lái sang trái | A, ← | hold | wheel |
 | Lái sang phải | D, → | hold | wheel |
 | Xi nhan trái | Q | press | left stalk |
 | Xi nhan phải | E | press | left stalk |
 | Đổi đèn: tắt, chiếu gần, chiếu xa | Z | press | left stalk |
 | Nháy đèn chiếu xa | X | hold | left stalk |
-| Còi | F | hold | wheel hub |
-| Đèn cảnh báo nguy hiểm | H | press | centre dash |
-| Lên số (ô tô) | I, Page Up | press | right-hand lever |
-| Xuống số (ô tô) | K, Page Down | press | right-hand lever |
-| Phanh tay (ô tô) | L | hold | right of the lever |
-| Phanh sau (xe máy) | Space | hold | left lever |
+| Còi | F | hold | right of the wheel |
+| Đèn cảnh báo nguy hiểm | H | press | right console (car) / switch cluster (scooter) |
+| Lên số (ô tô) | I, Page Up | press | gear lever |
+| Xuống số (ô tô) | K, Page Down | press | gear lever |
+| Phanh tay (ô tô) | L | hold | right of the gear lever |
+| Phanh sau (xe máy) | Space | hold | left hand lever |
 | Đổi góc nhìn | V | press | — |
 | Tạm dừng / tiếp tục | Esc, P | press | — |
 

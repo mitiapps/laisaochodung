@@ -241,6 +241,43 @@ describe('NPC contacts', () => {
     });
   });
 
+  describe('clears a wreck far from the ego early only when it lies behind', () => {
+    /**
+     * Wrecks a car through an ego contact, then steps with the ego `wreckClearDistM` + 10 m east
+     * or west of it, heading east, until the wreck is gone.
+     * @param {1 | -1} side +1: the ego east of the wreck, so the wreck is behind it.
+     * @returns {number} Time from the contact to the first step without the wreck.
+     */
+    const standTime = (side) => {
+      const map = emptyMap();
+      const st = createTraffic(map, LAWFUL, 38);
+      const car = place(st, 'rw-e1', 40, 9, 'car');
+      const id = st.ids[car];
+      run(st, map, 0, 1);
+      const lights = Object.fromEntries(map.signals.map((s) => [s.id, /** @type {const} */ ('green')]));
+      stepTraffic(st, { ego: EGO_AWAY, egoReset: false, scripted: [], lights, egoContacts: [id], t: 1 });
+      expect(st.wreck[car]).toBe(1);
+      const wreckT = st.wreckT[car];
+      const ego = { ...EGO_AWAY, pos: { x: st.x[car] + side * (FULL.wreckClearDistM + 10), z: st.z[car] }, heading: 0 };
+      for (let i = 1; i < Math.round((FULL.wreckClearS + 2) / DT); i += 1) {
+        const t = 1 + i * DT;
+        const { poses } = stepTraffic(st, { ego, egoReset: false, scripted: [], lights, egoContacts: [], t });
+        if (!poses.some((p) => p.id === id)) return t - wreckT;
+      }
+      return Infinity;
+    };
+
+    it('behind the ego: on the next step', () => {
+      expect(standTime(1)).toBeCloseTo(DT, 9);
+    });
+
+    it('ahead of the ego: after the full wreckClearS', () => {
+      const stood = standTime(-1);
+      expect(stood).toBeGreaterThanOrEqual(FULL.wreckClearS - DT / 2);
+      expect(stood).toBeLessThanOrEqual(FULL.wreckClearS + DT / 2);
+    });
+  });
+
   it('clears the wrecks within wreckClearS and the lane flows again within 30 s', () => {
     const map = emptyMap();
     const st = createTraffic(map, LAWFUL, 34);
