@@ -64,6 +64,9 @@ function chunkBudget() {
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Cloudflare Pages serves the site at `/`. The GitHub Pages job sets SITE_BASE to the repo's
+  // subpath (`/laisaochodung/`); the code builds every asset URL from `import.meta.env.BASE_URL`.
+  base: process.env.SITE_BASE ?? '/',
   plugins: [tailwindcss(), svelte(), chunkBudget()],
   build: {
     // Licence texts of the bundled third-party code, linked from the credits page.

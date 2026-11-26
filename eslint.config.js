@@ -76,7 +76,6 @@ export default defineConfig([
     'test-results/',
     'playwright-report/',
     'coverage/',
-    '.wrangler/',
   ]),
   js.configs.recommended,
   ...svelte.configs.recommended,

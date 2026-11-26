@@ -5,5 +5,4 @@ public/maps/
 test-results/
 playwright-report/
 coverage/
-.wrangler/
 *.log

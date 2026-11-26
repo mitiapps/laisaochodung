@@ -19,8 +19,6 @@
     "build:data": "npm run build:rules && npm run build:traffic && npm run build:maps",
     "fetch:osm": "node scripts/maps/fetch.js",
     "release:check": "node scripts/release-check.js",
-    "predeploy": "npm run build && npm run release:check",
-    "deploy": "wrangler deploy",
     "predev": "npm run build:data",
     "pretest": "npm run build:data",
     "build:traffic": "node scripts/traffic/build.js"
@@ -43,7 +41,6 @@
     "tailwindcss": "^4.3.5",
     "vite": "^8.3.8",
     "vitest": "^5.1.1",
-    "wrangler": "^4.166.0",
     "yaml": "^2.9.1"
   },
   "allowScripts": {

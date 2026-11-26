@@ -1,5 +1,5 @@
-# Cloudflare Workers static-asset headers. vite.config.js applies the same headers to
-# `vite preview`, so the Playwright smoke test runs under this policy.
+# Cloudflare Pages headers. vite.config.js applies the same headers to `vite preview`, so the
+# Playwright smoke test runs under this policy. GitHub Pages ignores this file.
 /*
   Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; img-src 'self' data: blob:; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'
   X-Content-Type-Options: nosniff

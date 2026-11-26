@@ -136,15 +136,24 @@ The purity rules are enforced by ESLint; see [CLAUDE.md](../CLAUDE.md).
 
 ## Deployment
 
-`wrangler.jsonc` deploys `dist/` as static assets with no Worker script, routes or custom domain.
+The build is a static site with no backend: `dist/` holds everything the game needs.
 Routing is hash-only (`#/...`), so there is no single-page fallback: a missing asset is a real 404.
 `public/_headers` sets the Content-Security-Policy and other security headers; `vite preview`
 applies the same file, so the Playwright smoke test runs under the policy. The build also emits
 `third-party-licenses.md` (Vite `build.license`), linked from the credits page.
 
-`npm run deploy` first runs `predeploy`: `npm run build`, then `npm run release:check`
-(`scripts/release-check.js`). The gate fails on unverified legal data, unchecked sign figures,
-missing contact channels or donate QR (`src/config/site.js`), uncredited files in `public/models/` or
-`public/signs/`, a traffic model key with neither a credited model file nor a procedural builder,
-an OSM map without attribution, or a missing `data/maps/LICENSE-ODbL.md`. It is
-not part of CI; `npx wrangler deploy --dry-run` skips it.
+`npm run release:check` (`scripts/release-check.js`) is the release gate. It fails on unverified
+legal data, unchecked sign figures, missing contact channels or donate QR (`src/config/site.js`),
+uncredited files in `public/models/` or `public/signs/`, a traffic model key with neither a
+credited model file nor a procedural builder, an OSM map without attribution, or a missing
+`data/maps/LICENSE-ODbL.md`. Every deploy runs it after the build.
+
+Two hosts serve the same build:
+
+- **Cloudflare Pages**, at the root path, through its Git integration: build command
+  `npm run build && npm run release:check`, output directory `dist`, Node from `.node-version`.
+  It applies `public/_headers`.
+- **GitHub Pages**, at `/<repo>/`: the `pages` jobs in `.github/workflows/ci.yml` run after the
+  `check` job passes on a push to `main`, build with `SITE_BASE=/<repo>/` (Vite's `base`), run the
+  release gate and publish `dist/`. GitHub Pages ignores `_headers`, so the security headers
+  apply on Cloudflare only.

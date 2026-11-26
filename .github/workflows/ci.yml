@@ -32,3 +32,42 @@ jobs:
           name: playwright-traces
           path: test-results/
           retention-days: 7
+
+  # GitHub Pages serves the site under /<repo>/; Cloudflare Pages builds the root path itself.
+  pages-build:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          SITE_BASE: /${{ github.event.repository.name }}/
+      - run: npm run release:check
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./dist
+
+  pages-deploy:
+    needs: pages-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
+    # Publishing rights live only here, away from the jobs that run dependency code.
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

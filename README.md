@@ -13,8 +13,8 @@ button. Two presets: Đơn giản (the default: automatic gears, one brake key f
 indicators that cancel after a turn) and Thực tế (manual gears, separate brakes); the preset never
 changes the score. See [docs/controls.md](docs/controls.md).
 
-Plain JavaScript with JSDoc, Svelte 5, Vite, Tailwind CSS 4, Three.js and Rapier. Static assets
-on Cloudflare Workers.
+Plain JavaScript with JSDoc, Svelte 5, Vite, Tailwind CSS 4, Three.js and Rapier. A static site,
+with no backend, on Cloudflare Pages and GitHub Pages.
 
 ## Quick start
 
@@ -34,7 +34,6 @@ npm test           # Vitest (Node); TRAFFIC_LONG=1 runs the full traffic seed sw
 | `npm run test:e2e` | Builds, then runs the Playwright tests (smoke, controls, full car and scooter runs of tutorial 01, traffic on `osm-pasteur`, the toast stack on the dev UI preview; about 6 min) against a fresh `vite preview` on port 5179 and, for the traffic diagnostics and the UI preview, `vite` dev on 5180 (both must be free; `E2E_PORT`, `E2E_DEV_PORT` and `E2E_SERVERS` in `playwright.config.js` move or split them) |
 | `npm run fetch:osm` | Refreshes the raw OpenStreetMap extracts (manual) |
 | `npm run release:check` | Release gate: verified legal data, checked sign figures, site settings, credits, traffic models, OSM licence |
-| `npm run deploy` | Builds, runs the release gate, then `wrangler deploy` (manual) |
 
 More: [docs/architecture.md](docs/architecture.md). Known limits:
 [docs/known-issues.md](docs/known-issues.md). Contributor rules: [CLAUDE.md](CLAUDE.md).
