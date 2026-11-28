@@ -374,7 +374,7 @@ export function createActorViews(map, assets) {
     if (!spec) return null;
     let state = tripo.get(key);
     if (!state) {
-      const created = /** @type {TripoState} */ ({ body: null, box: null, material: createLookMaterial({ roughness: 0.9 }), waiting: [] });
+      const created = /** @type {TripoState} */ ({ body: null, box: null, material: createLookMaterial({ roughness: 0.5 }), waiting: [] });
       state = created;
       tripo.set(key, created);
       assets

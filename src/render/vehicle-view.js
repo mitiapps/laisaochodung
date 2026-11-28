@@ -244,7 +244,7 @@ function proceduralBike(kit, config, L, isDisposed) {
           if (isDisposed()) return false;
           const parts = tripoParts(gltf, spec);
           bodyMesh.geometry = kit.own(parts.body);
-          bodyMesh.material = kit.own(createLookMaterial({ map: parts.map, roughness: 0.9 }));
+          bodyMesh.material = kit.own(createLookMaterial({ map: parts.map, roughness: 0.5 }));
           for (const tyre of tyres) tyre.visible = false;
           return true;
         })
@@ -431,7 +431,7 @@ export function createVehicleView(options) {
       .then((gltf) => {
         if (disposed) return;
         const parts = tripoParts(gltf, tripo);
-        const mesh = new Mesh(kit.own(parts.body), kit.own(createLookMaterial({ map: parts.map, roughness: 0.9 })));
+        const mesh = new Mesh(kit.own(parts.body), kit.own(createLookMaterial({ map: parts.map, roughness: 0.5 })));
         mesh.castShadow = true;
         body.remove(content);
         content = fitToFootprint(mesh, L, W);

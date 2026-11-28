@@ -35,12 +35,13 @@ face +Z with left at +X, and each wheel is a separate node (`wheel-front-left`,
 
 Each Tripo file (`src/render/vehicles/tripo.js`) is one textured mesh with its wheels baked in, so
 those wheels neither spin nor steer, and it keeps its own colours: no paint variants or taxi
-liveries. The files were simplified (about 1,200 triangles per motorbike and 1,800 per car or bus,
-to stay inside the 250,000-triangle actor budget of `src/render/actors-instanced.test.js`), their
-textures cut to 1024 px, and their meshopt geometry compression kept to stay inside the 5 MB
-payload; `createGltfLoader` in `src/render/assets.js` decodes it. Each model's `yaw` turns its
-front to +Z, measured on textured orthographic views of the file. The procedural or Car Kit model
-of the same key is drawn until the file loads, and for good when it fails.
+liveries. The motorbike files were simplified (~1,200 triangles each) with meshopt geometry
+compression; the car and bus files were remeshed watertight, smoothed, decimated (~1,850 triangles
+each) and texture-rebaked in Blender to remove decimation holes and UV seam tears while staying
+inside the 250,000-triangle actor budget of `src/render/actors-instanced.test.js` and the 5 MB model
+payload (`createGltfLoader` in `src/render/assets.js` decodes meshopt where present). Each model's
+`yaw` turns its front to +Z, measured on textured orthographic views of the file. The procedural or
+Car Kit model of the same key is drawn until the file loads, and for good when it fails.
 
 ### Procedural models
 
