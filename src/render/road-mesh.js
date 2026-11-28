@@ -1,5 +1,6 @@
 /**
- * Static map meshes: ground, lanes and junctions, pavements with kerbs, painted markings and the
+ * Static map meshes: ground, lanes and junctions, pavements with kerbs, painted markings (lines cut
+ * at stop lines and zebras, lane arrows, the STOP word and give-way triangles) and the
  * non-building obstacles (parked cars, barriers). Buildings belong to the scenery
  * (`src/render/scenery/`). Geometry is merged per material, so the whole road network costs about
  * ten draw calls whatever the map size.
@@ -14,7 +15,17 @@ import { KERB_HEIGHT_M } from '../contracts/units.js';
 import { polygonCentroid } from '../geometry/index.js';
 import { HAS_DOM } from './assets.js';
 import { nearestLaneHeading } from './layout.js';
-import { crosswalkStripes, laneLineQuads, stopLineQuads } from './markings.js';
+import {
+  crosswalkStripes,
+  giveWayTriangleQuads,
+  laneArrowRings,
+  laneLineQuads,
+  laneStations,
+  lineCuts,
+  nearEdgeM,
+  stopLineQuads,
+  stopWordQuads,
+} from './markings.js';
 import { TriangleSoup, outwardNormal } from './triangle-soup.js';
 
 /** @typedef {import('../contracts/map.js').GameMap} GameMap */
@@ -128,18 +139,33 @@ export function buildRoadMeshes(map) {
     LAYER_Y.ground,
   );
 
+  const cuts = lineCuts(map);
+  /** @type {Map<string, Lane>} */
+  const allLanes = new Map();
   for (const road of map.roads) {
     /** @type {Map<string, Lane>} */
     const lanes = new Map(road.lanes.map((l) => [l.id, l]));
-    for (const lane of road.lanes) soup('asphalt').addGroundPolygon(lane.polygon, LAYER_Y.road);
+    for (const lane of road.lanes) {
+      allLanes.set(lane.id, lane);
+      soup('asphalt').addGroundPolygon(lane.polygon, LAYER_Y.road);
+    }
     for (const line of road.laneLines) {
-      const { color, quads } = laneLineQuads(line, lanes);
+      const { color, quads } = laneLineQuads(line, lanes, cuts.get(road.id));
       soup(color).addGroundQuads(quads, LAYER_Y.paint);
     }
   }
   for (const j of map.junctions) soup('asphalt').addGroundPolygon(j.polygon, LAYER_Y.road);
 
-  for (const sl of map.stopLines) soup('white').addGroundQuads(stopLineQuads(sl), LAYER_Y.paint);
+  for (const sl of map.stopLines) {
+    soup('white').addGroundQuads(stopLineQuads(sl), LAYER_Y.paint);
+    if (sl.control === 'signal') continue;
+    const edge = nearEdgeM(sl);
+    const lanePaint = sl.control === 'stop-sign' ? stopWordQuads : giveWayTriangleQuads;
+    for (const station of laneStations(sl, allLanes)) soup('white').addGroundQuads(lanePaint(station, edge), LAYER_Y.paint);
+  }
+  for (const arrow of map.laneArrows ?? []) {
+    for (const ring of laneArrowRings(arrow)) soup('white').addGroundPolygon(ring, LAYER_Y.paint);
+  }
   for (const cw of map.crosswalks) {
     const heading = nearestLaneHeading(map, polygonCentroid(cw.polygon));
     if (heading === null) continue;
