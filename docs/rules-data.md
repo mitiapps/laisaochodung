@@ -189,11 +189,18 @@ and `gapTimeS` times the follower's speed (the player's for a vehicle ahead, the
 for one behind). The fixed floor is `gapMotorbikeMinM` (2 m, `design`) for a motorbike, so a
 merge into dense motorbike traffic stays possible, and `gapAheadM` or `gapBehindM` for a car.
 
-A lane line crossed while the player's signed speed is at or below `minSignedSpeedMps` (0,
-`design`) is no lane change at all: no tier fires, so backing out on full lock, with the scooter's
-push-back or a car's R gear, is not punished for the line. Driving forward across the line
-afterwards is judged as usual. Backing onto a pavement or an occupied crosswalk is still a breach:
-those rules gate on the speed magnitude.
+A lane line crossed while the player backs slowly, at a signed speed below 0 and no faster than
+`backExemptMaxMps` backwards (1.2 m/s, `design`, the scooter's feet-down hold speed), is no lane
+change at all: no tier fires, so backing out on full lock, with the scooter's push-back or a car's
+slow R gear, is not punished for the line. A faster reverse is judged like a forward crossing, and
+so is driving forward across the line afterwards. Backing onto a pavement or an occupied crosswalk
+is still a breach: those rules gate on the speed magnitude.
+
+The junction rules (`turn-signal`, `banned-turn`) use the same band on the exit step. Backing out
+slowly by the road the player entered on is no manoeuvre. Backing out slowly into any other arm
+keeps the entry: the next exit of that junction, re-entered from the arm backed into, is judged
+from the original entry, so entering south-bound, backing into the west arm and then driving east
+across is a left turn. An exit of another junction drops the kept entry.
 
 Danger: the crash rule has two tiers. A light contact (an NPC car or a static object or kerb
 below `accidentRelSpeed`) is danger 3; a pedestrian, an accident, a static or kerb hit at or above

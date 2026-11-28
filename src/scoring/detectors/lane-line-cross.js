@@ -15,14 +15,15 @@
  * motorbike traffic stays possible, and `gapAheadM` or `gapBehindM` for a car.
  * Lines between opposite-direction lanes belong to `against-lane-dir`.
  *
- * Crossings made on a step whose signed speed is below `minSignedSpeedMps` are ignored and leave
- * the state alone: at 0, backing (the scooter's push-back or a car's R gear) on full lock across
- * a line is no lane change. Driving forward across a line afterwards is judged as before.
+ * Crossings made while backing slowly (a signed speed below 0 and no faster than
+ * `backExemptMaxMps` backwards) are ignored and leave the state alone: the scooter's push-back or
+ * a car's slow R gear on full lock across a line is no lane change. A faster reverse is judged as
+ * a forward crossing, and so is driving forward across a line afterwards.
  */
 
 import { angleDiff, pointInPolygon, projectOntoPolyline } from '../../geometry/index.js';
 import { laneById } from '../../map-query/index.js';
-import { actorsAround, lawfulCross, NUMBER, VEHICLE_KINDS } from './common.js';
+import { actorsAround, lawfulCross, NUMBER, slowBacking, VEHICLE_KINDS } from './common.js';
 
 /** @typedef {{last: {t: number, side: 'left' | 'right'} | null}} State */
 /**
@@ -34,8 +35,7 @@ import { actorsAround, lawfulCross, NUMBER, VEHICLE_KINDS } from './common.js';
  * @property {number} gapTimeS Smallest safe time gap to a moving vehicle.
  * @property {number} gapMotorbikeMinM Smallest safe gap to a moving motorbike, ahead or behind.
  * @property {number} stoppedSpeedMps Below this speed a vehicle counts as stopped for the gap test.
- * @property {number} minSignedSpeedMps Crossings on a step with a signed ego speed below this are
- *   ignored.
+ * @property {number} backExemptMaxMps Fastest backward speed of the ignored slow-backing band.
  */
 
 /**
@@ -63,7 +63,7 @@ export const paramSpec = Object.freeze({
   gapTimeS: NUMBER,
   gapMotorbikeMinM: NUMBER,
   stoppedSpeedMps: NUMBER,
-  minSignedSpeedMps: NUMBER,
+  backExemptMaxMps: NUMBER,
 });
 
 /** @returns {State} Fresh state. */
@@ -79,7 +79,7 @@ export function init() {
  * @returns {import('./common.js').DetectorResult} Result.
  */
 export function detect(state, frame, ctx, params) {
-  if (frame.ego.speed < params.minSignedSpeedMps) return { detectorState: state, active: false, tierInput: { fault: false, unsafeGap: false } };
+  if (slowBacking(frame.ego.speed, params.backExemptMaxMps)) return { detectorState: state, active: false, tierInput: { fault: false, unsafeGap: false } };
   const { map, vehicle } = ctx.env;
   let last = state.last;
   let fault = false;

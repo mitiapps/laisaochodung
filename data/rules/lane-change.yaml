@@ -9,16 +9,17 @@
 # gapAheadM or gapBehindM for a car and gapMotorbikeMinM for a motorbike. gapTimeS 0.5 s is a
 # design value: at the stopped gap of 5 m it matches a 36 km/h move. gapMotorbikeMinM 2 m is a
 # design value too: with gapTimeS it keeps a cut-in into dense motorbike traffic possible, where a
-# 10 m floor behind every motorbike would not; it only bites below 4 m/s. minSignedSpeedMps 0 is a
-# design value: a line crossed while backing (push-back or R gear) is no lane change.
+# 10 m floor behind every motorbike would not; it only bites below 4 m/s. backExemptMaxMps 1.2 is a
+# design value matching the scooter's feet-down hold speed: a line crossed while backing at up to
+# 1.2 m/s (push-back or a slow R gear) is no lane change; a faster reverse is judged as usual.
 id: lane-change
 title: { vi: "Chuyển làn không đúng quy định" }
 description: { vi: "Chuyển làn không xi nhan trước, qua vạch liền, chuyển hai làn một lúc hoặc không bảo đảm khoảng cách an toàn." }
 vehicleClasses: [car, motorbike]
 detection:
   type: lane-line-cross
-  params: { signalLeadS: 1, skipWindowS: 3, gapAheadM: 5, gapBehindM: 10, gapTimeS: 0.5, gapMotorbikeMinM: 2, stoppedSpeedMps: 0.5, minSignedSpeedMps: 0 }
-  paramBasis: { signalLeadS: design, skipWindowS: design, gapAheadM: design, gapBehindM: design, gapTimeS: design, gapMotorbikeMinM: design, stoppedSpeedMps: design, minSignedSpeedMps: design }
+  params: { signalLeadS: 1, skipWindowS: 3, gapAheadM: 5, gapBehindM: 10, gapTimeS: 0.5, gapMotorbikeMinM: 2, stoppedSpeedMps: 0.5, backExemptMaxMps: 1.2 }
+  paramBasis: { signalLeadS: design, skipWindowS: design, gapAheadM: design, gapBehindM: design, gapTimeS: design, gapMotorbikeMinM: design, stoppedSpeedMps: design, backExemptMaxMps: design }
 obligation:
   - sourceId: law36-2024
     article: Điều 13

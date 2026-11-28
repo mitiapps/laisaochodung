@@ -82,6 +82,11 @@ says what happens and where.
 
 ## Scoring
 
+- **A turn finished by backing away is not judged** (`src/scoring/detectors/junction-turn.js`).
+  Backing slowly out of a junction into another arm keeps the entry only for the next exit of that
+  junction. Driving forward away along the arm backed into, without crossing the junction again,
+  completes the turn with no `turn-signal` or `banned-turn` check; the kept entry is dropped at the
+  next junction.
 - **A heavy score-only outcome replaces a light legal one** (`src/scoring/detectors/collision.js`).
   Inside one crash episode any heavy outcome outranks any light one, and the report keeps only
   the worst breach. A light rear-end (6.4.l / 7.3.i) followed within `rearmS` by a heavy kerb or

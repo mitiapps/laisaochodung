@@ -1,14 +1,16 @@
 # Turning at a junction without the indicator toward the turn held from signalFromM before the
-# junction until the exit. A U-turn needs the left indicator. minSignedSpeedMps 0 is a design
-# value: an exit made while backing (push-back or R gear) is no turn.
+# junction until the exit. A U-turn needs the left indicator. backExemptMaxMps 1.2 is a design
+# value matching the scooter's feet-down hold speed: backing out at up to 1.2 m/s by the road the
+# ego entered on is no turn; backing out into another arm defers the judgement to the next
+# forward exit of that junction (see junction-turn.js).
 id: turn-signal
 title: { vi: "Chuyển hướng không có tín hiệu báo rẽ" }
 description: { vi: "Rẽ hoặc quay đầu tại nút giao mà không bật xi nhan liên tục từ trước khi vào nút đến khi ra khỏi nút." }
 vehicleClasses: [car, motorbike]
 detection:
   type: junction-turn
-  params: { mode: signal, signalFromM: 30, turnMinDeg: 45, uturnMinDeg: 135, minSignedSpeedMps: 0 }
-  paramBasis: { mode: legal, signalFromM: design, turnMinDeg: design, uturnMinDeg: design, minSignedSpeedMps: design }
+  params: { mode: signal, signalFromM: 30, turnMinDeg: 45, uturnMinDeg: 135, backExemptMaxMps: 1.2 }
+  paramBasis: { mode: legal, signalFromM: design, turnMinDeg: design, uturnMinDeg: design, backExemptMaxMps: design }
 obligation:
   - sourceId: law36-2024
     article: Điều 15

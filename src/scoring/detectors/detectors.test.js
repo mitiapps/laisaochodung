@@ -562,25 +562,74 @@ describe('reversing', () => {
     }
   });
 
-  it('gives no turn breach for a heading swing while backing out of a junction', async () => {
-    // A scooter waits for sig-n's green, rides from rn-s 3 m into j1, then backs 3 m on full lock
-    // out of its west side, ending some 95° off its entry heading.
-    const track = drive({ x: 98.25, z: -12, heading: -Math.PI / 2 }, [
-      [31, 0, 0],
-      [11.5 / 3, 3, 0],
-      [0.5, 0, 0],
-      [3 / -PUSH_MPS, PUSH_MPS, -LOCK_RADIUS_M.scooter],
-    ]);
-    const unrestricted = quiet((m) => {
+  it('judges a reverse faster than the slow-backing band as a lane change, and a crossing at the band edge not', async () => {
+    const fast = drive({ x: 50, z: 0.8, heading: 0 }, [[0.5, 0, 0], [3 / 1.25, -1.25, LOCK_RADIUS_M.scooter]]);
+    const edge = fast.map((p) => (p.speed < 0 ? { ...p, speed: -1.2 } : p));
+    expect(fast.at(-1)?.pos.z).toBeLessThan(0);
+    expect(await runTrack(twoLanes('solid'), 'scooter', edge)).toEqual([]);
+    expect(await runTrack(twoLanes('solid'), 'scooter', fast)).toEqual([lanes.scooter.solid]);
+    // A car in R at 5 m/s across the solid line is judged as on a forward crossing.
+    const car = drive({ x: 50, z: 0.8, heading: 0 }, [[0.5, 0, 0], [1.2, -5, 8]]);
+    expect(car.at(-1)?.pos.z).toBeLessThan(0);
+    expect(await runTrack(twoLanes('solid'), 'car-sedan', car)).toEqual([lanes['car-sedan'].solid]);
+  });
+
+  // A scooter waits for sig-n's green and rides from rn-s 3 m into j1, heading south.
+  const INTO_J1 = /** @type {[number, number, number][]} */ ([
+    [31, 0, 0],
+    [11.5 / 3, 3, 0],
+    [0.5, 0, 0],
+  ]);
+  const unrestricted = () =>
+    quiet((m) => {
       m.restrictions = [];
     });
-    const allBanned = quiet((m) => {
+  const allBanned = () =>
+    quiet((m) => {
       m.restrictions[0].banned = ['left', 'right', 'uturn'];
     });
-    expect(await runTrack(unrestricted, 'scooter', track)).toEqual([]);
-    expect(await runTrack(allBanned, 'scooter', track)).toEqual([]);
-    expect(await runTrack(unrestricted, 'scooter', forwardIn(track, 3))).toEqual(['turn-signal:0:D7.3.a']);
-    expect(await runTrack(allBanned, 'scooter', forwardIn(track, 3))).toEqual(['banned-turn:0:D7.3.a']);
+
+  it('gives no turn breach for a heading swing while backing out of a junction', async () => {
+    // Back 3 m on full lock out of j1's west side, ending some 95° off the entry heading. The entry
+    // is kept, but no forward exit of j1 follows.
+    const track = drive({ x: 98.25, z: -12, heading: -Math.PI / 2 }, [...INTO_J1, [3 / -PUSH_MPS, PUSH_MPS, -LOCK_RADIUS_M.scooter]]);
+    expect(await runTrack(unrestricted(), 'scooter', track)).toEqual([]);
+    expect(await runTrack(allBanned(), 'scooter', track)).toEqual([]);
+    expect(await runTrack(unrestricted(), 'scooter', forwardIn(track, 3))).toEqual(['turn-signal:0:D7.3.a']);
+    expect(await runTrack(allBanned(), 'scooter', forwardIn(track, 3))).toEqual(['banned-turn:0:D7.3.a']);
+  });
+
+  it('lets the ego back out of a junction by the road it entered on', async () => {
+    // Swing 60° left inside j1, then back the same arc and on out north into rn, still 60° off at
+    // the turn's end: no turn, whatever the restrictions ban.
+    const arc = (Math.PI / 3) * LOCK_RADIUS_M.scooter;
+    const track = drive({ x: 98.25, z: -12, heading: -Math.PI / 2 }, [
+      ...INTO_J1,
+      [arc, 1, LOCK_RADIUS_M.scooter],
+      [0.5, 0, 0],
+      [arc / -PUSH_MPS, PUSH_MPS, LOCK_RADIUS_M.scooter],
+      [5 / -PUSH_MPS, PUSH_MPS, 0],
+    ]);
+    expect(track.at(-1)?.pos.z).toBeLessThan(-3.5);
+    expect(await runTrack(allBanned(), 'scooter', track)).toEqual([]);
+    expect(await runTrack(unrestricted(), 'scooter', track)).toEqual([]);
+  });
+
+  it('judges a turn dodged by backing into another arm at the next forward exit', async () => {
+    // P.123a bans the left turn from rn-s (south-bound to east-bound). Swing left to face east
+    // inside j1, back into the west arm, then ride east straight across j1: the pass is the
+    // banned left turn from rn-s, not a straight pass from rw.
+    const swing = (Math.PI / 2) * LOCK_RADIUS_M.scooter;
+    const track = drive({ x: 98.25, z: -12, heading: -Math.PI / 2 }, [
+      ...INTO_J1,
+      [swing, 1, LOCK_RADIUS_M.scooter],
+      [0.5, 0, 0],
+      [5 / -PUSH_MPS, PUSH_MPS, 0],
+      [0.5, 0, 0],
+      [12 / 3, 3, 0],
+    ]);
+    expect(await runTrack(quiet(), 'scooter', track)).toEqual(['banned-turn:0:D7.3.a']);
+    expect(await runTrack(unrestricted(), 'scooter', track)).toEqual(['turn-signal:0:D7.3.a']);
   });
 });
 

@@ -58,6 +58,18 @@ export const DEG = Math.PI / 180;
 export const EPS_T = 1e-9;
 
 /**
+ * Whether the ego backs slowly: a signed speed below 0 and no faster than `backExemptMaxMps`
+ * backwards. The scooter's push-back and a car's slow R-gear manoeuvring fall in this band; a car
+ * reversing faster does not.
+ * @param {number} signedSpeed Signed ego speed (negative backwards).
+ * @param {number} backExemptMaxMps Fastest backward speed of the band.
+ * @returns {boolean} Slow backing.
+ */
+export function slowBacking(signedSpeed, backExemptMaxMps) {
+  return signedSpeed < 0 && signedSpeed >= -backExemptMaxMps;
+}
+
+/**
  * Start time of a condition held continuously, or null when it does not hold.
  * @param {number | null} since Previous start.
  * @param {boolean} cond Condition now.
