@@ -267,6 +267,53 @@ describe('createSim', () => {
     expect(hits[0]).toMatchObject({ otherKind: 'static', otherId: 'ob-box' });
   });
 
+  it('counts one collision while the car stays pressed against a wall with pulsed throttle', () => {
+    const map = mapWith({
+      obstacles: [...MAP.obstacles, { id: 'ob-wall', kind: 'barrier', footprint: [[12, 0.2], [13, 0.2], [13, 3.3], [12, 3.3]], height: 1 }],
+    });
+    const sim = createSim(RAPIER, map, CAR);
+    let hitAt = -1;
+    const frames = run(sim, 1000, (prev, k) => {
+      if (k === 0) return { gearCmd: 'up' };
+      if (hitAt < 0 && prev && prev.events.some((e) => e.type === 'collision')) hitAt = k;
+      if (hitAt < 0) return { throttle: 0.3 };
+      // Never reverse: the car stays on the wall while the push rises and falls each second.
+      return { throttle: Math.floor((k - hitAt) / 60) % 2 === 0 ? 0.5 : 0 };
+    });
+    sim.dispose();
+    expect(hitAt).toBeGreaterThan(0);
+    const xs = frames.slice(hitAt + 30).map((f) => f.ego.pos.x);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeLessThan(0.05);
+    const hits = collisions(frames);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]).toMatchObject({ otherKind: 'static', otherId: 'ob-wall' });
+  });
+
+  it('counts a new collision when the car backs off a wall and comes back to it, and one while it then pushes on it', () => {
+    const map = mapWith({
+      obstacles: [...MAP.obstacles, { id: 'ob-wall', kind: 'barrier', footprint: [[12, 0.2], [13, 0.2], [13, 3.3], [12, 3.3]], height: 1 }],
+    });
+    const sim = createSim(RAPIER, map, CAR);
+    let hitAt = -1;
+    const frames = run(sim, 1100, (prev, k) => {
+      if (k === 0) return { gearCmd: 'up' };
+      if (hitAt < 0 && prev && prev.events.some((e) => e.type === 'collision')) hitAt = k;
+      if (hitAt < 0) return { throttle: 0.3 };
+      const t = k - hitAt;
+      // Back off for 2 s, creep onto the wall below 0.4 m/s and rest on it, then push hard.
+      if (t === 1 || t === 3) return { gearCmd: 'down' };
+      if (t < 60) return { throttle: 0.3 };
+      if (t < 120) return { brake: 1 };
+      if (t === 120 || t === 122) return { gearCmd: 'up' };
+      if (t < 840) return { throttle: prev.ego.speed < 0.4 ? 0.12 : 0 };
+      return { throttle: 1 };
+    });
+    sim.dispose();
+    expect(hitAt).toBeGreaterThan(0);
+    const hits = collisions(frames).filter((e) => e.otherId === 'ob-wall');
+    expect(hits).toHaveLength(2);
+  });
+
   it('drives both vehicles over a kerb at 20 km/h without a launch and reports y near 0 at rest', () => {
     for (const vehicle of [CAR, SCOOTER]) {
       // A pavement strip across the eastbound lane at x 30..33.

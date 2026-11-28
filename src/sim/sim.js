@@ -36,7 +36,7 @@ import { createVehicle } from '../physics/vehicle.js';
 import { vehicleTuning } from '../physics/vehicles/index.js';
 import { cancelIndicators, createElectrics, stepElectrics } from './electrics.js';
 import { createSignalCancel, stepSignalCancel } from './signal-cancel.js';
-import { buildWorldColliders, drainCollisions } from './world-colliders.js';
+import { buildWorldColliders, drainCollisions, holdContacts } from './world-colliders.js';
 import { createActorBodies } from './actors.js';
 import { createTrafficMirror } from './traffic-mirror.js';
 
@@ -284,6 +284,7 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
         map,
         strikerShare: params === null ? null : params.strikerShare,
       });
+      holdContacts(world, vehicle.collider, tags, contacts, tick);
       events.push(...drained.events);
       touched = drained.touchedIds;
 

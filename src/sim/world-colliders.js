@@ -13,8 +13,9 @@
  *
  * Contact-force events of the ego chassis are drained after each `world.step` and turned into one
  * `collision` event per contact episode and other body. A body is its kind and map id, so the
- * edge boxes of one obstacle count as one body and every kerb as one; a body re-arms after
- * `COLLISION_REARM_S` without contact. With attribution on (traffic running), an event also
+ * edge boxes of one obstacle count as one body and every kerb as one. A contact-force event above
+ * the chassis threshold opens an episode; `holdContacts` keeps it open while the chassis still
+ * touches the body at any force, so a body re-arms only after `COLLISION_REARM_S` without contact. With attribution on (traffic running), an event also
  * names the striker, whether the other party came from behind, and the other actor's model and
  * latched violations; the other actor's velocity always comes from its pose, never from the
  * kinematic body's position delta.
@@ -30,6 +31,7 @@ import { headingQuat } from '../physics/vehicle.js';
 /** @typedef {typeof import('@dimforge/rapier3d-compat').default} Rapier */
 /** @typedef {import('@dimforge/rapier3d-compat').World} World */
 /** @typedef {import('@dimforge/rapier3d-compat').EventQueue} EventQueue */
+/** @typedef {import('@dimforge/rapier3d-compat').Collider} Collider */
 /** @typedef {import('../contracts/map.js').GameMap} GameMap */
 /** @typedef {import('../contracts/map.js').Lane} Lane */
 /** @typedef {import('../contracts/telemetry.js').Vec2} Vec2 */
@@ -114,7 +116,7 @@ function edgeBox(R, world, a, b, height, thickness, groups) {
   const heading = Math.atan2(-dz, dx);
   const desc = R.ColliderDesc.cuboid(len / 2, height / 2, thickness / 2)
     .setTranslation((a[0] + b[0]) / 2, height / 2, (a[1] + b[1]) / 2)
-    .setRotation({ x: 0, y: Math.sin(heading / 2), z: 0, w: Math.cos(heading / 2) })
+    .setRotation(headingQuat(heading))
     .setCollisionGroups(groups);
   return world.createCollider(desc).handle;
 }
@@ -374,4 +376,32 @@ export function drainCollisions(queue, memory, ctx) {
     events.push(event);
   }
   return { events, touchedIds };
+}
+
+/**
+ * Keeps open contact episodes alive: refreshes the debouncer for every body that already has an
+ * episode and whose collider still touches the ego chassis after `world.step`, whatever the
+ * contact force. Bodies with no open episode (none yet, or one already re-armed) are left alone, so
+ * only a contact-force event opens one.
+ * Call it after `drainCollisions` on the same step.
+ * @param {World} world World, after `world.step`.
+ * @param {Collider} egoCollider Ego chassis collider.
+ * @param {Map<number, BodyTag>} tags Tags by collider handle.
+ * @param {ContactMemory} memory Debouncer state, updated in place.
+ * @param {number} tick Current tick.
+ */
+export function holdContacts(world, egoCollider, tags, memory, tick) {
+  const rearmTicks = Math.round(COLLISION_REARM_S / DT);
+  world.contactPairsWith(egoCollider, (other) => {
+    const tag = tags.get(other.handle);
+    if (!tag || tag.kind === 'ground') return;
+    const key = `${tag.kind}:${tag.id ?? ''}`;
+    const last = memory.get(key);
+    if (last === undefined || tick - last > rearmTicks) return;
+    let touching = false;
+    world.contactPair(egoCollider, other, (manifold) => {
+      if (manifold.numContacts() > 0) touching = true;
+    });
+    if (touching) memory.set(key, tick);
+  });
 }
