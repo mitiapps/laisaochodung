@@ -29,4 +29,9 @@ export const scooter = {
   dragCdA: 0.6,
   gearbox: { kind: 'auto', maxForceN: 900, topSpeedMps: 26, idleRpm: 1500, redlineRpm: 8500 },
   fall: { minSpeedKmh: 30, holdS: 0.3 },
+  // paramBasis: design. About 0.8 m/s² on 180 kg, fading to 0 at 0.8 m/s (about 3 km/h, a slow
+  // duck-walk). Gated on the signed speed, so the push never cuts off below its own cap.
+  // Measured on the flat bench from rest: 1.68 m back in 3 s, peak 0.76 m/s; released, the
+  // coast brake stops it in 7.5 s.
+  pushBack: { forceN: 150, maxSpeedMps: 0.8, engageMaxForwardMps: 0.5 },
 };

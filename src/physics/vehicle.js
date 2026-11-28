@@ -11,7 +11,7 @@ import { autoShiftRatio, driveForce, initialGear, shiftGear } from './gearbox.js
 import { stepFall } from './fall.js';
 import { isotropicFrictionSlip, wheelSkids } from './skid.js';
 import { fourWheelCommands } from './rigs/four-wheel.js';
-import { configureTwoWheelBody, twoWheelCommands } from './rigs/two-wheel.js';
+import { configureTwoWheelBody, pushBackForce, twoWheelCommands } from './rigs/two-wheel.js';
 
 /** @typedef {typeof import('@dimforge/rapier3d-compat').default} Rapier */
 /** @typedef {import('@dimforge/rapier3d-compat').World} World */
@@ -37,7 +37,7 @@ const AIR_DENSITY = 1.2;
  * @property {number} speed Signed forward speed.
  * @property {Pos3} velocity World velocity.
  * @property {number} yawRate dθ/dt, + left.
- * @property {Gear} gear Gear.
+ * @property {Gear} gear Gear; `R` on a motorbike while the rider pushes it backwards.
  * @property {number} rpm Engine speed.
  * @property {WheelState[]} wheels Wheels in telemetry order.
  * @property {boolean} frontSkid Any front wheel slides.
@@ -148,7 +148,7 @@ export function createVehicle(R, world, tuning, surfaceGrip, pos, heading, optio
     controller.setWheelFrictionSlip(i, baseSlip);
     controller.setWheelSideFrictionStiffness(i, tuning.sideFrictionStiffness);
   });
-  const commands = tuning.rig === 'two-wheel' ? twoWheelCommands : fourWheelCommands;
+  const twoWheel = tuning.rig === 'two-wheel';
   const drivenIdx = tuning.wheels.flatMap((w, i) => (w.driven ? [i] : []));
 
   let gear = initialGear(gearbox, shiftMode);
@@ -160,6 +160,8 @@ export function createVehicle(R, world, tuning, surfaceGrip, pos, heading, optio
   let rpm = tuning.gearbox.idleRpm;
   let fallHeldS = -1;
   let fell = false;
+  // The rider pushes the bike backwards this step; the readout then shows gear R.
+  let pushing = false;
   /** @type {number[]} */
   let prevRotation = tuning.wheels.map(() => 0);
   /** @type {number[]} */
@@ -196,6 +198,7 @@ export function createVehicle(R, world, tuning, surfaceGrip, pos, heading, optio
       steerAngle = 0;
       engaged = 1;
       fallHeldS = -1;
+      pushing = false;
       spin = spin.map(() => 0);
       skids = skids.map(() => false);
       tuning.wheels.forEach((_, i) => {
@@ -229,7 +232,12 @@ export function createVehicle(R, world, tuning, surfaceGrip, pos, heading, optio
       }
       const drive = driveForce(gearbox, driveGear, input.throttle, speed, drivenSpin, tuning.wheelRadius);
       rpm = drive.rpm;
-      commands(tuning, input, drive.forceN, steerAngle).forEach((c, i) => {
+      const push = pushBackForce(tuning.pushBack, input, speed);
+      pushing = push.acting;
+      const wheelCommands = twoWheel
+        ? twoWheelCommands(tuning, input, drive.forceN, steerAngle, push.forceN)
+        : fourWheelCommands(tuning, input, drive.forceN, steerAngle);
+      wheelCommands.forEach((c, i) => {
         controller.setWheelEngineForce(i, c.engine);
         controller.setWheelBrake(i, c.brake);
         controller.setWheelSteering(i, c.steer);
@@ -308,7 +316,7 @@ export function createVehicle(R, world, tuning, surfaceGrip, pos, heading, optio
         speed: speedNow(),
         velocity: { x: v.x, y: v.y, z: v.z },
         yawRate: body.angvel().y,
-        gear,
+        gear: pushing ? 'R' : gear,
         rpm,
         wheels,
         frontSkid: tuning.wheels.some((w, i) => w.front && skids[i]),
