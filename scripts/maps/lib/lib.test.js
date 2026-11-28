@@ -365,6 +365,25 @@ describe('zones and elements', () => {
   });
 });
 
+describe('scripted motorbikes and declared violations', () => {
+  const lane = { way: 'w2', dir: 'backward', fromS: 200, toS: 0 };
+  const runner = { id: 'runner', kind: 'motorbike', model: 'motorbike', lengthM: 1.9, widthM: 0.8, speed: 6, path: { lanes: [lane] }, trigger: { atS: 0 } };
+
+  it('writes a motorbike and its declared violations through, and omits the list when absent', () => {
+    const map = compileTutorial({
+      actors: [{ ...runner, violations: ['red-light', 'unsafe-lane-change'] }, { ...runner, id: 'quiet' }],
+    });
+    expect(map.actors[0]).toMatchObject({ kind: 'motorbike', violations: ['red-light', 'unsafe-lane-change'] });
+    expect(map.actors[1]).not.toHaveProperty('violations');
+  });
+
+  it('rejects a flag the contract does not know, and a value that is not a list', () => {
+    expect(() => compileTutorial({ actors: [{ ...runner, violations: ['inattentive'] }] })).toThrow(/actors\[0\]\.violations\[0\]/);
+    expect(() => compileTutorial({ actors: [{ ...runner, violations: 'red-light' }] })).toThrow(/actors\[0\]\.violations: expected a list/);
+    expect(() => compileTutorial({ actors: [{ ...runner, violations: null }] })).toThrow(/expected a list/);
+  });
+});
+
 describe('side-road stubs', () => {
   const proj = createProjection({ lat: 10, lon: 106 });
   /**

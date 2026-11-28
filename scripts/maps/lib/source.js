@@ -12,6 +12,7 @@ import { bboxCentre, createProjection } from './project.js';
 import { STUB_M, nodeDistance, osmCorridor, wayPoints } from './graph.js';
 import { LANE_WIDTH_M, parseLineSpec } from './lanes.js';
 import { polylineLength } from '../../../src/geometry/index.js';
+import { NPC_VIOLATIONS } from '../../../src/contracts/telemetry.js';
 
 /** @typedef {[number, number]} Vec2 */
 /** @typedef {import('./graph.js').Network} Network */
@@ -44,7 +45,7 @@ import { polylineLength } from '../../../src/geometry/index.js';
 /**
  * @typedef {object} ActorSpec
  * @property {string} id Actor id.
- * @property {'pedestrian' | 'car'} kind Kind.
+ * @property {'pedestrian' | 'car' | 'motorbike'} kind Kind. A motorbike is drawn ridden.
  * @property {string} model Renderer model key.
  * @property {number} lengthM Length.
  * @property {number} widthM Width.
@@ -53,6 +54,8 @@ import { polylineLength } from '../../../src/geometry/index.js';
  * @property {{lanes: Array<{way: string, dir: Dir, index: number, fromS: number, toS: number}>} | {crosswalk: string, from: 'left' | 'right'}} path
  *   Path spec: lane stretches driven in order, or across a crosswalk.
  * @property {{atS: number} | {way: string, fromS: number, toS: number}} trigger Trigger spec.
+ * @property {Array<import('../../../src/contracts/telemetry.js').NpcViolation>} [violations] Violations the
+ *   actor carries while it is active, from `NPC_VIOLATIONS`; absent when none.
  */
 
 /**
@@ -140,6 +143,17 @@ function num(v, where, o = {}) {
 function str(v, where) {
   if (typeof v !== 'string' || v.length === 0) throw new Error(`${where}: expected a non-empty string`);
   return v;
+}
+
+/**
+ * Declared violations of an actor: a list of names from `NPC_VIOLATIONS`.
+ * @param {unknown} v Value.
+ * @param {string} where Field.
+ * @returns {Array<import('../../../src/contracts/telemetry.js').NpcViolation>} Names.
+ */
+function violationsOf(v, where) {
+  if (!Array.isArray(v)) throw new Error(`${where}: expected a list`);
+  return v.map((name, k) => oneOf(name, NPC_VIOLATIONS, `${where}[${k}]`));
 }
 
 /**
@@ -359,7 +373,7 @@ function parseElements(src, at, wayOf, defaultDir, file) {
         : { way: wayOf(t.way, `${w}.trigger.way`), fromS: num(t.fromS, `${w}.trigger.fromS`, { min: 0 }), toS: num(t.toS, `${w}.trigger.toS`) };
     return {
       id: claim(a.id, `actor-${i + 1}`, w),
-      kind: oneOf(a.kind, /** @type {const} */ (['pedestrian', 'car']), `${w}.kind`),
+      kind: oneOf(a.kind, /** @type {const} */ (['pedestrian', 'car', 'motorbike']), `${w}.kind`),
       model: str(a.model, `${w}.model`),
       lengthM: num(a.lengthM, `${w}.lengthM`, { min: 0.1 }),
       widthM: num(a.widthM, `${w}.widthM`, { min: 0.1 }),
@@ -367,6 +381,9 @@ function parseElements(src, at, wayOf, defaultDir, file) {
       loop: a.loop === undefined ? false : Boolean(a.loop),
       path,
       trigger,
+      ...(a.violations === undefined
+        ? {}
+        : { violations: violationsOf(a.violations, `${w}.violations`) }),
     };
   });
 

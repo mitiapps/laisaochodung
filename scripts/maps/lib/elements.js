@@ -530,7 +530,8 @@ export function compileMap(spec) {
       }
       trigger = { polygon: band(pts, a.trigger.fromS, a.trigger.toS, cw.lo, cw.hi) };
     }
-    return { id: a.id, kind: a.kind, model: a.model, lengthM: a.lengthM, widthM: a.widthM, path, speed: a.speed, trigger, loop: a.loop };
+    const violations = a.violations === undefined ? {} : { violations: [...a.violations] };
+    return { id: a.id, kind: a.kind, model: a.model, lengthM: a.lengthM, widthM: a.widthM, path, speed: a.speed, trigger, loop: a.loop, ...violations };
   });
 
   // Route.

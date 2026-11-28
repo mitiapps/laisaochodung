@@ -84,17 +84,18 @@ Everything else is placed by way and distance, so authors write no polygons:
 - `centerLine` and `laneLine` are a type (`dashed`, `solid`, `double-solid`, `mixed`) or stretches
   `[{toS: 150, type: dashed}, {type: solid}]`; a `mixed` line names its `crossable` side.
 - `signs`, `crosswalks`, `obstacles` (`lateral` offset, positive left), `buildings` (rows by side
-  and range), `junctions` (`signals`), `actors` (path along lane stretches or across a crosswalk;
-  trigger at a time or over a stretch of road), `route` (start lane, checkpoints with their lane, finish),
+  and range), `junctions` (`signals`), `actors` (kind `pedestrian`, `car` or `motorbike`, optional
+  `violations`, path along lane stretches or across a crosswalk; trigger at a time or over a
+  stretch of road), `route` (start lane, checkpoints with their lane, finish),
   `environment`, `timeLimitS`, `lit`.
 - `layout: <id>` reuses another tutorial's source; keys set here replace the layout's.
 
 Actor `model` keys used: `pedestrian` and `npc-sedan`. A scripted actor that ends its path on a
 lane stays there as a parked vehicle: it closes that lane, and traffic changes lane round it. A car
-that moves against the lane it is on carries `wrong-way`. The runtime map also accepts a
-scripted actor of kind `motorbike` (drawn as a ridden motorbike) and an optional `violations` list
-(`NPC_VIOLATIONS`), which its pose carries while the actor is active. The map source in
-`scripts/maps` does not write either field yet, so the shipped maps declare no violations.
+that moves against the lane it is on carries `wrong-way`. An actor of kind `motorbike` is drawn as a
+ridden motorbike. An actor may also declare `violations` (names from `NPC_VIOLATIONS`), which its pose
+carries while the actor is active; the build rejects any other name. Declared flags drive no
+behaviour: the fault table reads them on a contact, and the actor runs no light and changes no lane.
 
 Street dressing, on tutorial and OSM sources alike:
 
