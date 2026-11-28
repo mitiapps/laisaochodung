@@ -225,6 +225,24 @@ describe('createInput brake mapping', () => {
       }
     }
   });
+
+  it('push-back: R and the on-screen control hold it on a motorbike, never on a car', () => {
+    const bike = setup({ legalClass: 'motorbike' });
+    expect(bike.input.sample().pushBack).toBe(false);
+    key(bike.target, 'keydown', 'KeyR');
+    expect(bike.input.sample().pushBack).toBe(true);
+    key(bike.target, 'keyup', 'KeyR');
+    expect(bike.input.sample().pushBack).toBe(false);
+    bike.input.hold('pushBack', true);
+    expect(bike.input.sample().pushBack).toBe(true);
+    bike.input.hold('pushBack', false);
+    expect(bike.input.sample().pushBack).toBe(false);
+
+    const car = setup();
+    key(car.target, 'keydown', 'KeyR');
+    car.input.hold('pushBack', true);
+    expect(car.input.sample().pushBack).toBe(false);
+  });
 });
 
 describe('createInput on-screen controls', () => {
