@@ -367,16 +367,16 @@ function laneChangeLeadS() {
 
 /**
  * Points where a path crosses a painted line between two lanes of the same direction, with the
- * side the path moves to.
+ * side the path moves to and the lane line crossed.
  * @param {GameMap} map Map.
  * @param {Vec2[]} line Path.
- * @returns {Array<{s: number, side: 'left' | 'right'}>} Crossings in path order.
+ * @returns {Array<{s: number, side: 'left' | 'right', line: Vec2[]}>} Crossings in path order.
  */
 export function laneLineCrossings(map, line) {
   /** @type {Map<string, 'forward' | 'backward'>} */
   const dirOf = new Map();
   for (const road of map.roads) for (const lane of road.lanes) dirOf.set(lane.id, lane.dir);
-  /** @type {Array<{s: number, side: 'left' | 'right'}>} */
+  /** @type {Array<{s: number, side: 'left' | 'right', line: Vec2[]}>} */
   const out = [];
   let acc = 0;
   for (let i = 0; i < line.length - 1; i += 1) {
@@ -399,7 +399,7 @@ export function laneLineCrossings(map, line) {
             dz = -dz;
           }
           const [lx, lz] = leftVector(headingOf(dx, dz));
-          out.push({ s: acc + hit.t * len, side: (b[0] - a[0]) * lx + (b[1] - a[1]) * lz > 0 ? 'left' : 'right' });
+          out.push({ s: acc + hit.t * len, side: (b[0] - a[0]) * lx + (b[1] - a[1]) * lz > 0 ? 'left' : 'right', line: ll.polyline });
         }
       }
     }

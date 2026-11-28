@@ -111,6 +111,14 @@ const MERGE_MARGIN_M = 2;
 const MERGE_MARGIN_S = 0.6;
 /** The gap check runs from this far before a lane line crossing, metres. */
 const MERGE_CHECK_M = 25;
+/**
+ * Clearance kept between the ego's side and the lane line while it waits for a merge gap, metres.
+ * Waiting with the body over the line would close the target lane: its traffic stops behind the
+ * ego, inside the gap the merge needs, and neither side moves again.
+ */
+const MERGE_HOLD_CLEAR_M = 0.3;
+/** Spacing of the search for the merge hold point, metres. */
+const MERGE_HOLD_STEP_M = 0.25;
 /** Distance before a junction entry where the gap check at a STOP or give-way line runs, metres. */
 const JUNCTION_CHECK_M = 10;
 /** Time kept between the ego clearing a junction and another road user arriving in it, seconds. */
@@ -257,6 +265,23 @@ function mergeBlocked(c, frame, s, crossing, bodies) {
 }
 
 /**
+ * Where the ego waits for a merge gap: the last point on the path, at least 3 m before the
+ * crossing, where its side still clears the lane line by `MERGE_HOLD_CLEAR_M`. The path drifts
+ * towards the line well before the crossing, so a fixed distance would leave the body over it.
+ * @param {Vec2[]} line Path.
+ * @param {{s: number, line: Vec2[]}} crossing Crossing and the lane line crossed.
+ * @param {number} halfWidth Half the ego's width.
+ * @returns {number} Hold point along the path.
+ */
+function mergeHoldS(line, crossing, halfWidth) {
+  const latest = crossing.s - 3;
+  for (let s = latest; s > Math.max(0, crossing.s - MERGE_CHECK_M); s -= MERGE_HOLD_STEP_M) {
+    if (Math.abs(projectOntoPolyline(pointAtDistance(line, s).point, crossing.line).lateral) >= halfWidth + MERGE_HOLD_CLEAR_M) return s;
+  }
+  return Math.max(0, crossing.s - MERGE_CHECK_M);
+}
+
+/**
  * Whether a junction the ego must yield at is not clear to enter: a crossing road user is moving
  * inside it, or will reach it before the ego has crossed it plus a margin.
  * @param {object} c Controller state.
@@ -287,7 +312,9 @@ function junctionBlocked(c, frame, s, j, bodies) {
 }
 
 /**
- * Speed target from other road users: following, merge gaps and junction gaps.
+ * Speed target from other road users: following, merge gaps and junction gaps. A merge waits at
+ * its hold point while the gap is short; once the ego passes the hold point with a gap, the merge
+ * is committed and never waits again.
  * @param {object} c Controller state.
  * @param {Frame} frame Frame.
  * @param {number} s Ego distance along the path.
@@ -295,17 +322,19 @@ function junctionBlocked(c, frame, s, j, bodies) {
  * @returns {number} Target speed, m/s.
  */
 function trafficTarget(c, frame, s, target) {
-  if (frame.actors.length === 0) return target;
-  const bodies = nearbyBodies(c, frame, s);
-  if (bodies.length === 0) return target;
-  let out = Math.min(target, followTarget(c, frame, s, target, bodies));
+  const bodies = frame.actors.length === 0 ? [] : nearbyBodies(c, frame, s);
+  let out = bodies.length === 0 ? target : Math.min(target, followTarget(c, frame, s, target, bodies));
   const front = s + c.veh.lengthM / 2;
   for (const x of c.crossings) {
-    if (s < x.s - MERGE_CHECK_M || s > x.s - 1) continue;
-    if (mergeBlocked(c, frame, s, x, bodies)) out = Math.min(out, Math.sqrt(2 * HOLD_DECEL * Math.max(0, x.s - 3 - s)));
+    if (x.committed || s < x.s - MERGE_CHECK_M || s > x.s - 1) continue;
+    const blocked = bodies.length > 0 && mergeBlocked(c, frame, s, x, bodies);
+    // Past the hold point with a gap, the body heads over the line: the change is made, as a
+    // driver does not stop across two lanes, where the target lane's traffic would queue behind.
+    if (!blocked && s >= x.holdS) x.committed = true;
+    if (blocked) out = Math.min(out, Math.sqrt(2 * HOLD_DECEL * Math.max(0, x.holdS - s)));
   }
   for (const j of c.junctions) {
-    if (front < j.enter - JUNCTION_CHECK_M || front > j.enter - 0.5) continue;
+    if (bodies.length === 0 || front < j.enter - JUNCTION_CHECK_M || front > j.enter - 0.5) continue;
     if (junctionBlocked(c, frame, s, j, bodies)) out = Math.min(out, Math.sqrt(2 * HOLD_DECEL * Math.max(0, j.enter - 1 - front)));
   }
   return out;
@@ -475,7 +504,7 @@ export function createDriver(map, vehicleId, options = {}) {
     gapParams: laneChangeGaps(),
     crossings: laneLineCrossings(map, line).map((x) => {
       const after = pointAtDistance(line, Math.min(total, x.s + 6));
-      return { s: x.s, laneId: locate(map, after.point, after.heading).laneId };
+      return { s: x.s, laneId: locate(map, after.point, after.heading).laneId, holdS: mergeHoldS(line, x, veh.widthM / 2), committed: false };
     }),
     junctions: yieldJunctions(map, line),
   };
