@@ -77,9 +77,10 @@ Sources of the standard's numbers: signal-head mounting comes from the QCVN 41:2
 51/2024/TT-BGTVT). The marking values (the G2.1 stop-line gap, the 7.2 give-way line and
 triangle, the 9.3 arrows, the 9.5a STOP word) and the 15 s minimum green of Phụ lục A.2 were read
 from QCVN 41:2019 (the give-way and arrow sizes off its drawings, Hình G.49 and G.73), not from the
-2024 text. The 2026 draft has the same wording, and the 2024 drafting dossier lists only Phụ lục
-A, E and O as changed (A's changes leave the 15 s minimum alone), so they are taken as the 2024
-values but remain unverified against the 2024 text.
+2024 text. The 2026 draft has the same marking wording, and the 2024 drafting dossier does not
+list Phụ lục G as changed (it lists A, E and O). The minimum green is the 2019 Phụ lục A text plus
+the 2024 changes in the August 2024 drafting comparison table, matching the 2026 draft text. All
+of these are taken as the 2024 values but remain unverified against the 2024 text.
 
 - **Cycle.** `DEFAULT_CYCLE` is green 25 s, yellow 3 s, red 32 s (period 60 s). Approaches on one
   axis share a phase; the crossing axis runs half a period (30 s) later, so each change has 2 s of

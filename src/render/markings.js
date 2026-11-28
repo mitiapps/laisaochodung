@@ -9,15 +9,18 @@
  * - vạch 2.1 dashes 1–3 m with 3–9 m gaps at 1:3 (2 m and 6 m here);
  * - vạch 1.3 is two 15 cm lines with a 15–50 cm inner gap (15 cm here);
  * - vạch 7.1 is 20, 30 or 40 cm wide (30 cm here, for urban streets);
- * - vạch 7.3 Mẫu 1 stripes are 40 cm wide with 60 cm gaps;
+ * - vạch 7.3 Mẫu 1 stripes are 40 cm wide with 60 cm gaps.
+ *
+ * Values from the Phụ lục G of QCVN 41:2019, not read from the 2024 text: the 2026 draft has the
+ * same wording and the 2024 drafting dossier does not list Phụ lục G as changed, so they are taken
+ * as the 2024 values (unverified):
+ * - vạch 7.2 Mẫu 1, the give-way line and triangle;
  * - vạch 9.3 lane arrows are white, 300 cm long (320 cm combined) with a 15 cm shaft;
  * - vạch 9.5a: the word STOP, letters 1.6 m high on low-speed urban roads, strokes 12–18 cm, its
- *   top 2.0–3.0 m before the stop line.
- * The 7.2, 9.3 and 9.5a values, and the stop-line gap of G2.1, come from the Phụ lục G of
- * QCVN 41:2019, not read from the 2024 text: the 2026 draft has the same wording and the 2024
- * drafting dossier does not list Phụ lục G as changed, so they are taken as the 2024 values
- * (unverified). Sizes read from the annex drawings rather than its text (Hình G.49 give-way,
- * Hình G.73 arrows) are marked as such.
+ *   top 2.0–3.0 m before the stop line;
+ * - G2.1: a stop line 1.5–3.0 m before the crosswalk (`scripts/maps/lib/elements.js`).
+ * Sizes read from the annex drawings rather than its text (Hình G.49 give-way, Hình G.73 arrows)
+ * are marked as such.
  *
  * Lane and centre lines stop at the stop line, or at the zebra edge where there is no stop line;
  * nothing is painted through a zebra (Hình G.43, G.47). `lineCuts` gives the areas to leave bare.
