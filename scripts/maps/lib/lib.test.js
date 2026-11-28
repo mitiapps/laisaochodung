@@ -13,12 +13,12 @@ import {
   shophouseHeight,
   typeOsmBuilding,
 } from './buildings.js';
-import { compileMap, topologyOf } from './elements.js';
+import { REPEATER_MAX_ARM_M, compileMap, topologyOf, withSolidStretches } from './elements.js';
 import { Blockers, roadSides } from './props.js';
 import { STUB_M, carriageway, continuation, laneSpan, locateOnWay, osmCorridor, splitNetwork } from './graph.js';
 import { buildRoad, convexHull, growPolygon, parseLineSpec } from './lanes.js';
 import { bboxCentre, createProjection } from './project.js';
-import { isMarkedCrossing, tutorialSpec } from './source.js';
+import { DEFAULT_CYCLE, isMarkedCrossing, tutorialSpec } from './source.js';
 
 /** @typedef {import('./graph.js').NetWay} NetWay */
 /** @typedef {import('./graph.js').Network} Network */
@@ -285,8 +285,140 @@ describe('zones and elements', () => {
   it('places the stop line before a crosswalk near the junction and ties the crosswalk to the signal', () => {
     const map = compileTutorial({ junctions: [{ node: 'j', signals: true }], crosswalks: [{ id: 'cw', at: { way: 'w1', s: 188 } }] });
     const sl = map.stopLines.find((s) => s.id === 'sl-w1-f');
-    expect(sl?.segment[0][0]).toBeCloseTo(185);
+    // The crosswalk spans x 186–190; the line keeps STOP_LINE_CROSSWALK_GAP_M (2 m) before it.
+    expect(sl?.segment[0][0]).toBeCloseTo(184);
     expect(map.crosswalks[0].signalId).toBe('sig-w1-f');
+  });
+
+  it('runs the cross axis half a period later and rejects a cycle without the all-red clearance', () => {
+    const map = compileTutorial({ junctions: [{ node: 'j', signals: true }] });
+    const period = DEFAULT_CYCLE.green + DEFAULT_CYCLE.yellow + DEFAULT_CYCLE.red;
+    expect(period).toBe(60);
+    const offsets = Object.fromEntries(map.signals.map((s) => [s.id, s.cycle.offset]));
+    // The first approach in id order (cross-1) sets the axis at offset 0.
+    expect(offsets).toEqual({ 'sig-cross-1-f': 0, 'sig-cross-2-b': 0, 'sig-w1-f': 30, 'sig-w2-b': 30 });
+    expect(map.signals[0].cycle).toMatchObject({ green: 25, yellow: 3, red: 32 });
+    expect(() => compileTutorial({ junctions: [{ node: 'j', signals: { green: 27, yellow: 3, red: 30 } }] })).toThrow(/all-red/);
+  });
+
+  it('adds a 4 m crosswalk on every arm of a signalised junction with the stop line 2 m before it', () => {
+    const map = compileTutorial({ junctions: [{ node: 'j', signals: true }] });
+    expect(map.crosswalks.map((c) => c.id).sort()).toEqual(['cw-cross-1-e', 'cw-cross-2-s', 'cw-w1-e', 'cw-w2-s']);
+    // w1 ends at the junction edge x 195.5: the crosswalk spans 191–195 and the stop line sits at 189.
+    const cw = /** @type {import('../../../src/contracts/map.js').Crosswalk} */ (map.crosswalks.find((c) => c.id === 'cw-w1-e'));
+    expect(Math.min(...cw.polygon.map((p) => p[0]))).toBeCloseTo(191);
+    expect(Math.max(...cw.polygon.map((p) => p[0]))).toBeCloseTo(195);
+    expect(map.stopLines.find((l) => l.id === 'sl-w1-f')?.segment[0][0]).toBeCloseTo(189);
+    expect(cw.signalId).toBe('sig-w1-f');
+    // Unsignalised, no crosswalk is derived and the stop-sign line keeps 1 m to the road end.
+    const plain = compileTutorial({ signs: [{ id: 's-r420', code: 'R.420', at: { way: 'w1', s: 2 } }, { id: 'stop', code: 'R.122', at: { way: 'w1', s: 180 } }] });
+    expect(plain.crosswalks).toEqual([]);
+    expect(plain.stopLines[0].segment[0][0]).toBeCloseTo(194.5);
+  });
+
+  it('derives no crosswalk where a written one is near or the arm is short, and logs the short arm', () => {
+    const notes = /** @type {string[]} */ ([]);
+    const src = tutorialSource({ junctions: [{ node: 'j', signals: true }], crosswalks: [{ id: 'cw', at: { way: 'w1', s: 188 } }] });
+    src.nodes.n = [200, -18];
+    const map = compileMap(tutorialSpec('t', src, () => ({})), notes);
+    expect(map.crosswalks.map((c) => c.id).sort()).toEqual(['cw', 'cw-cross-2-s', 'cw-w2-s']);
+    expect(notes).toEqual([expect.stringMatching(/^no derived crosswalk on road cross-1 at j-j: the road is 13\.5 m, under 20 m$/)]);
+  });
+
+  it('times the pedestrian heads of each crosswalk by a signal of the other axis', () => {
+    const map = compileTutorial({ junctions: [{ node: 'j', signals: true }] });
+    const walk = Object.fromEntries(map.crosswalks.map((c) => [c.id, c.walkSignalId]));
+    expect(walk).toEqual({ 'cw-w1-e': 'sig-cross-1-f', 'cw-w2-s': 'sig-cross-1-f', 'cw-cross-1-e': 'sig-w1-f', 'cw-cross-2-s': 'sig-w1-f' });
+  });
+
+  it('makes the lines solid on the last 30 m before a stop line, for the approaching direction only', () => {
+    const map = compileTutorial({
+      junctions: [{ node: 'j', signals: true }],
+      ways: [
+        { id: 'w1', nodes: ['a', 'j'], lanes: { forward: 2, backward: 2 } },
+        { id: 'w2', nodes: ['j', 'b'], centerLine: 'dashed' },
+        { id: 'cross', nodes: ['n', 'j', 's'] },
+      ],
+    });
+    const lines = (/** @type {string} */ id) => map.roads.find((r) => r.id === id)?.laneLines.map((l) => [l.id, l.type, l.polyline[0][0], l.polyline[l.polyline.length - 1][0]]);
+    // w1 ends at x 192 at the wider junction: stop line at 185.5, solid from 155.5.
+    expect(lines('w1')).toEqual([
+      ['w1-lf1-1', 'dashed', 0, 155.5],
+      ['w1-lf1-2', 'solid', 155.5, 192],
+      ['w1-lb1', 'dashed', 0, 192],
+      ['w1-lc-1', 'dashed', 0, 155.5],
+      ['w1-lc-2', 'solid', 155.5, 192],
+    ]);
+    expect(map.roads.find((r) => r.id === 'w1')?.laneLines.find((l) => l.id === 'w1-lf1-2')?.crossable).toBe('none');
+    // A written centre line is kept as written.
+    expect(lines('w2')).toEqual([['w2-lc', 'dashed', 208, 400]]);
+  });
+
+  it('clamps the solid approach to 40 % of a short road', () => {
+    const src = tutorialSource({ junctions: [{ node: 'j', signals: true }] });
+    src.nodes.n = [200, -40];
+    const map = compileTutorial({ ...src });
+    // cross-1 runs 35.5 m to the junction edge: the stop line at 29 (6.5 m back), solid from 29 − 14.2.
+    const solid = map.roads.find((r) => r.id === 'cross-1')?.laneLines.find((l) => l.type === 'solid');
+    expect(solid?.polyline[0][1]).toBeCloseTo(-40 + 29 - 0.4 * 35.5);
+  });
+
+  it('stands a far-side repeater post across the junction, off every lane and junction', () => {
+    const map = compileTutorial({ junctions: [{ node: 'j', signals: true }] });
+    const sig = /** @type {import('../../../src/contracts/map.js').Signal} */ (map.signals.find((s) => s.id === 'sig-w1-f'));
+    // 1.5 m past the junction edge (x 204.5), 1 m right of the eastbound lane (z 3.5).
+    expect(sig.repeaters).toEqual([{ pos: { x: 206, z: 4.5 }, mount: 'post' }]);
+    const blocked = [...map.roads.flatMap((r) => r.lanes.map((l) => l.polygon)), ...map.junctions.map((j) => j.polygon)];
+    for (const s of map.signals) {
+      expect(s.repeaters).toHaveLength(1);
+      const h = /** @type {import('../../../src/contracts/map.js').SignalHead} */ (s.repeaters?.[0]);
+      expect(blocked.some((poly) => pointInPolygon([h.pos.x, h.pos.z], poly))).toBe(false);
+    }
+  });
+
+  it('hangs the repeater of two or more lanes from a mast arm over the lanes, at most 7 m long', () => {
+    const map = compileTutorial({
+      junctions: [{ node: 'j', signals: true }],
+      ways: [
+        { id: 'w1', nodes: ['a', 'j'], oneway: true, lanes: { forward: 4 } },
+        { id: 'w2', nodes: ['j', 'b'], oneway: true, lanes: { forward: 4 } },
+        { id: 'cross', nodes: ['n', 'j', 's'], oneway: true, lanes: { forward: 2 } },
+      ],
+    });
+    const head = (/** @type {string} */ id) => /** @type {import('../../../src/contracts/map.js').SignalHead} */ (map.signals.find((s) => s.id === id)?.repeaters?.[0]);
+    const two = head('sig-cross-1-f');
+    expect(two.mount).toBe('mast-arm');
+    // Two lanes: the head over their middle line, 4.5 m from the mast 1 m off the kerb.
+    expect(two.pos.x).toBeCloseTo(200);
+    expect(Math.hypot(two.pos.x - (two.mastPos?.x ?? NaN), two.pos.z - (two.mastPos?.z ?? NaN))).toBeCloseTo(4.5);
+    const four = head('sig-w1-f');
+    expect(four.mount).toBe('mast-arm');
+    expect(Math.hypot(four.pos.x - (four.mastPos?.x ?? NaN), four.pos.z - (four.mastPos?.z ?? NaN))).toBeCloseTo(REPEATER_MAX_ARM_M);
+  });
+
+  it('drops a repeater whose base stays on a lane for 6 m and logs it', () => {
+    const notes = /** @type {string[]} */ ([]);
+    const src = tutorialSource({
+      junctions: [{ node: 'j', signals: true }],
+      ways: [
+        { id: 'w1', nodes: ['a', 'j'] },
+        { id: 'w2', nodes: ['j', 'b'], lanes: { forward: 3, backward: 1 } },
+        { id: 'cross', nodes: ['n', 'j', 's'] },
+      ],
+    });
+    const map = compileMap(tutorialSpec('t', src, () => ({})), notes);
+    expect(map.signals.find((s) => s.id === 'sig-w1-f')?.repeaters).toBeUndefined();
+    expect(notes).toContainEqual(expect.stringMatching(/^no far-side repeater for sig-w1-f at j-j: its base stays on a lane or junction/));
+  });
+
+  it('lays solid stretches over a line spec and merges equal neighbours', () => {
+    const dashed = parseLineSpec('dashed', 't');
+    expect(withSolidStretches(dashed, [[10, 20]])).toEqual([
+      { fromS: 0, toS: 10, type: 'dashed', crossable: 'both' },
+      { fromS: 10, toS: 20, type: 'solid', crossable: 'none' },
+      { fromS: 20, toS: Infinity, type: 'dashed', crossable: 'both' },
+    ]);
+    expect(withSolidStretches(parseLineSpec('solid', 't'), [[10, 20]])).toEqual(parseLineSpec('solid', 't'));
   });
 
   it('turns P.123a, P.124a, P.101 and P.102 into restrictions and entries', () => {
@@ -441,12 +573,15 @@ describe('side-road stubs', () => {
   });
 
   it('follows the same street to the asked length, keeps its bends, and logs short or clipped stubs', () => {
-    const { network, stubNotes } = osmCorridor(raw, [1], proj, attributes, { stubM: 120, laneWidth: 3.5 });
+    const { network, stubNotes, stubNodeSources } = osmCorridor(raw, [1], proj, attributes, { stubM: 120, laneWidth: 3.5 });
     // Way 10 ends at 50 m; way 11 of the same name carries it on to 120 m.
     expect(length(network, 'w10-2-out')).toBeCloseTo(120, 6);
     const w10 = network.ways.find((w) => w.id === 'w10-2-out');
     expect(w10?.nodeIds).toEqual(['n2', 'n10@2-out-p1', 'n10@2-out']);
     expect(network.nodes.get('n11')).toBeUndefined();
+    // A stub vertex remembers its OSM node (for tagged crossings); the cut point has none.
+    expect(stubNodeSources.get('n10@2-out-p1')).toBe('n11');
+    expect(stubNodeSources.has('n10@2-out')).toBe(false);
     // The unnamed lane ends at 40 m; Phố B is cut back where it would overlap Phố A.
     expect(length(network, 'w20-2-out')).toBeCloseTo(40, 6);
     const w30 = length(network, 'w30-3-out');

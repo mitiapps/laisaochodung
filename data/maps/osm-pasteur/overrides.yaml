@@ -15,6 +15,15 @@ signs:
       one R.420 at the corridor start and the built-up zone covers the whole map (decision D11).
       No real P.127 is known on this stretch; the OSM maxspeed tags are not used.
 
+junctions:
+  - node: 411919306
+    signals: true
+    reason: >-
+      Pasteur × Nguyễn Du is signalised by game decision, not checked on the street. The extract
+      has no signal node and no crossing node within 45 m of it, so it says nothing either way, and
+      an unmarked crossing of a three-lane artery teaches nothing. If street imagery shows no
+      lights, delete this entry and the junction falls back to bare, as the extract has it.
+
 # Buildings the renderer draws as landmarks (the generic massing of their type with the landmark
 # look). Heights still follow the import rule: OSM `height`, else `building:levels`, else the
 # type default. `osm` names the OSM element: way/<id> or relation/<id>. `colour` is the facade

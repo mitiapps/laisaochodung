@@ -4,9 +4,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { checkMap } from '../../src/contracts/assert-map.js';
-import { pointInPolygon, projectOntoPolyline } from '../../src/geometry/index.js';
+import { CONNECTOR_TURNS } from '../../src/contracts/map.js';
+import { polygonCentroid, polylineLength, pointInPolygon, projectOntoPolyline } from '../../src/geometry/index.js';
+import { signalState } from '../../src/world/signals.js';
 import { MAX_OSM_ROUTE_M, buildAll, buildOne, canonical, loadSignCodes, serializeIndex } from './build.js';
-import { routeLength } from './lib/elements.js';
+import { REPEATER_MAX_ARM_M, STOP_LINE_CROSSWALK_GAP_M, routeLength } from './lib/elements.js';
 import { coverageReport, overpassQuery, overpassRuntimeError } from './fetch.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -181,6 +183,156 @@ describe('shipped maps', () => {
     expect(corners('tutorial-01-co-ban')).toEqual([]);
     // The straight side of a T-junction between two nearly aligned arms is not a corner.
     expect(corners('osm-pasteur').filter((c) => c.startsWith('pv-j-n2408528251-'))).toEqual([]);
+  });
+});
+
+/**
+ * Distance from a point to a polygon's boundary (0 inside).
+ * @param {[number, number]} p Point.
+ * @param {[number, number][]} poly Ring.
+ * @returns {number} Distance.
+ */
+function distanceToPolygon(p, poly) {
+  if (pointInPolygon(p, poly)) return 0;
+  let best = Infinity;
+  for (let i = 0; i < poly.length; i += 1) best = Math.min(best, projectOntoPolyline(p, [poly[i], poly[(i + 1) % poly.length]]).distance);
+  return best;
+}
+
+/**
+ * Signals of each signalised junction: a signal belongs to the junction of its road nearest to it.
+ * @param {GameMap} map Map.
+ * @returns {Map<string, GameMap['signals']>} Junction id → signals.
+ */
+function signalsByJunction(map) {
+  const roadOfLane = new Map(map.roads.flatMap((r) => r.lanes.map((l) => [l.id, r.id])));
+  /** @type {Map<string, GameMap['signals']>} */
+  const out = new Map();
+  for (const s of map.signals) {
+    const line = map.stopLines.find((l) => l.id === s.stopLineIds[0]);
+    const road = roadOfLane.get(line?.laneIds[0] ?? '');
+    const at = /** @type {[number, number]} */ ([s.pos.x, s.pos.z]);
+    const j = map.junctions
+      .filter((x) => road !== undefined && x.roadIds.includes(road))
+      .sort((a, b) => distanceToPolygon(at, a.polygon) - distanceToPolygon(at, b.polygon))[0];
+    if (!j) throw new Error(`signal ${s.id} has no junction`);
+    out.set(j.id, [...(out.get(j.id) ?? []), s]);
+  }
+  return out;
+}
+
+describe('standard junctions on the shipped maps', () => {
+  it.each(SHIPPED)('%s never lets two crossing axes go together and clears each change with 2 s of all-red', (id) => {
+    const map = shippedMap(id);
+    for (const [jid, signals] of signalsByJunction(map)) {
+      const axisA = signals.filter((s) => Math.abs(Math.sin(s.heading - signals[0].heading)) < Math.SQRT1_2);
+      const axisB = signals.filter((s) => !axisA.includes(s));
+      const period = signals[0].cycle.green + signals[0].cycle.yellow + signals[0].cycle.red;
+      const step = 0.05;
+      /** @type {number[]} */
+      const allRedRuns = [];
+      let run = 0;
+      for (let k = 0; k < (2 * period) / step; k += 1) {
+        const t = k * step;
+        const goA = axisA.some((s) => signalState(s, t) !== 'red');
+        const goB = axisB.some((s) => signalState(s, t) !== 'red');
+        expect(goA && goB, `${jid} at ${t.toFixed(2)} s`).toBe(false);
+        if (!goA && !goB) run += 1;
+        else if (run > 0) {
+          allRedRuns.push(run * step);
+          run = 0;
+        }
+      }
+      if (axisB.length === 0) continue;
+      expect(allRedRuns.length, jid).toBeGreaterThanOrEqual(2);
+      for (const r of allRedRuns) expect(r, jid).toBeCloseTo(2, 1);
+    }
+  });
+
+  it.each(SHIPPED)('%s gives every signalised approach a far-side repeater standing off the lanes and junctions', (id) => {
+    const map = shippedMap(id);
+    const blocked = [...map.roads.flatMap((r) => r.lanes.map((l) => l.polygon)), ...map.junctions.map((j) => j.polygon)];
+    for (const line of map.stopLines.filter((l) => l.control === 'signal')) {
+      const signal = map.signals.find((s) => s.id === line.signalId);
+      expect(signal?.repeaters, line.id).toHaveLength(1);
+      const head = /** @type {import('../../src/contracts/map.js').SignalHead} */ (signal?.repeaters?.[0]);
+      expect(head.mount, line.id).toBe(line.laneIds.length >= 2 ? 'mast-arm' : 'post');
+      const base = head.mastPos ?? head.pos;
+      expect(blocked.some((poly) => pointInPolygon([base.x, base.z], poly)), line.id).toBe(false);
+      if (head.mastPos) expect(Math.hypot(head.pos.x - head.mastPos.x, head.pos.z - head.mastPos.z)).toBeLessThanOrEqual(REPEATER_MAX_ARM_M + 1e-6);
+    }
+  });
+
+  it.each(SHIPPED)('%s has a crosswalk on every signalised arm of 20 m or more, and each signal stop line 2 m before its crosswalk', (id) => {
+    const map = shippedMap(id);
+    const laneById = new Map(map.roads.flatMap((r) => r.lanes.map((l) => [l.id, l])));
+    for (const j of map.junctions.filter((x) => x.signalized)) {
+      for (const roadId of j.roadIds) {
+        const road = /** @type {import('../../src/contracts/map.js').Road} */ (map.roads.find((r) => r.id === roadId));
+        if (polylineLength(road.lanes[0].centerline) < 20) continue;
+        const has = map.crosswalks.some((c) => {
+          const mid = polygonCentroid(c.polygon);
+          return road.lanes.some((l) => pointInPolygon(mid, l.polygon)) && distanceToPolygon(mid, j.polygon) <= 17;
+        });
+        expect(has, `${j.id} arm ${roadId}`).toBe(true);
+      }
+    }
+    for (const line of map.stopLines.filter((l) => l.control === 'signal')) {
+      const lane = /** @type {import('../../src/contracts/map.js').Lane} */ (laneById.get(line.laneIds[0]));
+      if (polylineLength(lane.centerline) < 20) continue;
+      const cw = map.crosswalks.find((c) => c.signalId === line.signalId);
+      expect(cw, line.id).toBeDefined();
+      const [a, b] = line.segment;
+      const stopS = projectOntoPolyline([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], lane.centerline).s;
+      const near = Math.min(...(cw?.polygon ?? []).map((p) => projectOntoPolyline(p, lane.centerline).s));
+      expect(near - stopS, line.id).toBeCloseTo(STOP_LINE_CROSSWALK_GAP_M, 1);
+    }
+  });
+
+  it.each(SHIPPED)('%s paints lane arrows with exactly the turns of their lane', (id) => {
+    const map = shippedMap(id);
+    for (const a of map.laneArrows ?? []) {
+      const turns = new Set((map.connectors ?? []).filter((c) => c.fromLaneId === a.laneId).map((c) => c.turn));
+      expect(a.turns, a.id).toEqual(CONNECTOR_TURNS.filter((t) => turns.has(t)));
+    }
+    const laneById = new Map(map.roads.flatMap((r) => r.lanes.map((l) => [l.id, l])));
+    for (const line of map.stopLines.filter((l) => l.laneIds.length >= 2)) {
+      for (const laneId of line.laneIds) {
+        const lane = /** @type {import('../../src/contracts/map.js').Lane} */ (laneById.get(laneId));
+        if (polylineLength(lane.centerline) < 25) continue;
+        expect((map.laneArrows ?? []).some((a) => a.laneId === laneId), laneId).toBe(true);
+      }
+    }
+  });
+
+  it('signalises Pasteur × Nguyễn Du, keeps Hàn Thuyên bare with its four zebras, and keeps the route lane change dashed', () => {
+    const map = shippedMap('osm-pasteur');
+    expect(map.junctions.find((j) => j.id === 'j-n411919306')?.signalized).toBe(true);
+    expect(map.junctions.find((j) => j.id === 'j-n4605453644')?.signalized).toBe(false);
+    for (const id of ['cw-n6315539756', 'cw-n7502330652', 'cw-n7502330666', 'cw-n14357970345']) {
+      expect(map.crosswalks.map((c) => c.id)).toContain(id);
+    }
+    const lines = map.roads.filter((r) => r.osmWayId === 747231131).flatMap((r) => r.laneLines);
+    expect(lines.length).toBeGreaterThan(0);
+    for (const l of lines) expect(l.type, l.id).toBe('dashed');
+  });
+
+  it('builds the tutorial-02 crossroads to the standard layout', () => {
+    const map = shippedMap('tutorial-02-nga-tu');
+    const j1 = map.signals.filter((s) => ['sig-bac-b', 'sig-giua-b', 'sig-nam-f', 'sig-tay-f'].includes(s.id));
+    expect(j1).toHaveLength(4);
+    for (const s of j1) {
+      expect(s.cycle).toMatchObject({ green: 25, yellow: 3, red: 32 });
+      expect(s.repeaters?.map((h) => h.mount)).toEqual(['post']);
+    }
+    expect(map.crosswalks.map((c) => c.id).sort()).toEqual(['cw-bac-s', 'cw-giua-s', 'cw-nam-e', 'cw-tay']);
+    const centre = (/** @type {string} */ id) => map.roads.find((r) => r.id === id)?.laneLines.map((l) => `${l.id}:${l.type}`);
+    expect(centre('bac')).toEqual(['bac-lc-1:solid', 'bac-lc-2:dashed']);
+    expect(centre('nam')).toEqual(['nam-lc-1:dashed', 'nam-lc-2:solid']);
+    // Written centre lines stay as written.
+    expect(centre('tay')).toEqual(['tay-lc-1:dashed', 'tay-lc-2:solid']);
+    expect(centre('giua')).toEqual(['giua-lc-1:dashed', 'giua-lc-2:solid']);
+    expect(map.laneArrows?.map((a) => `${a.id}:${a.turns.join('+')}`)).toEqual(['la-mot-chieu-f0:right', 'la-mot-chieu-f1:left']);
   });
 });
 

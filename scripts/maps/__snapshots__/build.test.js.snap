@@ -655,7 +655,54 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
           35.418
         ]
       ],
-      "signalId": "sig-w1-2-f"
+      "signalId": "sig-w1-2-f",
+      "walkSignalId": "sig-w2-b"
+    },
+    {
+      "id": "cw-w2-s",
+      "polygon": [
+        [
+          129.432,
+          33.918
+        ],
+        [
+          129.432,
+          29.918
+        ],
+        [
+          122.432,
+          29.918
+        ],
+        [
+          122.432,
+          33.918
+        ]
+      ],
+      "signalId": "sig-w2-b",
+      "walkSignalId": "sig-w1-2-f"
+    },
+    {
+      "id": "cw-w4-3-out-s",
+      "polygon": [
+        [
+          130.932,
+          42.418
+        ],
+        [
+          134.932,
+          42.418
+        ],
+        [
+          134.932,
+          35.418
+        ],
+        [
+          130.932,
+          35.418
+        ]
+      ],
+      "signalId": "sig-w4-3-out-b",
+      "walkSignalId": "sig-w2-b"
     }
   ],
   "entries": [],
@@ -751,6 +798,33 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
     }
   ],
   "kind": "osm",
+  "laneArrows": [
+    {
+      "heading": 0,
+      "id": "la-w1-2-f0",
+      "laneId": "w1-2-f0",
+      "pos": {
+        "x": 90.506,
+        "z": 40.668
+      },
+      "turns": [
+        "straight"
+      ]
+    },
+    {
+      "heading": 0,
+      "id": "la-w1-2-f1",
+      "laneId": "w1-2-f1",
+      "pos": {
+        "x": 90.506,
+        "z": 37.168
+      },
+      "turns": [
+        "straight",
+        "left"
+      ]
+    }
+  ],
   "laneJoins": [],
   "name": {
     "vi": "Đoạn phố kiểm thử (dữ liệu tổng hợp)"
@@ -1617,7 +1691,7 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
       "kind": "tree",
       "pos": {
         "x": 121.582,
-        "z": 26.877
+        "z": 25.877
       },
       "solid": true
     },
@@ -1896,7 +1970,7 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
       "id": "pr-tree-w4-3-out-r-1",
       "kind": "tree",
       "pos": {
-        "x": 136.563,
+        "x": 138.563,
         "z": 43.268
       },
       "solid": true
@@ -2015,11 +2089,28 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
       "laneLines": [
         {
           "crossable": "both",
-          "id": "w1-2-lf1",
+          "id": "w1-2-lf1-1",
           "left": "w1-2-f1",
           "polyline": [
             [
               -33.827,
+              38.918
+            ],
+            [
+              75.506,
+              38.918
+            ]
+          ],
+          "right": "w1-2-f0",
+          "type": "dashed"
+        },
+        {
+          "crossable": "none",
+          "id": "w1-2-lf1-2",
+          "left": "w1-2-f1",
+          "polyline": [
+            [
+              75.506,
               38.918
             ],
             [
@@ -2032,7 +2123,7 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
             ]
           ],
           "right": "w1-2-f0",
-          "type": "dashed"
+          "type": "solid"
         }
       ],
       "lanes": [
@@ -2136,13 +2227,30 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
       "id": "w2",
       "laneLines": [
         {
-          "crossable": "both",
-          "id": "w2-lc",
+          "crossable": "none",
+          "id": "w2-lc-1",
           "left": "w2-b0",
           "polyline": [
             [
               125.932,
               34.418
+            ],
+            [
+              125.932,
+              -2.082
+            ]
+          ],
+          "right": "w2-f0",
+          "type": "solid"
+        },
+        {
+          "crossable": "both",
+          "id": "w2-lc-2",
+          "left": "w2-b0",
+          "polyline": [
+            [
+              125.932,
+              -2.082
             ],
             [
               125.932,
@@ -2418,12 +2526,29 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
       "id": "w4-3-out",
       "laneLines": [
         {
-          "crossable": "both",
-          "id": "w4-3-out-lc",
+          "crossable": "none",
+          "id": "w4-3-out-lc-1",
           "left": "w4-3-out-b0",
           "polyline": [
             [
               130.432,
+              38.918
+            ],
+            [
+              147.132,
+              38.918
+            ]
+          ],
+          "right": "w4-3-out-f0",
+          "type": "solid"
+        },
+        {
+          "crossable": "both",
+          "id": "w4-3-out-lc-2",
+          "left": "w4-3-out-b0",
+          "polyline": [
+            [
+              147.132,
               38.918
             ],
             [
@@ -2550,51 +2675,82 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
   "signals": [
     {
       "cycle": {
-        "green": 27,
+        "green": 25,
         "offset": 0,
-        "red": 30,
+        "red": 32,
         "yellow": 3
       },
       "heading": 0,
       "id": "sig-w1-2-f",
       "pos": {
-        "x": 106.506,
+        "x": 105.506,
         "z": 43.418
       },
+      "repeaters": [
+        {
+          "mastPos": {
+            "x": 131.932,
+            "z": 43.418
+          },
+          "mount": "mast-arm",
+          "pos": {
+            "x": 131.932,
+            "z": 38.918
+          }
+        }
+      ],
       "stopLineIds": [
         "sl-w1-2-f"
       ]
     },
     {
       "cycle": {
-        "green": 27,
+        "green": 25,
         "offset": 30,
-        "red": 30,
+        "red": 32,
         "yellow": 3
       },
       "heading": -1.571,
       "id": "sig-w2-b",
       "pos": {
         "x": 121.432,
-        "z": 33.418
+        "z": 27.918
       },
+      "repeaters": [
+        {
+          "mount": "post",
+          "pos": {
+            "x": 121.432,
+            "z": 43.918
+          }
+        }
+      ],
       "stopLineIds": [
         "sl-w2-b"
       ]
     },
     {
       "cycle": {
-        "green": 27,
+        "green": 25,
         "offset": 0,
-        "red": 30,
+        "red": 32,
         "yellow": 3
       },
       "heading": 3.142,
       "id": "sig-w4-3-out-b",
       "pos": {
-        "x": 131.432,
+        "x": 136.932,
         "z": 34.418
       },
+      "repeaters": [
+        {
+          "mount": "post",
+          "pos": {
+            "x": 119.932,
+            "z": 34.418
+          }
+        }
+      ],
       "stopLineIds": [
         "sl-w4-3-out-b"
       ]
@@ -2633,11 +2789,11 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
       ],
       "segment": [
         [
-          106.506,
+          105.506,
           42.418
         ],
         [
-          106.506,
+          105.506,
           35.418
         ]
       ],
@@ -2652,11 +2808,11 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
       "segment": [
         [
           125.932,
-          33.418
+          27.918
         ],
         [
           122.432,
-          33.418
+          27.918
         ]
       ],
       "signalId": "sig-w2-b"
@@ -2669,11 +2825,11 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
       ],
       "segment": [
         [
-          131.432,
+          136.932,
           38.918
         ],
         [
-          131.432,
+          136.932,
           35.418
         ]
       ],

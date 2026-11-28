@@ -198,7 +198,7 @@ describe('traffic source parsing', () => {
 });
 
 describe('lane graph of the shipped maps', () => {
-  it.each(NO_TRAFFIC_MAPS)('%s adds only the lane graph, as it has no traffic', (id) => {
+  it.each(NO_TRAFFIC_MAPS)('%s adds only the lane graph and its lane arrows, as it has no traffic', (id) => {
     const { spec, json } = /** @type {NonNullable<ReturnType<typeof built.get>>} */ (built.get(id));
     const map = JSON.parse(json);
     expect(map.traffic).toBeUndefined();
@@ -206,10 +206,11 @@ describe('lane graph of the shipped maps', () => {
     delete map.connectors;
     delete map.conflicts;
     delete map.laneJoins;
+    delete map.laneArrows;
     expect(`${JSON.stringify(map, null, 2)}\n`).toBe(serializeMap(compileMap(spec)));
   });
 
-  it.each(TRAFFIC_MAPS)('%s changes only the lane graph, traffic and time limit', (id) => {
+  it.each(TRAFFIC_MAPS)('%s changes only the lane graph, its lane arrows, traffic and time limit', (id) => {
     const { spec, map } = /** @type {NonNullable<ReturnType<typeof built.get>>} */ (built.get(id));
     const base = JSON.parse(serializeMap(compileMap(spec)));
     const copy = structuredClone(map);
@@ -217,6 +218,7 @@ describe('lane graph of the shipped maps', () => {
     delete copy.connectors;
     delete copy.conflicts;
     delete copy.laneJoins;
+    delete copy.laneArrows;
     delete copy.traffic;
     copy.route.timeLimitS = base.route.timeLimitS;
     expect(copy).toEqual(base);
