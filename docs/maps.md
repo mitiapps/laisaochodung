@@ -70,8 +70,9 @@ are byte-identical.
 ### Junctions
 
 Built to QCVN 41:2024 (`scripts/maps/lib/elements.js`, `lane-arrows.js`; render in
-`src/render/traffic-lights.js` and `markings.js`). Marking sizes are build and render constants
-tagged "2019 text = 2026 draft"; thresholds the standard does not give are `design`.
+`src/render/traffic-lights.js`, `pedestrian-lights.js` and `markings.js`). Marking sizes are build
+and render constants tagged "2019 text = 2026 draft"; thresholds the standard does not give are
+`design`.
 
 - **Cycle.** `DEFAULT_CYCLE` is green 25 s, yellow 3 s, red 32 s (period 60 s). Approaches on one
   axis share a phase; the crossing axis runs half a period (30 s) later, so each change has 2 s of
@@ -92,6 +93,12 @@ tagged "2019 text = 2026 draft"; thresholds the standard does not give are `desi
   surveyed, as a mid-block crossing; an authored crosswalk always stays where it is written.
   `Crosswalk.walkSignalId` names a signal of the other axis, whose green times the pedestrian
   heads (flashing for its last 5 s).
+- **Pedestrian heads (6.5.1).** Each crosswalk with a `walkSignalId` gets a head at both ends
+  (`src/render/pedestrian-lights.js`), red standing figure over green walking figure (Kiểu 2),
+  green lamp 2.2 m up, facing across the crosswalk to the far end. Its post stands 0.6 m beyond
+  the end and 0.3 m outside the zebra on the side away from the junction, stepped outwards until
+  it is off every lane and junction. Walk lights the green figure, flashing blinks it at 1 Hz,
+  stop lights the red one. The heads are visual only and cost two draw calls in all.
 - **Stop line.** 30 cm wide, 2.0 m before the junction's crosswalk on that approach (G2.1:
   1.5–3.0 m), which takes the approach's signal; 1 m before the road end where there is none. On
   every signalised arm of 20 m or more the line is therefore 6.5 m from the road end.

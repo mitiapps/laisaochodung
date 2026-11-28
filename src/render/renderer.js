@@ -21,6 +21,7 @@ import { FAR_M, LOW_FAR_M, createCameraRig, createEnvironment } from './scene.js
 import { buildScenery } from './scenery/index.js';
 import { SCENERY_KIT } from './scenery/kit.js';
 import { buildSigns } from './signs.js';
+import { buildPedestrianLights } from './pedestrian-lights.js';
 import { buildTrafficLights } from './traffic-lights.js';
 import { createVehicleView, lampState } from './vehicle-view.js';
 import { vehicleModel } from './vehicles/index.js';
@@ -37,6 +38,7 @@ import { vehicleModel } from './vehicles/index.js';
  * @property {ReturnType<typeof buildScenery>} scenery Buildings and street furniture.
  * @property {ReturnType<typeof buildSigns>} signs Signs.
  * @property {ReturnType<typeof buildTrafficLights>} lights Signal heads.
+ * @property {ReturnType<typeof buildPedestrianLights>} pedestrianLights Pedestrian signal heads.
  * @property {ReturnType<typeof buildRouteMarkers>} markers Route markers.
  * @property {ReturnType<typeof buildActors>} actors Scripted actors and traffic.
  * @property {ReturnType<typeof createEnvironment>} environment Lights, fog and rain.
@@ -131,6 +133,8 @@ export function buildWorld(map, vehicleInfo, { quality = 'high' } = {}) {
   scene.add(signs.group);
   const lights = buildTrafficLights(map);
   scene.add(lights.group);
+  const pedestrianLights = buildPedestrianLights(map);
+  scene.add(pedestrianLights.group);
   const markers = buildRouteMarkers(map);
   scene.add(markers.group);
   const actors = buildActors(map);
@@ -153,6 +157,7 @@ export function buildWorld(map, vehicleInfo, { quality = 'high' } = {}) {
     scenery,
     signs,
     lights,
+    pedestrianLights,
     markers,
     actors,
     environment,
@@ -168,6 +173,7 @@ export function buildWorld(map, vehicleInfo, { quality = 'high' } = {}) {
       scenery.dispose();
       signs.dispose();
       lights.dispose();
+      pedestrianLights.dispose();
       markers.dispose();
       skids.dispose();
       environment.dispose();
@@ -197,7 +203,7 @@ export function createRenderer(canvas, map, vehicleInfo) {
   gl.shadowMap.type = PCFSoftShadowMap;
 
   const world = buildWorld(map, vehicleInfo, { quality });
-  const { scene, lights, markers, actors, environment, ego, cockpit, skids, ghosts } = world;
+  const { scene, lights, pedestrianLights, markers, actors, environment, ego, cockpit, skids, ghosts } = world;
   const offsets = wheelOffsets(vehicleInfo.legalClass, vehicleInfo.lengthM, vehicleInfo.widthM);
   const shake = createShake();
 
@@ -273,6 +279,7 @@ export function createRenderer(canvas, map, vehicleInfo) {
     cockpit.update(frame.ego.wheels[0]?.steer ?? 0);
     actors.update(prev, frame, alpha, newTick);
     lights.update(frame.trafficLights, frame.t);
+    pedestrianLights.update(frame.t);
     markers.update(frame, now);
     ghosts.update(now);
     const lean = motorbike ? leanAngle(frame.ego.speed, frame.ego.yawRate) : 0;
