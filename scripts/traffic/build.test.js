@@ -7,11 +7,14 @@ import { checkTrafficParams } from '../../src/contracts/traffic.js';
 import { buildTraffic, compileTrafficParams } from './build.js';
 
 const PARAMS_FILE = new URL('../../data/traffic/params.yaml', import.meta.url);
+const DEFAULTS_FILE = new URL('../../data/legal/speed-defaults.yaml', import.meta.url);
 
 /** @typedef {import('../../src/contracts/check.js').UntrustedJson} UntrustedJson Parsed YAML. */
 
 /** @returns {Promise<UntrustedJson>} Fresh parsed copy of the shipped YAML. */
 const shipped = async () => parse(await readFile(PARAMS_FILE, 'utf8'));
+/** @returns {Promise<UntrustedJson>} Fresh parsed copy of the shipped speed defaults. */
+const shippedDefaults = async () => parse(await readFile(DEFAULTS_FILE, 'utf8'));
 
 /** @type {string} */
 let dir;
@@ -24,7 +27,7 @@ afterAll(async () => {
 
 describe('compileTrafficParams', () => {
   it('compiles the shipped parameters to values only', async () => {
-    const params = compileTrafficParams(await shipped());
+    const params = compileTrafficParams(await shipped(), await shippedDefaults());
     expect(checkTrafficParams(params)).toEqual([]);
     const text = JSON.stringify(params);
     expect(text).not.toContain('paramBasis');
@@ -60,7 +63,38 @@ describe('compileTrafficParams', () => {
   it.each(broken)('rejects %s', async (_, mutate, pattern) => {
     const doc = await shipped();
     mutate(doc);
-    expect(() => compileTrafficParams(doc)).toThrow(pattern);
+    const defaults = await shippedDefaults();
+    expect(() => compileTrafficParams(doc, defaults)).toThrow(pattern);
+  });
+
+  it('carries every statutory default limit row without its citation', async () => {
+    const defaults = await shippedDefaults();
+    const params = compileTrafficParams(await shipped(), defaults);
+    expect(params.speedDefaults).toEqual(
+      defaults.map((/** @type {UntrustedJson} */ r) => ({ legalClass: r.legalClass, builtUp: r.builtUp, multiLane: r.multiLane, maxKmh: r.maxKmh })),
+    );
+    expect(JSON.stringify(params.speedDefaults)).not.toContain('citation');
+  });
+
+  /** @type {[string, (rows: UntrustedJson) => void, RegExp][]} */
+  const brokenDefaults = [
+    ['a row with an unknown class', (r) => (r[0].legalClass = 'tram'), /speedDefaults\[0\]\.legalClass/],
+    ['a row with a zero limit', (r) => (r[1].maxKmh = 0), /speedDefaults\[1\]\.maxKmh: must be positive/],
+    ['a row without a built-up flag', (r) => delete r[2].builtUp, /speedDefaults\[2\]\.builtUp: expected a boolean/],
+    ['a duplicate row', (r) => r.push({ ...r[0] }), /duplicate row/],
+  ];
+  it.each(brokenDefaults)('rejects speed defaults with %s', async (_, mutate, pattern) => {
+    const rows = await shippedDefaults();
+    mutate(rows);
+    const doc = await shipped();
+    expect(() => compileTrafficParams(doc, rows)).toThrow(pattern);
+  });
+
+  it('rejects default limits written into params.yaml', async () => {
+    const doc = await shipped();
+    doc.speedDefaults = [];
+    const defaults = await shippedDefaults();
+    expect(() => compileTrafficParams(doc, defaults)).toThrow(/speedDefaults: comes from data\/legal/);
   });
 });
 
@@ -69,7 +103,9 @@ describe('buildTraffic', () => {
     const outFile = path.join(dir, 'out', 'traffic-params.json');
     const { models } = await buildTraffic({ outFile });
     expect(models).toBe(5);
-    expect(checkTrafficParams(JSON.parse(await readFile(outFile, 'utf8')))).toEqual([]);
+    const written = JSON.parse(await readFile(outFile, 'utf8'));
+    expect(checkTrafficParams(written)).toEqual([]);
+    expect(written.speedDefaults.length).toBe((await shippedDefaults()).length);
   });
 
   it('fails with a clear message on an invalid file', async () => {

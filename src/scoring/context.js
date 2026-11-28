@@ -5,6 +5,7 @@
  */
 
 import { DISCONTINUITY_EVENTS } from '../contracts/telemetry.js';
+import { findSpeedDefault, isMultiLaneRoad } from '../contracts/speed-limit.js';
 import { DT, mpsToKmh } from '../contracts/units.js';
 import { angleDiff, headingVector, leftVector } from '../geometry/index.js';
 import { crossedLines, laneById, laneHeadingAt, locate, zonesAt } from '../map-query/index.js';
@@ -229,7 +230,7 @@ export function isDiscontinuity(frame) {
  * @param {boolean} builtUp Built-up.
  * @returns {LimitInfo | null} Limit, null off the lanes.
  */
-function limitFor(env, loc, zones, builtUp) {
+export function limitFor(env, loc, zones, builtUp) {
   if (!loc.laneId) return null;
   const signed = zones.filter((z) => z.type === 'speed-limit' && typeof z.valueKmh === 'number');
   if (signed.length > 0) {
@@ -237,11 +238,7 @@ function limitFor(env, loc, zones, builtUp) {
   }
   const entry = laneById(env.map, loc.laneId);
   if (!entry) return null;
-  const { road } = entry;
-  const multiLane = road.divided || (road.oneway && road.lanes.length >= 2);
-  const row = env.bundle.speedDefaults.find(
-    (s) => s.legalClass === env.vehicle.legalClass && s.builtUp === builtUp && s.multiLane === multiLane,
-  );
+  const row = findSpeedDefault(env.bundle.speedDefaults, env.vehicle.legalClass, builtUp, isMultiLaneRoad(entry.road));
   return row ? { kmh: row.maxKmh, source: 'default', verified: row.verified } : null;
 }
 

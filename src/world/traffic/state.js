@@ -11,7 +11,7 @@
 import { PERSONALITIES } from '../../contracts/traffic.js';
 import { createStream, hash32, nextUint32, pick, range, streamFor, uniform } from '../random.js';
 import { normalizeAngle, projectOntoPolyline } from '../../geometry/index.js';
-import { buildLaneGraph, edgePoint } from './lane-graph.js';
+import { buildLaneGraph, edgeLimitKmh, edgePoint } from './lane-graph.js';
 import { createGrid } from './grid.js';
 import { RING_STEPS, drawHumanFactors } from './human-factors.js';
 import { FLAG_COUNT, clearFlags } from './violations.js';
@@ -175,14 +175,16 @@ export function modelRows(params, key) {
 }
 
 /**
- * Desired speed on an edge before the agent's factor: the class share of the limit in force,
- * else the class desired speed; capped by the turn speed of a connector.
+ * Desired speed on an edge before the agent's factor: the class share of the limit in force for
+ * the model's legal class, else the class desired speed; capped by the turn speed of a connector.
  * @param {import('./lane-graph.js').Edge} edge Edge.
  * @param {ClassParams} cls Class row.
+ * @param {ModelParams['kind']} kind Model kind, which is its legal class.
  * @returns {number} m/s.
  */
-export function edgeBaseSpeed(edge, cls) {
-  const base = edge.limitKmh !== null ? (edge.limitKmh / 3.6) * cls.v0LimitFactor : cls.v0Kmh / 3.6;
+export function edgeBaseSpeed(edge, cls, kind) {
+  const limit = edgeLimitKmh(edge, kind);
+  const base = limit !== null ? (limit / 3.6) * cls.v0LimitFactor : cls.v0Kmh / 3.6;
   return Math.min(base, edge.turnSpeedMps);
 }
 
@@ -284,7 +286,7 @@ export function createTrafficState(map, params, runSeed) {
   const traffic = map.traffic;
   if (!traffic) throw new Error(`Map ${map.id} has no traffic block`);
   const capacity = traffic.maxAgents;
-  const graph = buildLaneGraph(map, params.behaviour, sweepOptions(map, params));
+  const graph = buildLaneGraph(map, params.behaviour, sweepOptions(map, params), params.speedDefaults);
   const modelKeys = Object.keys(params.models);
   const mixModel = traffic.mix.map((m) => {
     const i = modelKeys.indexOf(m.model);
@@ -627,8 +629,8 @@ function drawNoSignal(st, slot) {
  * @returns {void}
  */
 export function refreshBaseSpeed(st, slot) {
-  const { cls } = modelRows(st.params, st.modelKeys[st.model[slot]]);
-  st.baseV0[slot] = edgeBaseSpeed(st.graph.edges[st.edge[slot]], cls);
+  const { model, cls } = modelRows(st.params, st.modelKeys[st.model[slot]]);
+  st.baseV0[slot] = edgeBaseSpeed(st.graph.edges[st.edge[slot]], cls, model.kind);
 }
 
 /**

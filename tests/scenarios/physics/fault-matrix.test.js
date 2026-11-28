@@ -139,7 +139,7 @@ describe('fault table end to end on tutorial 02', () => {
   it('pulling away on green into a red-light runner crossing from the left is a notice', async () => {
     // The signal phases are swapped so the ego has green from t 0; it starts from rest 13 m before
     // its stop line. The only traffic is a stream down the northern approach whose drivers all run
-    // the red. Seed 12 gives a glancing contact with a rider: the ego gains several m/s between the
+    // the red. Seed 9 gives a glancing contact with a rider: the ego gains several m/s between the
     // rider's red-light flag first showing and the contact, and keeps most of its speed after it.
     const map = stage([]);
     const traffic = /** @type {NonNullable<GameMap['traffic']>} */ (map.traffic);
@@ -151,7 +151,7 @@ describe('fault table end to end on tutorial 02', () => {
     for (const p of Object.values(params.personalities)) p.violations.redLight = 1;
     params.violations.carScale = 1;
     const run = await drivePhysics(map, 'car-sedan', {
-      sim: { traffic: 'map', runSeed: 12, params },
+      sim: { traffic: 'map', runSeed: 9, params },
       aware: false,
       cruiseMps: 12,
       path: straightLine(startX, 15, LANE_Z),

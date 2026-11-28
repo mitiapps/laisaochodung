@@ -11,11 +11,14 @@
  * that lane and obstacles that traffic perceives exactly.
  */
 
+import { findSpeedDefault, isMultiLaneRoad } from '../../contracts/speed-limit.js';
 import { angleDiff, footprint, headingOf, polygonsIntersect, projectOntoPolyline, segmentIntersection } from '../../geometry/index.js';
 
 /** @typedef {import('../../contracts/map.js').GameMap} GameMap */
 /** @typedef {import('../../contracts/map.js').Connector} Connector */
 /** @typedef {import('../../contracts/telemetry.js').Vec2} Vec2 */
+/** @typedef {import('../../contracts/speed-limit.js').SpeedDefaultKey} SpeedDefaultKey */
+/** @typedef {'car' | 'motorbike'} LimitClass Legal class of a traffic model (`ModelParams.kind`). */
 /** @typedef {import('./perception.js').Obstacle} Obstacle */
 /** @typedef {{edge: number, fromS: number, toS: number}} LaneSpan A stretch of one lane edge. */
 
@@ -83,8 +86,11 @@ const SWING_SAMPLE_M = 0.5;
  *   the lane end). Connectors: 0.
  * @property {'signal' | 'stop-sign' | 'give-way' | null} control Lanes: control of the stop line.
  * @property {number} signalIndex Lanes: index into `map.signals` of the signal, or −1.
- * @property {number | null} limitKmh Speed limit binding the lane (of the approach lane for a
- *   connector), or null when none is known.
+ * @property {number | null} limitKmh Signed speed limit binding the lane (of the approach lane for
+ *   a connector), or null when no sign binds it.
+ * @property {Record<LimitClass, number | null>} defaultKmh Statutory default limit of the lane (of
+ *   the approach lane for a connector) per legal class, or null when no default row matches;
+ *   `limitKmh` overrides it.
  * @property {number} turnSpeedMps Connectors: speed cap through the turn; Infinity on lanes and
  *   straight connectors.
  * @property {'straight' | 'left' | 'right' | 'uturn' | null} turn Connectors: manoeuvre.
@@ -120,6 +126,33 @@ function laneLimit(map, laneId) {
     if (limit === null || z.valueKmh < limit) limit = z.valueKmh;
   }
   return limit;
+}
+
+/**
+ * Statutory default limits of a lane per legal class, as the scorer resolves them: built-up when a
+ * `built-up` zone lists the lane, multi-lane by the road's TT 38 column.
+ * @param {GameMap} map Map.
+ * @param {import('../../contracts/map.js').Road} road Road of the lane.
+ * @param {string} laneId Lane id.
+ * @param {readonly SpeedDefaultKey[]} rows Default rows.
+ * @returns {Record<LimitClass, number | null>} Limits in km/h.
+ */
+function laneDefaults(map, road, laneId, rows) {
+  const builtUp = map.zones.some((z) => z.type === 'built-up' && z.laneIds.includes(laneId));
+  const multiLane = isMultiLaneRoad(road);
+  /** @type {(cls: LimitClass) => number | null} */
+  const of = (cls) => findSpeedDefault(rows, cls, builtUp, multiLane)?.maxKmh ?? null;
+  return { car: of('car'), motorbike: of('motorbike') };
+}
+
+/**
+ * Speed limit in force on an edge for a legal class: the signed limit, else the statutory default.
+ * @param {Edge} edge Edge.
+ * @param {LimitClass} cls Legal class.
+ * @returns {number | null} Limit in km/h, or null when none is known.
+ */
+export function edgeLimitKmh(edge, cls) {
+  return edge.limitKmh ?? edge.defaultKmh[cls];
 }
 
 /**
@@ -390,9 +423,11 @@ function addBlocks(map, edges, edgeIndex) {
  * @param {GameMap} map Map.
  * @param {GraphParams} params Shaping values.
  * @param {SweepOptions} [sweep] Vehicle sizes; without it no hold point moves back.
+ * @param {readonly SpeedDefaultKey[]} [speedDefaults] Statutory default limits
+ *   (`TrafficParams.speedDefaults`); without them only signed limits bind.
  * @returns {LaneGraph} Graph.
  */
-export function buildLaneGraph(map, params, sweep) {
+export function buildLaneGraph(map, params, sweep, speedDefaults = []) {
   /** @type {Edge[]} */
   const edges = [];
   /** @type {Map<string, number>} */
@@ -440,6 +475,7 @@ export function buildLaneGraph(map, params, sweep) {
         control: stop ? stop.control : null,
         signalIndex,
         limitKmh: laneLimit(map, lane.id),
+        defaultKmh: laneDefaults(map, road, lane.id, speedDefaults),
         turnSpeedMps: Infinity,
         turn: null,
         fromEdge: -1,
@@ -487,6 +523,7 @@ export function buildLaneGraph(map, params, sweep) {
       control: null,
       signalIndex: -1,
       limitKmh: edges[fromEdge].limitKmh,
+      defaultKmh: edges[fromEdge].defaultKmh,
       turnSpeedMps: turnSpeed,
       turn: c.turn,
       fromEdge,

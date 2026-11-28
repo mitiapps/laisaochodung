@@ -121,9 +121,9 @@ function drawModel(st, rng) {
 export function createSpawner(st, t0) {
   const traffic = /** @type {import('../../contracts/map.js').TrafficConfig} */ (st.map.traffic);
   const edges = st.graph.edges;
-  const classes = [...new Set(st.mixModel)].map((m) => modelRows(st.params, st.modelKeys[m]).cls);
+  const rows = [...new Set(st.mixModel)].map((m) => modelRows(st.params, st.modelKeys[m]));
   /** @type {(edge: import('./lane-graph.js').Edge) => number} */
-  const vMaxOf = (edge) => classes.reduce((v, cls) => Math.max(v, SPAWN_SPEED_SHARE * edgeBaseSpeed(edge, cls)), 0);
+  const vMaxOf = (edge) => rows.reduce((v, { model, cls }) => Math.max(v, SPAWN_SPEED_SHARE * edgeBaseSpeed(edge, cls, model.kind)), 0);
   const sources = traffic.sources.map((src, i) => {
     const edge = st.graph.edgeIndex.get(src.laneId);
     if (edge === undefined || edge >= st.graph.laneCount) throw new Error(`Traffic source names unknown lane ${src.laneId}`);
@@ -302,7 +302,7 @@ export function trySpawn(st, edge, s, modelIndex, ego, scripted, firstNew) {
   for (let i = firstNew; i < st.activeCount; i += 1) if (hit(st.active[i])) return -1;
   // A speed it can stop from before the agent ahead and the hold point (the light may be red).
   const stopGap = Math.min(blockAhead, e.sink ? gapAhead : Math.min(gapAhead, e.holdS - (sc + half)));
-  const v0 = edgeBaseSpeed(e, cls);
+  const v0 = edgeBaseSpeed(e, cls, model.kind);
   const speed = Math.min(v0 * SPAWN_SPEED_SHARE, Math.sqrt(Math.max(0, 2 * cls.comfortDecelMps2 * (stopGap - cls.minGapM))));
   return spawnAgent(st, edge, sc, speed, modelIndex);
 }

@@ -42,7 +42,7 @@ const CHECKPOINT_TICKS = Math.round(REPLAY_CHECKPOINT_S / DT);
 const CUTTING_RIDERS = structuredClone(PARAMS);
 for (const row of Object.values(CUTTING_RIDERS.personalities)) row.violations.cutIn = 1;
 /** A run seed on which a vehicle cuts in on the cruising ego early in the run, with no other contact for 16 s. */
-const CUT_IN_SEED = 3;
+const CUT_IN_SEED = 16;
 
 beforeAll(async () => {
   await RAPIER.init();
@@ -636,7 +636,7 @@ describe('session with traffic (dev build checks)', () => {
       createSim: recordingSim(recorded),
       createInput: pursuitInput(recorded, PASTEUR.actors.length, 'car'),
     });
-    await h.game.start('osm-pasteur', 'car-sedan', { seed: 4242 });
+    await h.game.start('osm-pasteur', 'car-sedan', { seed: 8 });
     runFor(h, 20);
     const egoHit = recorded.flatMap((f) => f.events).find((ev) => ev.type === 'collision' && ev.striker === 'ego' && ev.sameLaneAhead);
     expect(egoHit).toBeDefined();

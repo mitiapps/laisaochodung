@@ -9,8 +9,10 @@
  */
 
 import { Checker } from './check.js';
+import { LEGAL_CLASSES } from './vehicle.js';
 
 /** @typedef {import('./check.js').UntrustedJson} UntrustedJson */
+/** @typedef {import('./speed-limit.js').SpeedDefaultKey} SpeedDefaultKey */
 
 /** @typedef {'car' | 'taxi' | 'truck' | 'bus' | 'motorbike'} TrafficClass Driving class of a model. */
 /** @typedef {'careful' | 'normal' | 'reckless'} Personality Driver personality. */
@@ -18,7 +20,7 @@ import { Checker } from './check.js';
 /**
  * IDM row and class limits for the "normal" personality; personalities scale it.
  * @typedef {object} ClassParams
- * @property {number} v0Kmh Desired speed where no limit is known.
+ * @property {number} v0Kmh Desired speed where neither a sign nor a statutory default gives a limit.
  * @property {number} v0LimitFactor Desired speed as a share of the limit in force.
  * @property {number} timeGapS IDM safe time gap T.
  * @property {number} minGapM IDM jam distance s0.
@@ -29,7 +31,6 @@ import { Checker } from './check.js';
  * @property {number} reactionMeanS Mean reaction time (lognormal population).
  * @property {number} reactionSdS Standard deviation of the reaction time.
  * @property {number} criticalGapS Gap-acceptance critical gap at unsignalled conflicts.
- * @property {number} followUpGapS Follow-up headway behind an accepted gap.
  * @property {number} tailgatingGapS Time gap below which the `tailgating` flag is set.
  */
 
@@ -66,7 +67,6 @@ import { Checker } from './check.js';
  * @property {number} accelFactor Multiplier on a.
  * @property {number} comfortDecelFactor Multiplier on b.
  * @property {number} reactionFactor Multiplier on the drawn reaction time.
- * @property {number} distractedReactionFactor Reaction multiplier during a distraction episode.
  * @property {number} distanceErr Relative gap estimation error (HDM Vs).
  * @property {number} approachErr Approach-rate error per metre of gap, 1/s (HDM rc).
  * @property {number} mobilPoliteness MOBIL politeness p.
@@ -82,7 +82,6 @@ import { Checker } from './check.js';
  * @typedef {object} HumanFactorParams
  * @property {number} perceptionTauS Time constant of the perception-error OU process.
  * @property {[number, number]} distractionDurationS Duration range of one distraction episode.
- * @property {number} v0VarCoeff Inter-driver variation coefficient of the desired speed.
  * @property {number} timeGapVarCoeff Inter-driver variation coefficient of T.
  */
 
@@ -92,7 +91,6 @@ import { Checker } from './check.js';
  *   motorbikes.
  * @property {number} earlyStartRedRemainingS Red time left below which an early starter goes.
  * @property {number} yellowLogisticK Steepness of `P(stop) = 1 / (1 + exp(k·(b_req − b_stop)))`, s²/m.
- * @property {number} stopLineOvershootShare Share of queued motorbikes that stop past the stop line.
  * @property {number} nearEgoViolationBoost Factor on violation rates of agents near the ego (1 = off).
  * @property {number} nearEgoBoostRadiusM Radius of the near-ego boost.
  */
@@ -101,10 +99,7 @@ import { Checker } from './check.js';
  * @typedef {object} MotorbikeParams
  * @property {number} laneWidthPerMps Dynamic lane width `lw = laneWidthPerMps · v + laneWidthBaseM`.
  * @property {number} laneWidthBaseM Base of the dynamic lane width.
- * @property {number} passClearanceM Centre-to-centre lateral clearance when passing.
- * @property {number} sideBySideM Lateral distance below which two riders count as side by side.
  * @property {number} keepRightOffsetM Offset right of the lane centre held without slots.
- * @property {number} queueMinGapM Jam distance s0 between queued riders at a red light.
  * @property {number} slotHz Rate of the lateral slot choice.
  */
 
@@ -150,6 +145,9 @@ import { Checker } from './check.js';
  * @property {MotorbikeParams} motorbike Lateral behaviour of motorbikes.
  * @property {BehaviourParams} behaviour Junction, lane-change and wreck behaviour.
  * @property {IncidentBand} incidentBand Incident rate target.
+ * @property {SpeedDefaultKey[]} speedDefaults Statutory default limits for lanes no sign binds,
+ *   copied by `npm run build:traffic` from `data/legal/speed-defaults.yaml` (the rows the scorer
+ *   uses, without their citations); `ModelParams.kind` is the legal class.
  * @property {number} mirrorRadiusM Agents within this distance of the ego get a physics body.
  * @property {number} maxMirrored Most agents mirrored at once.
  * @property {number} strikerShare Share of the closing speed above which one party is the striker
@@ -188,7 +186,6 @@ const CLASS_KEYS = Object.freeze([
   'reactionMeanS',
   'reactionSdS',
   'criticalGapS',
-  'followUpGapS',
   'tailgatingGapS',
 ]);
 /** @type {readonly (keyof PersonalityParams)[]} */
@@ -198,7 +195,6 @@ const PERSONALITY_SCALARS = Object.freeze([
   'accelFactor',
   'comfortDecelFactor',
   'reactionFactor',
-  'distractedReactionFactor',
   'distanceErr',
   'approachErr',
   'mobilPoliteness',
@@ -237,17 +233,13 @@ const VIOLATION_SCALARS = Object.freeze([
   'carScale',
   'earlyStartRedRemainingS',
   'yellowLogisticK',
-  'stopLineOvershootShare',
   'nearEgoViolationBoost',
   'nearEgoBoostRadiusM',
 ]);
 const MOTORBIKE_SCALARS = Object.freeze([
   'laneWidthPerMps',
   'laneWidthBaseM',
-  'passClearanceM',
-  'sideBySideM',
   'keepRightOffsetM',
-  'queueMinGapM',
   'slotHz',
 ]);
 const BEHAVIOUR_SCALARS = Object.freeze([
@@ -348,7 +340,17 @@ export function checkTrafficParams(params) {
   const c = new Checker();
   if (!c.object(params, 'params')) return c.problems;
   const p = /** @type {UntrustedJson} */ (params);
-  const sections = ['classes', 'models', 'personalities', 'humanFactors', 'violations', 'motorbike', 'behaviour', 'incidentBand'];
+  const sections = [
+    'classes',
+    'models',
+    'personalities',
+    'humanFactors',
+    'violations',
+    'motorbike',
+    'behaviour',
+    'incidentBand',
+    'speedDefaults',
+  ];
   numbers(c, p, TOP_SCALARS, 'params', sections);
   if (Number.isFinite(p.maxMirrored) && !Number.isInteger(p.maxMirrored)) c.fail('params.maxMirrored', 'expected an integer');
   if (Number.isFinite(p.viewHalfAngleDeg) && p.viewHalfAngleDeg > 180) c.fail('params.viewHalfAngleDeg', 'must be at most 180');
@@ -423,7 +425,7 @@ export function checkTrafficParams(params) {
   }
 
   if (c.object(p.humanFactors, 'humanFactors')) {
-    numbers(c, p.humanFactors, ['perceptionTauS', 'v0VarCoeff', 'timeGapVarCoeff'], 'humanFactors', ['distractionDurationS']);
+    numbers(c, p.humanFactors, ['perceptionTauS', 'timeGapVarCoeff'], 'humanFactors', ['distractionDurationS']);
     range(c, p.humanFactors.distractionDurationS, 'humanFactors.distractionDurationS');
     if (p.humanFactors.perceptionTauS === 0) c.fail('humanFactors.perceptionTauS', 'must be positive');
   }
@@ -440,6 +442,23 @@ export function checkTrafficParams(params) {
   if (c.object(p.incidentBand, 'incidentBand')) {
     numbers(c, p.incidentBand, ['minPerMin', 'maxPerMin'], 'incidentBand');
     if (p.incidentBand.maxPerMin < p.incidentBand.minPerMin) c.fail('incidentBand', 'maxPerMin is below minPerMin');
+  }
+  if (c.array(p.speedDefaults, 'speedDefaults')) {
+    /** @type {Set<string>} */
+    const seen = new Set();
+    p.speedDefaults.forEach((/** @type {UntrustedJson} */ row, /** @type {number} */ i) => {
+      const rp = `speedDefaults[${i}]`;
+      if (!c.object(row, rp)) return;
+      c.oneOf(row.legalClass, LEGAL_CLASSES, `${rp}.legalClass`);
+      for (const k of ['builtUp', 'multiLane']) if (typeof row[k] !== 'boolean') c.fail(`${rp}.${k}`, 'expected a boolean');
+      if (c.number(row.maxKmh, `${rp}.maxKmh`, { min: 0 }) && row.maxKmh === 0) c.fail(`${rp}.maxKmh`, 'must be positive');
+      for (const k of Object.keys(row)) {
+        if (!['legalClass', 'builtUp', 'multiLane', 'maxKmh'].includes(k)) c.fail(`${rp}.${k}`, 'unknown key');
+      }
+      const key = `${String(row.legalClass)}/${String(row.builtUp)}/${String(row.multiLane)}`;
+      if (seen.has(key)) c.fail(rp, `duplicate row ${key}`);
+      seen.add(key);
+    });
   }
   return c.problems;
 }

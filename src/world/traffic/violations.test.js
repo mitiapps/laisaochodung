@@ -132,6 +132,25 @@ describe('flags are facts', () => {
     expect(st.graph.edges[st.edge[k]].id).toBe('rs-n');
   });
 
+  it('flags speeding above the statutory default on a built-up lane no sign binds', () => {
+    const map = emptyMap('signal');
+    const st = createTraffic(map, LAWFUL, 3);
+    const k = place(st, 'rw-e1', 30, 0, 'car', 'c-rw-e1-re-e0');
+    const edge = st.graph.edges[st.edge[k]];
+    expect(edge.limitKmh).toBeNull();
+    // Two-way built-up road: the car row of the built-up, single-carriageway column.
+    const row = /** @type {{maxKmh: number}} */ (FULL.speedDefaults.find((s) => s.legalClass === 'car' && s.builtUp && !s.multiLane));
+    const limit = row.maxKmh / 3.6;
+    expect(st.baseV0[k]).toBeCloseTo(limit * FULL.classes.car.v0LimitFactor, 9);
+    st.v0Factor[k] = 1.3;
+    const steps = run(st, 0, 20, () => EGO_AWAY, allLights(map, 'green'));
+    const id = st.ids[k];
+    const fast = steps.find(({ poses }) => (poses.find((p) => p.id === id)?.speed ?? 0) > limit + 0.5);
+    expect(fast).toBeDefined();
+    const later = steps.find(({ t }) => t > /** @type {{t: number}} */ (fast).t + DT);
+    expect(later?.poses.find((p) => p.id === id)?.violations).toContain('speeding');
+  });
+
   it('flags speeding from the true speed above the limit', () => {
     const map = emptyMap('signal');
     const st = createTraffic(map, LAWFUL, 3);

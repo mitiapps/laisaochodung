@@ -49,7 +49,7 @@ import { detectContacts, makeWreck } from './contacts.js';
 import { STOPPED_MPS, createSpawner, inViewCone, runSpawner } from './spawner.js';
 import { queryGrid, rebuildGrid } from './grid.js';
 import { changingLane, moveAcross, tryMandatoryLaneChange } from './lane-change.js';
-import { edgeLateral, edgePoint, lanesUnder } from './lane-graph.js';
+import { edgeLateral, edgeLimitKmh, edgePoint, lanesUnder } from './lane-graph.js';
 import {
   chooseNext,
   claimAdd,
@@ -849,7 +849,8 @@ function computePhase(st, input, egoObs, scriptedObs, sc) {
     // Joining the exit lane behind a merging agent is not following it too closely.
     mergeLeader(st, k, pair);
     const trueGap = pair[0];
-    if (e.limitKmh !== null && v > e.limitKmh / 3.6) raise(st, k, FLAG.speeding);
+    const limitKmh = edgeLimitKmh(e, st.isMoto[k] === 1 ? 'motorbike' : 'car');
+    if (limitKmh !== null && v > limitKmh / 3.6) raise(st, k, FLAG.speeding);
     perceiveLeader(st, k, trueGap, pair[1], t, seen);
     let gapGo = distracted(st, k, t) ? Infinity : trueGap - QUEUE_BUFFER_M;
     let accGo = accel(st, k, v0, seen[0], seen[1]);
