@@ -642,7 +642,20 @@
         "yellow": 3,
         "red": 30,
         "offset": 0
-      }
+      },
+      "repeaters": [
+        {
+          "pos": {
+            "x": 8.5,
+            "z": 3.5
+          },
+          "mount": "mast-arm",
+          "mastPos": {
+            "x": 8.5,
+            "z": 5
+          }
+        }
+      ]
     },
     {
       "id": "sig-e",
@@ -659,7 +672,16 @@
         "yellow": 3,
         "red": 30,
         "offset": 0
-      }
+      },
+      "repeaters": [
+        {
+          "pos": {
+            "x": -8.5,
+            "z": -4.5
+          },
+          "mount": "post"
+        }
+      ]
     },
     {
       "id": "sig-n",
@@ -676,7 +698,16 @@
         "yellow": 3,
         "red": 30,
         "offset": 30
-      }
+      },
+      "repeaters": [
+        {
+          "pos": {
+            "x": -4.5,
+            "z": 8.5
+          },
+          "mount": "post"
+        }
+      ]
     },
     {
       "id": "sig-s",
@@ -693,10 +724,43 @@
         "yellow": 3,
         "red": 30,
         "offset": 30
-      }
+      },
+      "repeaters": [
+        {
+          "pos": {
+            "x": 4.5,
+            "z": -8.5
+          },
+          "mount": "post"
+        }
+      ]
     }
   ],
-  "crosswalks": [],
+  "crosswalks": [
+    {
+      "id": "cw-w",
+      "polygon": [
+        [
+          -8.75,
+          -3.5
+        ],
+        [
+          -7.25,
+          -3.5
+        ],
+        [
+          -7.25,
+          7
+        ],
+        [
+          -8.75,
+          7
+        ]
+      ],
+      "signalId": "sig-w",
+      "walkSignalId": "sig-n"
+    }
+  ],
   "restrictions": [],
   "entries": [],
   "pavements": [],
@@ -1668,6 +1732,34 @@
       },
       "heading": 0,
       "solid": false
+    }
+  ],
+  "laneArrows": [
+    {
+      "id": "la-rw-e0",
+      "laneId": "rw-e0",
+      "pos": {
+        "x": -24,
+        "z": 5.25
+      },
+      "heading": 0,
+      "turns": [
+        "straight",
+        "right"
+      ]
+    },
+    {
+      "id": "la-rw-e1",
+      "laneId": "rw-e1",
+      "pos": {
+        "x": -24,
+        "z": 1.75
+      },
+      "heading": 0,
+      "turns": [
+        "straight",
+        "left"
+      ]
     }
   ]
 }

@@ -9,6 +9,8 @@ import {
   createActorState,
   createRouteState,
   finishTarget,
+  PEDESTRIAN_FLASH_S,
+  pedestrianSignalState,
   signalState,
   actorStoppingDistance,
   stepActors,
@@ -244,8 +246,57 @@ describe('stepActors', () => {
   });
 });
 
+describe('pedestrianSignalState', () => {
+  it('walks through the green, flashes for its last seconds, and stops through yellow and red', () => {
+    const s = signal({ green: 25, yellow: 3, red: 32 });
+    expect(PEDESTRIAN_FLASH_S).toBe(5);
+    expect(pedestrianSignalState(s, 0)).toBe('walk');
+    expect(pedestrianSignalState(s, 19.999)).toBe('walk');
+    expect(pedestrianSignalState(s, 20)).toBe('flashing');
+    expect(pedestrianSignalState(s, 24.999)).toBe('flashing');
+    expect(pedestrianSignalState(s, 25)).toBe('stop');
+    expect(pedestrianSignalState(s, 27.999)).toBe('stop');
+    expect(pedestrianSignalState(s, 59.999)).toBe('stop');
+    expect(pedestrianSignalState(s, 60)).toBe('walk');
+  });
+
+  it('follows the offset and negative times like signalState', () => {
+    const s = signal({ green: 25, yellow: 3, red: 32, offset: 30 });
+    expect(pedestrianSignalState(s, 0)).toBe('stop');
+    expect(pedestrianSignalState(s, 30)).toBe('walk');
+    expect(pedestrianSignalState(s, -10)).toBe('flashing');
+    expect(pedestrianSignalState(s, -5)).toBe('stop');
+    for (let t = -61; t < 121; t += 0.5) {
+      const p = pedestrianSignalState(s, t);
+      expect(p === 'stop', `t = ${t}`).toBe(signalState(s, t) !== 'green');
+    }
+  });
+
+  it('flashes for the whole of a green shorter than the flash time', () => {
+    const s = signal({ green: 3, yellow: 3, red: 4 });
+    expect(pedestrianSignalState(s, 0)).toBe('flashing');
+    expect(pedestrianSignalState(s, 2.999)).toBe('flashing');
+    expect(pedestrianSignalState(s, 3)).toBe('stop');
+  });
+
+  it('rejects an empty cycle', () => {
+    expect(() => pedestrianSignalState(signal({ green: 0, yellow: 0, red: 0 }), 1)).toThrow(RangeError);
+  });
+});
+
 describe('stepRoute', () => {
   const at = (/** @type {number} */ x) => ({ x, z: 1.75 });
+
+  it('runs no route when it is off: no events, a null nav and the state unchanged', () => {
+    const state = createRouteState();
+    for (const [x, t] of [[10, 0], [60, 1], [186, 2], [10, MAP.route.timeLimitS * 2]]) {
+      const r = stepRoute(state, MAP, at(x), t, { route: 'off' });
+      expect(r).toEqual({ state, events: [], nav: null });
+      expect(r.state).toBe(state);
+    }
+    expect(stepRoute(state, MAP, at(10), 1, { route: 'map' }).nav).not.toBeNull();
+    expect(() => stepRoute(state, MAP, at(10), 1, { route: /** @type {never} */ ('maybe') })).toThrow(RangeError);
+  });
 
   it('emits checkpoints in order, then the finish, and points nav at the next target', () => {
     let state = createRouteState();

@@ -84,6 +84,7 @@ export function sanitizeInput(input) {
     signalCmd: i.signalCmd === 'left' || i.signalCmd === 'right' || i.signalCmd === 'hazard' ? i.signalCmd : null,
     lightsCmd: i.lightsCmd === 'cycle' || i.lightsCmd === 'flash' ? i.lightsCmd : null,
     horn: i.horn === true,
+    pushBack: i.pushBack === true,
   };
 }
 

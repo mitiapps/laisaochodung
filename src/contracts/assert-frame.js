@@ -61,7 +61,7 @@ export function checkFrame(frame, options = {}) {
     for (const [id, state] of Object.entries(f.trafficLights)) c.oneOf(state, LIGHT_STATES, `trafficLights.${id}`);
   }
 
-  if (c.object(f.route, 'route')) {
+  if (f.route !== null && c.object(f.route, 'route')) {
     c.number(f.route.nextCheckpoint, 'route.nextCheckpoint', { integer: true, min: 0 });
     c.number(f.route.distanceM, 'route.distanceM', { min: 0 });
     c.number(f.route.bearingRad, 'route.bearingRad');
@@ -148,6 +148,7 @@ function checkEgo(c, ego) {
     c.oneOf(i.signalCmd, ['left', 'right', 'hazard', null], 'ego.input.signalCmd');
     c.oneOf(i.lightsCmd, ['cycle', 'flash', null], 'ego.input.lightsCmd');
     c.boolean(i.horn, 'ego.input.horn');
+    c.boolean(i.pushBack, 'ego.input.pushBack');
   }
   c.oneOf(ego.indicators, INDICATORS, 'ego.indicators');
   c.oneOf(ego.lights, LIGHTS, 'ego.lights');

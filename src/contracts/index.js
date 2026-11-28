@@ -39,11 +39,12 @@ export {
   PROP_KINDS,
   CONNECTOR_TURNS,
   CONFLICT_KINDS,
+  SIGNAL_MOUNTS,
 } from './map.js';
 export { TRAFFIC_CLASSES, PERSONALITIES, checkTrafficParams } from './traffic.js';
 export { LICENCE_POINT_VALUES, CLAUSE_ID_PATTERN } from './rule.js';
 export { ENDED_BY, LICENCE_START_POINTS } from './score.js';
-export { RUN_STATUSES } from './hud.js';
+export { RUN_STATUSES, RUN_MODES } from './hud.js';
 export { ContractError } from './check.js';
 export { assertFrame, checkFrame } from './assert-frame.js';
 export { assertMap, checkMap } from './assert-map.js';
@@ -96,6 +97,8 @@ export { assertMap, checkMap } from './assert-map.js';
 /** @typedef {import('./map.js').StopLine} StopLine */
 /** @typedef {import('./map.js').SignalCycle} SignalCycle */
 /** @typedef {import('./map.js').Signal} Signal */
+/** @typedef {import('./map.js').SignalHead} SignalHead */
+/** @typedef {import('./map.js').LaneArrow} LaneArrow */
 /** @typedef {import('./map.js').Crosswalk} Crosswalk */
 /** @typedef {import('./map.js').Restriction} Restriction */
 /** @typedef {import('./map.js').Entry} Entry */
@@ -133,6 +136,7 @@ export { assertMap, checkMap } from './assert-map.js';
 /** @typedef {import('./modules.js').ScorerStep} ScorerStep */
 /** @typedef {import('./modules.js').Scorer} Scorer */
 /** @typedef {import('./modules.js').CreateScorer} CreateScorer */
+/** @typedef {import('./modules.js').ScorerOptions} ScorerOptions */
 /** @typedef {import('./modules.js').ScoreRun} ScoreRun */
 /** @typedef {import('./modules.js').Sim} Sim */
 /** @typedef {import('./modules.js').CreateSim} CreateSim */
@@ -148,6 +152,7 @@ export { assertMap, checkMap } from './assert-map.js';
 /** @typedef {import('./hud.js').GameApi} GameApi */
 /** @typedef {import('./hud.js').GameControls} GameControls */
 /** @typedef {import('./hud.js').StartOptions} StartOptions */
+/** @typedef {import('./hud.js').RunMode} RunMode */
 
 /** @typedef {import('./traffic.js').TrafficParams} TrafficParams */
 /** @typedef {import('./traffic.js').TrafficClass} TrafficClass */

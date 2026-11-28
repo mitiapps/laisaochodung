@@ -77,13 +77,15 @@ import { createWorld, stepWorld } from '../world/traffic/index.js';
  * @property {string} [laneId] Lane whose centreline is driven when `path` is not given.
  * @property {number} [startS] Start distance along the path, default 0.
  * @property {number} [durationS] Frames to emit, as seconds; default until the path end is reached
- *   at standstill, the run ends, or the map time limit passes.
+ *   at standstill, the run ends, or the map time limit passes (also with the route off).
  * @property {number | Keyframe[]} [speed] Speed in m/s, constant or keyframed; needed without
  *   `egoTrack`.
  * @property {Keyframe[]} [offset] Lateral offset from the path in metres, positive left.
  * @property {ControlChange[]} [controls] Control changes.
  * @property {ForcedEvent[]} [events] Injected events (collisions, falls, resets).
  * @property {boolean} [stopAtRunEnd] Stop after the frame with `finish` or `timeout`, default true.
+ * @property {'map' | 'off'} [route] `map` (default) follows the map route; `off` runs none, as the
+ *   sim's `SimOptions.route`: no route events and `frame.route` null.
  * @property {(t: number) => ActorPose[]} [extraActors] Hand-placed traffic poses at time `t`,
  *   appended after the scripted poses. Their footprints also hold scripted actors, as traffic
  *   agents do. Poses should use the shared `ACTOR_LIGHTS` entries and frozen `violations` lists.
@@ -174,6 +176,7 @@ export function buildFrames(options) {
   if (options.traffic && options.extraActors) throw new Error('buildFrames takes traffic or extraActors, not both');
   const pathLength = path ? polylineLength(path) : 0;
   const stopAtRunEnd = options.stopAtRunEnd ?? true;
+  const routeMode = options.route ?? 'map';
   const controls = [...(options.controls ?? [])].sort((a, b) => a.t - b.t);
   /** @type {Map<number, FrameEvent[]>} */
   const forced = new Map();
@@ -300,7 +303,7 @@ export function buildFrames(options) {
       actorPoses = extra.length > 0 ? [...actors.poses, ...extra] : actors.poses;
     }
     contacts = events.flatMap((e) => (e.type === 'collision' && typeof e.otherId === 'string' ? [e.otherId] : []));
-    const route = stepRoute(routeState, map, { x: here.x, z: here.z }, t);
+    const route = stepRoute(routeState, map, { x: here.x, z: here.z }, t, { route: routeMode });
     routeState = route.state;
     events.push(...route.events);
 

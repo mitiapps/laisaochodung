@@ -21,6 +21,9 @@ import {
   neutralInput,
   NO_VIOLATIONS,
   NPC_VIOLATIONS,
+  OPTIONAL_MAP_COLLECTIONS,
+  RUN_MODES,
+  SIGNAL_MOUNTS,
 } from './index.js';
 
 /** @typedef {import('./check.js').UntrustedJson} UntrustedJson Parsed fixture JSON. */
@@ -63,11 +66,17 @@ describe('key bindings', () => {
   it('covers every action once, with unique keys and Vietnamese labels', () => {
     const actions = KEY_BINDINGS.map((b) => b.action);
     expect(new Set(actions).size).toBe(actions.length);
-    expect(actions).toHaveLength(16);
+    expect(actions).toHaveLength(17);
     const keys = KEY_BINDINGS.flatMap((b) => b.keys);
     expect(new Set(keys).size).toBe(keys.length);
     expect(KEY_BINDINGS.every((b) => b.label.vi.length > 0)).toBe(true);
-    expect(neutralInput()).toMatchObject({ throttle: 0, steer: 0, gearCmd: null, horn: false });
+    expect(neutralInput()).toMatchObject({ throttle: 0, steer: 0, gearCmd: null, horn: false, pushBack: false });
+    expect(KEY_BINDINGS.find((b) => b.action === 'pushBack')).toEqual({
+      action: 'pushBack',
+      keys: ['KeyR'],
+      mode: 'hold',
+      label: { vi: 'Lùi xe bằng chân (xe máy)' },
+    });
   });
 
   it('binds no key that needs a modifier, Tab, Enter or a function key', () => {
@@ -78,6 +87,11 @@ describe('key bindings', () => {
   it('fixes the two camera modes, chase first as the default', () => {
     expect(CAMERA_MODES).toEqual(['chase', 'cockpit']);
     expect(Object.isFrozen(CAMERA_MODES)).toBe(true);
+  });
+
+  it('fixes the two run modes, scored first as the default', () => {
+    expect(RUN_MODES).toEqual(['scored', 'free']);
+    expect(Object.isFrozen(RUN_MODES)).toBe(true);
   });
 
   it('fixes the two control presets', () => {
@@ -172,6 +186,33 @@ describe('assertMap with a lane graph and traffic', () => {
     for (const id of JUNCTION.traffic.sinks) expect(sourced.has(id)).toBe(false);
   });
 
+  it('junction fixture: repeaters on every signal, arrows matching their connectors, a timed crosswalk', () => {
+    expect(OPTIONAL_MAP_COLLECTIONS).toContain('laneArrows');
+    expect(SIGNAL_MOUNTS).toEqual(['post', 'mast-arm']);
+    const mounts = JUNCTION.signals.flatMap((/** @type {UntrustedJson} */ s) => s.repeaters.map((/** @type {UntrustedJson} */ h) => h.mount));
+    expect(new Set(mounts)).toEqual(new Set(SIGNAL_MOUNTS));
+    for (const a of JUNCTION.laneArrows) {
+      const turns = JUNCTION.connectors
+        .filter((/** @type {UntrustedJson} */ k) => k.fromLaneId === a.laneId)
+        .map((/** @type {UntrustedJson} */ k) => k.turn);
+      expect(new Set(a.turns), a.id).toEqual(new Set(turns));
+    }
+    const signals = new Map(JUNCTION.signals.map((/** @type {UntrustedJson} */ s) => [s.id, s]));
+    for (const w of JUNCTION.crosswalks.filter((/** @type {UntrustedJson} */ c) => c.walkSignalId)) {
+      // The walk signal runs on the axis perpendicular to the traffic over the crossing.
+      const cross = Math.abs(Math.cos(signals.get(w.walkSignalId).heading - signals.get(w.signalId).heading));
+      expect(cross, w.id).toBeLessThan(1e-9);
+    }
+  });
+
+  it('accepts a map without lane arrows or repeaters', () => {
+    const m = clone(JUNCTION);
+    delete m.laneArrows;
+    for (const s of m.signals) delete s.repeaters;
+    for (const c of m.crosswalks) delete c.walkSignalId;
+    expect(checkMap(m, { signCodes: SIGN_CODES })).toEqual([]);
+  });
+
   it('accepts plain lane joins from lanes that start no connector', () => {
     const m = clone(JUNCTION);
     const starts = new Set(m.connectors.map((/** @type {UntrustedJson} */ k) => k.fromLaneId));
@@ -222,6 +263,21 @@ describe('assertMap with a lane graph and traffic', () => {
       /obstacles\[\d+\]\.colour: expected #rrggbb/,
     ],
     ['lane joins that is not a list', (m) => (m.laneJoins = {}), /laneJoins: expected an array/],
+    ['repeaters that is not a list', (m) => (m.signals[0].repeaters = {}), /signals\[0\]\.repeaters: expected an array/],
+    ['repeater with an unknown mount', (m) => (m.signals[1].repeaters[0].mount = 'gantry'), /signals\[1\]\.repeaters\[0\]\.mount/],
+    ['mast-arm repeater without a mast base', (m) => delete m.signals[0].repeaters[0].mastPos, /signals\[0\]\.repeaters\[0\]\.mastPos/],
+    ['post repeater with a mast base', (m) => (m.signals[1].repeaters[0].mastPos = { x: 0, z: 0 }), /only a mast-arm head has a mast base/],
+    ['repeater without a position', (m) => delete m.signals[1].repeaters[0].pos, /signals\[1\]\.repeaters\[0\]\.pos/],
+    ['crosswalk walk signal that is unknown', (m) => (m.crosswalks[0].walkSignalId = 'sig-x'), /crosswalks\[0\]\.walkSignalId: unknown signal "sig-x"/],
+    ['crosswalk walk signal naming a lane', (m) => (m.crosswalks[0].walkSignalId = 'rw-e0'), /unknown signal "rw-e0"/],
+    ['lane arrows that is not a list', (m) => (m.laneArrows = {}), /laneArrows: expected an array/],
+    ['lane arrow on an unknown lane', (m) => (m.laneArrows[0].laneId = 'nope'), /laneArrows\[0\]\.laneId: unknown lane "nope"/],
+    ['lane arrow with no turns', (m) => (m.laneArrows[0].turns = []), /laneArrows\[0\]\.turns: expected at least one turn/],
+    ['lane arrow with an unknown turn', (m) => (m.laneArrows[0].turns = ['straight', 'sideways']), /laneArrows\[0\]\.turns\[1\]/],
+    ['lane arrow listing a turn twice', (m) => (m.laneArrows[0].turns = ['straight', 'straight']), /each turn once/],
+    ['lane arrow turns out of order', (m) => (m.laneArrows[0].turns = ['right', 'straight']), /CONNECTOR_TURNS order/],
+    ['lane arrow without a heading', (m) => delete m.laneArrows[0].heading, /laneArrows\[0\]\.heading/],
+    ['lane arrow sharing a lane id', (m) => (m.laneArrows[0].id = 'rw-e0'), /duplicate id "rw-e0"/],
   ];
   it.each(broken)('rejects %s', (_, mutate, pattern) => {
     const m = clone(JUNCTION);
@@ -254,8 +310,18 @@ describe('assertFrame', () => {
     expect(checkFrame(f, { parsed: true })).toEqual([]);
   });
 
+  it('accepts a frame with no route (a free run)', () => {
+    const f = clone(FRAMES[0]);
+    f.route = null;
+    expect(checkFrame(f, { parsed: true })).toEqual([]);
+  });
+
   /** @type {[string, (f: UntrustedJson) => void, RegExp][]} */
   const broken = [
+    ['missing route', (f) => delete f.route, /route: /],
+    ['route without a distance', (f) => delete f.route.distanceM, /route\.distanceM/],
+    ['input without pushBack', (f) => delete f.ego.input.pushBack, /ego\.input\.pushBack/],
+    ['pushBack that is not a boolean', (f) => (f.ego.input.pushBack = 1), /ego\.input\.pushBack/],
     ['NaN speed', (f) => (f.ego.speed = Number.NaN), /ego\.speed/],
     ['unknown gear', (f) => (f.ego.gear = 6), /ego\.gear/],
     ['three-corner footprint', (f) => f.ego.footprint.pop(), /4 corners/],
@@ -386,6 +452,7 @@ describe('catalog and HUD fixtures', () => {
     for (const state of Object.values(hud)) {
       expect(Array.isArray(state.notices)).toBe(true);
       expect(CONTROL_PRESETS).toContain(state.controlPreset);
+      expect(RUN_MODES).toContain(state.mode);
       expect(typeof state.headingRad).toBe('number');
       expect(Object.keys(state.controls).sort()).toEqual(['brakeFront', 'brakeRear', 'handbrake', 'steer', 'throttle']);
     }

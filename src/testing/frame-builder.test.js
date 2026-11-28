@@ -45,6 +45,18 @@ describe('buildFrames', () => {
     expect(JSON.parse(readFileSync(url, 'utf8'))).toEqual(JSON.parse(JSON.stringify(frames)));
   });
 
+  it('emits a null route and no route events with the route off', () => {
+    const scored = buildFrames({ ...STRAIGHT, startS: 0, durationS: undefined, speed: 30 });
+    expect(scored.some((f) => f.events.some((e) => e.type === 'checkpoint'))).toBe(true);
+    const free = buildFrames({ ...STRAIGHT, startS: 0, durationS: undefined, speed: 30, route: 'off' });
+    expect(free.length).toBeGreaterThan(0);
+    for (const f of free) {
+      assertFrame(f);
+      expect(f.route).toBeNull();
+      expect(f.events.filter((e) => ['checkpoint', 'finish', 'timeout'].includes(e.type))).toEqual([]);
+    }
+  });
+
   it('drives 120 valid frames at 15 m/s inside the eastbound lane', () => {
     const frames = buildFrames(STRAIGHT);
     expect(frames).toHaveLength(120);

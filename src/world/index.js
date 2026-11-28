@@ -3,7 +3,7 @@
  * Imports only `src/contracts/` and `src/geometry/`.
  */
 
-export { signalState, trafficLightStates } from './signals.js';
+export { PEDESTRIAN_FLASH_S, pedestrianSignalState, signalState, trafficLightStates } from './signals.js';
 export { clockAt } from './clock.js';
 export {
   ACTOR_DECEL_MPS2,

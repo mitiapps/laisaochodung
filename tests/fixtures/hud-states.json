@@ -25,7 +25,8 @@
     "toasts": [],
     "notices": [],
     "runStatus": "ready",
-    "controlPreset": "real"
+    "controlPreset": "real",
+    "mode": "scored"
   },
   "running": {
     "speedKmh": 42,
@@ -53,7 +54,8 @@
     "toasts": [],
     "notices": [],
     "runStatus": "running",
-    "controlPreset": "real"
+    "controlPreset": "real",
+    "mode": "scored"
   },
   "withToasts": {
     "speedKmh": 63,
@@ -340,7 +342,8 @@
       }
     ],
     "runStatus": "running",
-    "controlPreset": "real"
+    "controlPreset": "real",
+    "mode": "scored"
   },
   "paused": {
     "speedKmh": 0,
@@ -386,7 +389,8 @@
       }
     ],
     "runStatus": "paused",
-    "controlPreset": "real"
+    "controlPreset": "real",
+    "mode": "scored"
   },
   "finished": {
     "speedKmh": 0,
@@ -658,6 +662,7 @@
       "finished": true,
       "endedBy": "finish"
     },
-    "controlPreset": "real"
+    "controlPreset": "real",
+    "mode": "scored"
   }
 }

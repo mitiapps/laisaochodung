@@ -19,11 +19,12 @@
  * @property {number} score Running score out of 10.
  * @property {number} headingRad Ego heading θ from `frame.ego.heading`; the nav arrow points at
  *   `nav.bearingRad − headingRad`.
- * @property {{distanceM: number, bearingRad: number}} nav Copied from `frame.route`; `bearingRad`
- *   is the world bearing.
+ * @property {{distanceM: number, bearingRad: number} | null} nav Copied from `frame.route`;
+ *   `bearingRad` is the world bearing. Null when the frame has no route (a free run).
  * @property {import('./score.js').Breach[]} toasts Breaches to show, newest last.
  * @property {import('./score.js').Notice[]} notices Contacts the player did not cause, newest last.
  * @property {import('./controls.js').ControlPreset} controlPreset Control preset the session applied.
+ * @property {RunMode} mode Run mode the session applied.
  * @property {'ready' | 'running' | 'paused' | 'finished'} runStatus Run status.
  * @property {import('./score.js').ScoreReport} [report] Present once finished.
  */
@@ -39,9 +40,18 @@
  */
 
 /**
+ * Run mode, chosen on the home page and fixed for a run. `scored` (Chấm điểm, the default): drive
+ * the route from start to finish within the time limit, scored out of 10. `free` (Lái tự do): the
+ * same map, vehicle and traffic with no route, time limit, finish or score; breaches still show,
+ * and the run ends only when the player quits.
+ * @typedef {'scored' | 'free'} RunMode
+ */
+
+/**
  * @typedef {object} StartOptions
  * @property {import('./controls.js').ControlPreset} [controlPreset] Control preset for the run; it is
  *   fixed until the next start.
+ * @property {RunMode} [mode] Run mode, default `scored`; fixed until the next start.
  */
 
 /**
@@ -71,3 +81,5 @@
 
 /** @type {readonly HudState['runStatus'][]} */
 export const RUN_STATUSES = Object.freeze(['ready', 'running', 'paused', 'finished']);
+/** @type {readonly RunMode[]} */
+export const RUN_MODES = Object.freeze(['scored', 'free']);

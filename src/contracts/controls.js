@@ -15,17 +15,21 @@
  * @property {'left' | 'right' | 'hazard' | null} signalCmd Indicator toggle requested this step (edge).
  * @property {'cycle' | 'flash' | null} lightsCmd `cycle`: off → low → high → off; `flash`: high beam while held.
  * @property {boolean} horn Horn held.
+ * @property {boolean} pushBack Scooter only: the rider pushes the bike backwards with the feet while
+ *   held. The input mixer keeps it false on a car (which has the R gear); the sim acts on it only
+ *   with the throttle and both brakes released and the bike not rolling forward.
  */
 
 /**
  * @typedef {'throttle' | 'brake' | 'steerLeft' | 'steerRight' | 'signalLeft' | 'signalRight'
  *   | 'lightsCycle' | 'flash' | 'horn' | 'hazard' | 'gearUp' | 'gearDown' | 'handbrake' | 'brakeRear'
- *   | 'camera' | 'pause'} ControlAction
+ *   | 'pushBack' | 'camera' | 'pause'} ControlAction
  *   `handbrake` (car) and `brakeRear` (motorbike) are one control in the input: either key applies the
  *   car's handbrake on a car and the rear brake on a motorbike. `gearUp` and `gearDown` act on a
  *   car only: the input switches them off by legal class, not by gearbox, which holds because every
  *   motorbike in the catalog has an automatic gearbox (a catalog test enforces it). A manual
- *   motorbike needs the input to key the gears on the gearbox first. `camera` and `pause` are
+ *   motorbike needs the input to key the gears on the gearbox first. `pushBack` acts on a motorbike
+ *   only, the mirror of the gear keys: a car reverses through its R gear. `camera` and `pause` are
  *   handled by the game outside the sim step; they are not `ControlInput` fields.
  */
 
@@ -70,7 +74,8 @@ export const CAMERA_MODES = Object.freeze(['chase', 'cockpit']);
  * The key table, in the car's cabin order: pedals and wheel under the left hand (W A S D, or the
  * arrows), the indicator and light stalk left of the wheel (Q E Z X), the horn right of the wheel
  * (F), the hazard switch beside the gear lever (H), and the gear lever and handbrake under the
- * right hand (I K L, or Page Up and Page Down beside the arrows). A motorbike shares the same keys.
+ * right hand (I K L, or Page Up and Page Down beside the arrows). A motorbike shares the same keys,
+ * plus R to push the bike backwards with the feet.
  * @type {readonly KeyBinding[]}
  */
 export const KEY_BINDINGS = Object.freeze([
@@ -98,6 +103,7 @@ export const KEY_BINDINGS = Object.freeze([
   { action: 'gearDown', keys: ['KeyK', 'PageDown'], mode: 'press', label: { vi: 'Xuống số (ô tô)' } },
   { action: 'handbrake', keys: ['KeyL'], mode: 'hold', label: { vi: 'Phanh tay (ô tô)' } },
   { action: 'brakeRear', keys: ['Space'], mode: 'hold', label: { vi: 'Phanh sau (xe máy)' } },
+  { action: 'pushBack', keys: ['KeyR'], mode: 'hold', label: { vi: 'Lùi xe bằng chân (xe máy)' } },
   { action: 'camera', keys: ['KeyV'], mode: 'press', label: { vi: 'Đổi góc nhìn' } },
   { action: 'pause', keys: ['Escape', 'KeyP'], mode: 'press', label: { vi: 'Tạm dừng / tiếp tục' } },
 ]);
@@ -117,5 +123,6 @@ export function neutralInput() {
     signalCmd: null,
     lightsCmd: null,
     horn: false,
+    pushBack: false,
   };
 }

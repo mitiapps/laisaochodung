@@ -10,7 +10,7 @@
 /**
  * @typedef {'R' | 'N' | 'D' | 1 | 2 | 3 | 4 | 5} Gear Car with the manual gearbox: N, R, 1–5. Car
  *   with the automatic gearbox (an assist): the selector R, N or D, never a ratio number.
- *   Automatic scooter: N, D.
+ *   Automatic scooter: N, D, and R while the rider pushes it backwards (`ControlInput.pushBack`).
  */
 /** @typedef {'off' | 'left' | 'right' | 'hazard'} Indicators Turn-signal state. */
 /** @typedef {'off' | 'low' | 'high'} Lights Headlight state; `high` while flashing too. */
@@ -137,12 +137,12 @@
  * @property {readonly NpcViolation[]} [otherViolations] The other actor's latched `violations`.
  */
 
-/** @typedef {{type: 'fall'}} FallEvent Motorbike fell; the sim resets to the last checkpoint and emits `reset` next. */
+/** @typedef {{type: 'fall'}} FallEvent Motorbike fell; the sim resets it (see `Sim.reset`) and emits `reset` next. */
 /** @typedef {{type: 'checkpoint', index: number}} CheckpointEvent Checkpoint `index` reached. */
 /** @typedef {{type: 'timeout'}} TimeoutEvent `t ≥ route.timeLimitS` before the finish. */
 /** @typedef {{type: 'run-start'}} RunStartEvent First frame of a run. */
 /** @typedef {{type: 'finish'}} FinishEvent Finish polygon entered after every checkpoint. */
-/** @typedef {{type: 'reset'}} ResetEvent Ego placed back at the last checkpoint. */
+/** @typedef {{type: 'reset'}} ResetEvent Ego placed back where `Sim.reset` puts it. */
 
 /**
  * Frame event. `reset` and `fall` are discontinuities: consumers close open episodes, forget
@@ -160,7 +160,8 @@
  * @property {ActorPose[]} actors Scripted actors in map order, then active traffic agents in
  *   ascending spawn index. Consumers match poses by `id`, never by index.
  * @property {Record<string, LightState>} trafficLights State of every map signal by id.
- * @property {RouteNav} route Navigation to the next target.
+ * @property {RouteNav | null} route Navigation to the next target; null in a run with no route
+ *   (`SimOptions.route: 'off'`).
  * @property {FrameEnv} env Clock and weather.
  * @property {FrameEvent[]} events Events of this step, possibly empty.
  */

@@ -122,13 +122,26 @@
  */
 
 /**
+ * A further head of a signal, showing the same lights as the signal's own head: same heading, same
+ * cycle, same state in every frame. A far-side repeater stands across the junction (QCVN 41:2024
+ * 9.5). `post`: a roadside post with the head on top, `pos` the post base. `mast-arm`: a post at
+ * `mastPos` with an arm reaching over the carriageway, `pos` the ground point under the head.
+ * @typedef {object} SignalHead
+ * @property {Pos2} pos Post base (`post`) or the ground point under the head (`mast-arm`).
+ * @property {'post' | 'mast-arm'} mount How the head is mounted.
+ * @property {Pos2} [mastPos] Mast base; present exactly when `mount` is `mast-arm`.
+ */
+
+/**
  * Traffic-light head.
  * @typedef {object} Signal
  * @property {string} id Signal id.
- * @property {Pos2} pos Head position.
+ * @property {Pos2} pos Head position: the near-side post at the stop line.
  * @property {number} heading Travel heading of the traffic it controls.
  * @property {string[]} stopLineIds Stop lines it controls.
  * @property {SignalCycle} cycle Light cycle.
+ * @property {SignalHead[]} [repeaters] Further heads of this signal (far-side repeaters); absent
+ *   or empty when the signal has only its near-side head. They add no `trafficLights` entry.
  */
 
 /**
@@ -136,6 +149,21 @@
  * @property {string} id Crosswalk id.
  * @property {Polygon} polygon Zebra area (QCVN 41 marking 7.3).
  * @property {string} [signalId] Vehicle signal that governs traffic over it.
+ * @property {string} [walkSignalId] Vehicle signal of the perpendicular axis at the same junction
+ *   that times the pedestrian heads at both ends (`pedestrianSignalState`); absent when the
+ *   crossing has no pedestrian heads.
+ */
+
+/**
+ * Painted lane-direction arrow (QCVN 41 marking 9.3), one per lane. The arrow lies on the lane
+ * centreline pointing along `heading`; `pos` is its tip, the end nearest the stop line.
+ * @typedef {object} LaneArrow
+ * @property {string} id Arrow id.
+ * @property {string} laneId Lane it is painted on.
+ * @property {Pos2} pos Arrow tip.
+ * @property {number} heading Travel heading of the lane at the arrow.
+ * @property {('left' | 'straight' | 'right' | 'uturn')[]} turns Movements it shows: non-empty, no
+ *   repeats, in `CONNECTOR_TURNS` order.
  */
 
 /**
@@ -301,6 +329,7 @@
  *   lane graph.
  * @property {TrafficConfig} [traffic] Traffic values; without it the map has no traffic.
  * @property {Prop[]} [props] Street furniture.
+ * @property {LaneArrow[]} [laneArrows] Painted lane-direction arrows.
  */
 
 /** Current map schema version. */
@@ -326,7 +355,7 @@ export const MAP_COLLECTIONS = Object.freeze([
  * Optional map collections whose elements carry an id: validated, and their ids claimed, only
  * when present.
  */
-export const OPTIONAL_MAP_COLLECTIONS = Object.freeze(['connectors', 'conflicts', 'props']);
+export const OPTIONAL_MAP_COLLECTIONS = Object.freeze(['connectors', 'conflicts', 'props', 'laneArrows']);
 
 export const ZONE_TYPES = Object.freeze(['speed-limit', 'built-up', 'no-stopping', 'junction-buffer', 'lit']);
 export const ZONE_SOURCES = Object.freeze(['override', 'default', 'tutorial']);
@@ -351,3 +380,4 @@ export const PROP_KINDS = Object.freeze([
 ]);
 export const CONNECTOR_TURNS = Object.freeze(['straight', 'left', 'right', 'uturn']);
 export const CONFLICT_KINDS = Object.freeze(['cross', 'merge']);
+export const SIGNAL_MOUNTS = Object.freeze(['post', 'mast-arm']);

@@ -234,6 +234,7 @@ describe('createInput on-screen controls', () => {
     ['brake', 5],
     ['handbrake', 5],
     ['brakeRear', 5],
+    ['pushBack', 5],
     ['steerLeft', 30],
     ['steerRight', 10],
     ['horn', 3],

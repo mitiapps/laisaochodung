@@ -20,6 +20,7 @@ import {
   OPTIONAL_MAP_COLLECTIONS,
   PROP_KINDS,
   SIGN_SOURCES,
+  SIGNAL_MOUNTS,
   STOP_CONTROLS,
   ZONE_SOURCES,
   ZONE_TYPES,
@@ -79,6 +80,8 @@ export function checkMap(map, options = {}) {
   const conflicts = m.conflicts ?? [];
   /** @type {UntrustedJson[]} */
   const props = m.props ?? [];
+  /** @type {UntrustedJson[]} */
+  const laneArrows = m.laneArrows ?? [];
   /** @type {UntrustedJson[]} */
   const laneJoins = m.laneJoins ?? [];
 
@@ -182,6 +185,9 @@ export function checkMap(map, options = {}) {
       for (const k of ['green', 'yellow', 'red', 'offset']) c.number(s.cycle[k], `${p}.cycle.${k}`, { min: 0 });
       if (s.cycle.green + s.cycle.yellow + s.cycle.red <= 0) c.fail(`${p}.cycle`, 'period must be positive');
     }
+    if (s.repeaters !== undefined && c.array(s.repeaters, `${p}.repeaters`)) {
+      s.repeaters.forEach((/** @type {UntrustedJson} */ h, /** @type {number} */ k) => checkSignalHead(c, h, `${p}.repeaters[${k}]`));
+    }
   });
 
   m.crosswalks.forEach((w, i) => {
@@ -190,6 +196,7 @@ export function checkMap(map, options = {}) {
     claim(w.id, p, 'crosswalk');
     c.polygon(w.polygon, `${p}.polygon`);
     if (w.signalId !== undefined) c.string(w.signalId, `${p}.signalId`);
+    if (w.walkSignalId !== undefined) c.string(w.walkSignalId, `${p}.walkSignalId`);
   });
 
   m.restrictions.forEach((r, i) => {
@@ -335,6 +342,24 @@ export function checkMap(map, options = {}) {
     c.boolean(k.solid, `${p}.solid`);
   });
 
+  laneArrows.forEach((k, i) => {
+    const p = `laneArrows[${i}]`;
+    if (!c.object(k, p)) return;
+    claim(k.id, p, 'laneArrow');
+    c.string(k.laneId, `${p}.laneId`);
+    c.pos2(k.pos, `${p}.pos`);
+    c.number(k.heading, `${p}.heading`);
+    if (!c.array(k.turns, `${p}.turns`)) return;
+    /** @type {unknown[]} */
+    const turns = k.turns;
+    if (turns.length === 0) c.fail(`${p}.turns`, 'expected at least one turn');
+    if (!turns.map((t, j) => c.oneOf(t, CONNECTOR_TURNS, `${p}.turns[${j}]`)).every(Boolean)) return;
+    const canonical = CONNECTOR_TURNS.filter((t) => turns.includes(t));
+    if (canonical.length !== turns.length || canonical.some((t, j) => t !== turns[j])) {
+      c.fail(`${p}.turns`, 'must list each turn once, in CONNECTOR_TURNS order');
+    }
+  });
+
   if (m.traffic !== undefined) checkTraffic(c, m.traffic);
 
   // References.
@@ -384,9 +409,10 @@ export function checkMap(map, options = {}) {
   m.signals.forEach((s, i) =>
     refs(s?.stopLineIds, 'stopLine', `signals[${i}].stopLineIds`),
   );
-  m.crosswalks.forEach((w, i) =>
-    ref(w?.signalId, 'signal', `crosswalks[${i}].signalId`),
-  );
+  m.crosswalks.forEach((w, i) => {
+    ref(w?.signalId, 'signal', `crosswalks[${i}].signalId`);
+    ref(w?.walkSignalId, 'signal', `crosswalks[${i}].walkSignalId`);
+  });
   m.restrictions.forEach((r, i) => {
     ref(r?.junctionId, 'junction', `restrictions[${i}].junctionId`);
     refs(r?.fromLaneIds, 'lane', `restrictions[${i}].fromLaneIds`);
@@ -403,6 +429,7 @@ export function checkMap(map, options = {}) {
     ref(k?.a, 'connector', `conflicts[${i}].a`);
     ref(k?.b, 'connector', `conflicts[${i}].b`);
   });
+  laneArrows.forEach((k, i) => ref(k?.laneId, 'lane', `laneArrows[${i}].laneId`));
   laneJoins.forEach((k, i) => {
     ref(k?.fromLaneId, 'lane', `laneJoins[${i}].fromLaneId`);
     ref(k?.toLaneId, 'lane', `laneJoins[${i}].toLaneId`);
@@ -421,6 +448,20 @@ export function checkMap(map, options = {}) {
   }
 
   return c.problems;
+}
+
+/**
+ * @param {Checker} c Checker.
+ * @param {UntrustedJson} h Signal head (untrusted).
+ * @param {string} p Path.
+ * @returns {void}
+ */
+function checkSignalHead(c, h, p) {
+  if (!c.object(h, p)) return;
+  c.pos2(h.pos, `${p}.pos`);
+  if (!c.oneOf(h.mount, SIGNAL_MOUNTS, `${p}.mount`)) return;
+  if (h.mount === 'mast-arm') c.pos2(h.mastPos, `${p}.mastPos`);
+  else if (h.mastPos !== undefined) c.fail(`${p}.mastPos`, 'only a mast-arm head has a mast base');
 }
 
 /** A `#rrggbb` colour. */

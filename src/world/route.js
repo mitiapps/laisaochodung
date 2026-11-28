@@ -6,6 +6,9 @@
  * cannot be skipped below 360 m/s. The finish counts only after every checkpoint. `timeout` fires
  * once when `t ≥ timeLimitS` and the finish was not reached in the same call. After `finish` or
  * `timeout` no further events are emitted. Progress survives `reset` events.
+ *
+ * A run with the route off (`SimOptions.route: 'off'`, a free run) has no checkpoints, finish,
+ * time limit or navigation: `stepRoute` then emits no events and a null nav, whatever the map holds.
  */
 
 import { headingOf, headingVector, pointInPolygon, polygonCentroid, segmentIntersection } from '../geometry/index.js';
@@ -82,14 +85,24 @@ export function insideCheckpoint(checkpoint, p) {
 }
 
 /**
+ * @typedef {object} RouteStepOptions
+ * @property {'map' | 'off'} [route] `map` (default) follows the map route; `off` runs no route.
+ */
+
+/**
  * Advances route progress for the ego position at time `t`.
  * @param {RouteState} routeState Current state.
  * @param {GameMap} map Map.
  * @param {{x: number, z: number}} egoPos Ego centre.
  * @param {number} t Run time in seconds.
- * @returns {{state: RouteState, events: FrameEvent[], nav: RouteNav}} Next state, events and nav.
+ * @param {RouteStepOptions} [options] Route switch.
+ * @returns {{state: RouteState, events: FrameEvent[], nav: RouteNav | null}} Next state, events and
+ *   nav; with the route off the state is returned unchanged, with no events and a null nav.
  */
-export function stepRoute(routeState, map, egoPos, t) {
+export function stepRoute(routeState, map, egoPos, t, options = {}) {
+  const mode = options.route ?? 'map';
+  if (mode === 'off') return { state: routeState, events: [], nav: null };
+  if (mode !== 'map') throw new RangeError(`Unknown route option "${String(mode)}"`);
   const { checkpoints, finish, timeLimitS } = map.route;
   /** @type {FrameEvent[]} */
   const events = [];

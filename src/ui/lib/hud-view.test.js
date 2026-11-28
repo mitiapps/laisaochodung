@@ -120,10 +120,11 @@ describe('HUD view helpers', () => {
     const all = KEY_BINDINGS.map((b) => b.action);
     const car = layoutActions(controlLayout('car', 'real'));
     expect(new Set(car).size).toBe(car.length);
-    expect([...car].sort()).toEqual(all.filter((a) => a !== 'brakeRear').sort());
+    expect([...car].sort()).toEqual(all.filter((a) => !['brakeRear', 'pushBack'].includes(a)).sort());
     const bike = layoutActions(controlLayout('motorbike', 'real'));
     expect(new Set(bike).size).toBe(bike.length);
-    expect([...bike].sort()).toEqual(all.filter((a) => !['gearUp', 'gearDown', 'handbrake'].includes(a)).sort());
+    // The motorbike has no on-screen push-back control yet.
+    expect([...bike].sort()).toEqual(all.filter((a) => !['gearUp', 'gearDown', 'handbrake', 'pushBack'].includes(a)).sort());
     expect(layoutActions(controlLayout('motorbike', 'simple'))).not.toContain('brakeRear');
   });
 

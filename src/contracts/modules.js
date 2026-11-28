@@ -19,7 +19,8 @@
  * @property {import('./score.js').Notice[]} notices Notices raised this step; the state keeps every
  *   notice of the run so far, so a fold from a saved state still reports them.
  * @property {ScoreContext} context Context for the HUD.
- * @property {null | 'crash'} runEnded `crash` after a pedestrian hit at or above the contact speed.
+ * @property {null | 'crash'} runEnded `crash` after a pedestrian hit at or above the contact speed;
+ *   always null when the scorer was created with `endOnPedestrianHit: false`.
  */
 
 /**
@@ -31,10 +32,17 @@
  */
 
 /**
+ * @typedef {object} ScorerOptions
+ * @property {boolean} [endOnPedestrianHit] A pedestrian hit at or above the contact speed ends the
+ *   run (`runEnded: 'crash'`); default true. False (a free run) records the breach and goes on.
+ */
+
+/**
  * @callback CreateScorer
  * @param {RulesBundle} bundle Rules bundle.
  * @param {GameMap} map Map.
  * @param {VehicleInfo} vehicleInfo Vehicle.
+ * @param {ScorerOptions} [options] Run options.
  * @returns {Scorer} Scorer.
  */
 
@@ -54,6 +62,7 @@
  * @property {boolean} quit The player quit after the last frame.
  * @property {unknown} [initialState] Scorer state to fold from instead of `scorer.initial`: the
  *   state saved at a checkpoint, so a windowed replay folds only the frames after it.
+ * @property {boolean} [endOnPedestrianHit] Passed to `createScorer`; default true.
  */
 
 /**
@@ -61,7 +70,9 @@
  * @typedef {object} Sim
  * @property {(input: import('./controls.js').ControlInput) => Frame} step Advance one DT.
  * @property {() => void} reset Place the ego back at the last passed checkpoint, or the start, on
- *   the next step, which emits `reset`; run time and route progress are kept. A full restart of the
+ *   the next step, which emits `reset`; run time and route progress are kept. With the route off
+ *   the ego goes instead to the nearest lane centreline point to where it was, facing along that
+ *   lane; the same reset happens when it strays far outside the lanes. A full restart of the
  *   run creates a new sim.
  * @property {() => void} dispose Free physics resources.
  * @property {() => number | null} [trafficMs] Wall time the last step spent in the world step
@@ -79,6 +90,9 @@
  * @property {import('./controls.js').ControlAssists} [assists] Driving assists; default all off.
  * @property {() => number} [now] Wall clock in milliseconds for `Sim.trafficMs`; leave it out to
  *   time nothing.
+ * @property {'map' | 'off'} [route] `map` (the default) runs the map route: checkpoints, finish,
+ *   time limit and navigation. `off` runs none of it: no route events and `frame.route` null. The
+ *   map keeps its route either way; the start pose is still `map.route.start`.
  */
 
 /**
