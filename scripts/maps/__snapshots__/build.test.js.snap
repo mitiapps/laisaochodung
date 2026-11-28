@@ -631,27 +631,19 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
       "id": "cw-n7",
       "polygon": [
         [
-          107.506,
+          116.932,
           42.418
         ],
         [
-          109.506,
+          120.932,
           42.418
         ],
         [
-          111.506,
-          42.418
-        ],
-        [
-          111.506,
+          120.932,
           35.418
         ],
         [
-          109.506,
-          35.418
-        ],
-        [
-          107.506,
+          116.932,
           35.418
         ]
       ],
@@ -804,7 +796,7 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
       "id": "la-w1-2-f0",
       "laneId": "w1-2-f0",
       "pos": {
-        "x": 90.506,
+        "x": 99.932,
         "z": 40.668
       },
       "turns": [
@@ -816,7 +808,7 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
       "id": "la-w1-2-f1",
       "laneId": "w1-2-f1",
       "pos": {
-        "x": 90.506,
+        "x": 99.932,
         "z": 37.168
       },
       "turns": [
@@ -1500,7 +1492,7 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
       "id": "pr-tree-w1-2-l-10",
       "kind": "tree",
       "pos": {
-        "x": 115.462,
+        "x": 112.462,
         "z": 34.568
       },
       "solid": true
@@ -1600,7 +1592,7 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
       "id": "pr-tree-w1-2-r-10",
       "kind": "tree",
       "pos": {
-        "x": 115.159,
+        "x": 111.159,
         "z": 43.268
       },
       "solid": true
@@ -2097,7 +2089,7 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
               38.918
             ],
             [
-              75.506,
+              84.932,
               38.918
             ]
           ],
@@ -2110,7 +2102,7 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
           "left": "w1-2-f1",
           "polyline": [
             [
-              75.506,
+              84.932,
               38.918
             ],
             [
@@ -2683,7 +2675,7 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
       "heading": 0,
       "id": "sig-w1-2-f",
       "pos": {
-        "x": 105.506,
+        "x": 114.932,
         "z": 43.418
       },
       "repeaters": [
@@ -2789,11 +2781,11 @@ exports[`fixture builds > matches the snapshot for the synthetic OSM extract 1`]
       ],
       "segment": [
         [
-          105.506,
+          114.932,
           42.418
         ],
         [
-          105.506,
+          114.932,
           35.418
         ]
       ],

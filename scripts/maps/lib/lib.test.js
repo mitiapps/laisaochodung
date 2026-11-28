@@ -285,9 +285,44 @@ describe('zones and elements', () => {
   it('places the stop line before a crosswalk near the junction and ties the crosswalk to the signal', () => {
     const map = compileTutorial({ junctions: [{ node: 'j', signals: true }], crosswalks: [{ id: 'cw', at: { way: 'w1', s: 188 } }] });
     const sl = map.stopLines.find((s) => s.id === 'sl-w1-f');
-    // The crosswalk spans x 186–190; the line keeps STOP_LINE_CROSSWALK_GAP_M (2 m) before it.
+    // An authored crosswalk stays where it is written, even 5.5 m out: it spans x 186–190 and the
+    // line keeps STOP_LINE_CROSSWALK_GAP_M (2 m) before it.
     expect(sl?.segment[0][0]).toBeCloseTo(184);
     expect(map.crosswalks[0].signalId).toBe('sig-w1-f');
+  });
+
+  it('draws an OSM crossing near a junction end at the junction edge, and leaves a farther one where surveyed', () => {
+    /**
+     * Compiles the signalised tutorial with one OSM crossing node on w1.
+     * @param {number} at Way distance of the crossing node.
+     * @returns {import('../../../src/contracts/map.js').GameMap} Map.
+     */
+    const withOsmCrossing = (at) => {
+      const spec = tutorialSpec('t', tutorialSource({ junctions: [{ node: 'j', signals: true }] }), () => ({}));
+      spec.crosswalks.push({ id: 'cw-osm', at: { way: 'w1', s: at }, widthM: 4, clamp: true });
+      return compileMap(spec);
+    };
+    const xSpan = (/** @type {import('../../../src/contracts/map.js').GameMap} */ map, /** @type {string} */ id) => {
+      const cw = /** @type {import('../../../src/contracts/map.js').Crosswalk} */ (map.crosswalks.find((c) => c.id === id));
+      return [Math.min(...cw.polygon.map((p) => p[0])), Math.max(...cw.polygon.map((p) => p[0]))];
+    };
+    // w1 ends at the junction edge x 195.5. A node at 183 (span 181–185, 10.5 m out) is the
+    // junction's crosswalk: drawn at 191–195, with no derived zebra and the stop line at 189.
+    const near = withOsmCrossing(183);
+    const [lo, hi] = xSpan(near, 'cw-osm');
+    expect(lo).toBeCloseTo(191);
+    expect(hi).toBeCloseTo(195);
+    expect(near.crosswalks.some((c) => c.id === 'cw-w1-e')).toBe(false);
+    expect(near.stopLines.find((l) => l.id === 'sl-w1-f')?.segment[0][0]).toBeCloseTo(189);
+    expect(near.crosswalks.find((c) => c.id === 'cw-osm')?.signalId).toBe('sig-w1-f');
+    // A node at 170 (span 168–172, 23.5 m out) stays a mid-block crossing; the arm gets its
+    // derived zebra and the stop line keeps to it.
+    const far = withOsmCrossing(170);
+    const [flo, fhi] = xSpan(far, 'cw-osm');
+    expect(flo).toBeCloseTo(168);
+    expect(fhi).toBeCloseTo(172);
+    expect(far.crosswalks.find((c) => c.id === 'cw-osm')?.signalId).toBeUndefined();
+    expect(far.stopLines.find((l) => l.id === 'sl-w1-f')?.segment[0][0]).toBeCloseTo(189);
   });
 
   it('runs the cross axis half a period later and rejects a cycle without the all-red clearance', () => {

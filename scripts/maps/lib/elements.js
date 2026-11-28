@@ -438,7 +438,14 @@ export function compileMap(spec, notes = []) {
         return gap(r) < gap(best) ? r : best;
       });
       const len = polylineLength(road.points);
-      const s = Math.max(half + 0.5, Math.min(len - half - 0.5, c.at.s - road.s0));
+      let s = Math.max(half + 0.5, Math.min(len - half - 0.5, c.at.s - road.s0));
+      // An OSM crossing near a junction end is that junction's crosswalk, drawn at the junction
+      // edge where a derived zebra would go: the game junction has no corner radii, so the
+      // surveyed offset (where the real kerb return ends) would leave a stretch of dead approach
+      // before the stop line. Farther crossings stay where surveyed, as mid-block crossings.
+      const span = { s0: s - half, s1: s + half, s };
+      if (road.startJunction && crosswalkNearEnd(span, len, true)) s = DERIVED_CROSSWALK_END_GAP_M + half;
+      else if (road.endJunction && crosswalkNearEnd(span, len, false)) s = len - DERIVED_CROSSWALK_END_GAP_M - half;
       located = { road, s };
     } else {
       located = place(c.at, 'forward', `crosswalk ${c.id}`, true);

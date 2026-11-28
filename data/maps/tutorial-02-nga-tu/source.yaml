@@ -73,7 +73,7 @@ signs:
   - { id: s-r122, code: R.122, at: { way: mot-chieu, s: 225 } }
 
 crosswalks:
-  - { id: cw-tay, at: { way: tay, s: 186 } }
+  - { id: cw-tay, at: { way: tay, s: 193 } }
 
 buildings:
   - { way: tay, side: right, fromS: 20, toS: 180 }

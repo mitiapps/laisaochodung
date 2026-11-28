@@ -8,7 +8,7 @@ import { CONNECTOR_TURNS } from '../../src/contracts/map.js';
 import { polygonCentroid, polylineLength, pointInPolygon, projectOntoPolyline } from '../../src/geometry/index.js';
 import { signalState } from '../../src/world/signals.js';
 import { MAX_OSM_ROUTE_M, buildAll, buildOne, canonical, loadSignCodes, serializeIndex } from './build.js';
-import { REPEATER_MAX_ARM_M, STOP_LINE_CROSSWALK_GAP_M, routeLength } from './lib/elements.js';
+import { DERIVED_CROSSWALK_END_GAP_M, DERIVED_CROSSWALK_WIDTH_M, REPEATER_MAX_ARM_M, STOP_LINE_CROSSWALK_GAP_M, routeLength } from './lib/elements.js';
 import { coverageReport, overpassQuery, overpassRuntimeError } from './fetch.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -272,7 +272,7 @@ describe('standard junctions on the shipped maps', () => {
         if (polylineLength(road.lanes[0].centerline) < 20) continue;
         const has = map.crosswalks.some((c) => {
           const mid = polygonCentroid(c.polygon);
-          return road.lanes.some((l) => pointInPolygon(mid, l.polygon)) && distanceToPolygon(mid, j.polygon) <= 17;
+          return road.lanes.some((l) => pointInPolygon(mid, l.polygon)) && distanceToPolygon(mid, j.polygon) <= 5;
         });
         expect(has, `${j.id} arm ${roadId}`).toBe(true);
       }
@@ -286,6 +286,8 @@ describe('standard junctions on the shipped maps', () => {
       const stopS = projectOntoPolyline([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], lane.centerline).s;
       const near = Math.min(...(cw?.polygon ?? []).map((p) => projectOntoPolyline(p, lane.centerline).s));
       expect(near - stopS, line.id).toBeCloseTo(STOP_LINE_CROSSWALK_GAP_M, 1);
+      // The crosswalk sits at the junction edge, so the line is 0.5 + 4 + 2 m from the lane end.
+      expect(polylineLength(lane.centerline) - stopS, line.id).toBeCloseTo(DERIVED_CROSSWALK_END_GAP_M + DERIVED_CROSSWALK_WIDTH_M + STOP_LINE_CROSSWALK_GAP_M, 1);
     }
   });
 
