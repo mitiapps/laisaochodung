@@ -184,6 +184,9 @@ says what happens and where.
   exactly), and a scripted actor holds for anything in its path, so neither ever strikes the other.
 - **A parked scripted actor closes its lane.** A scripted actor that ends its path on a lane stays
   there, and traffic changes lane round it.
+- **Scripted violations do not act.** A declared violation is a flag of the actor's pose, read by
+  the fault table on a contact with it. The actor does not run a light or change lane, and the flag
+  is not latched: it shows for as long as the actor is active.
 - **All signal heads stand on side poles.** No map data says which heads hang on a cantilever.
 - **Civic fences are drawn only.** They have no collider, so the player can drive through them.
 - **Signal countdowns** count red and green only, as the countdown lamps in Ho Chi Minh City do.

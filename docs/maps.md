@@ -91,7 +91,10 @@ Everything else is placed by way and distance, so authors write no polygons:
 
 Actor `model` keys used: `pedestrian` and `npc-sedan`. A scripted actor that ends its path on a
 lane stays there as a parked vehicle: it closes that lane, and traffic changes lane round it. A car
-that moves against the lane it is on carries `wrong-way`.
+that moves against the lane it is on carries `wrong-way`. The runtime map also accepts a
+scripted actor of kind `motorbike` (drawn as a ridden motorbike) and an optional `violations` list
+(`NPC_VIOLATIONS`), which its pose carries while the actor is active. The map source in
+`scripts/maps` does not write either field yet, so the shipped maps declare no violations.
 
 Street dressing, on tutorial and OSM sources alike:
 

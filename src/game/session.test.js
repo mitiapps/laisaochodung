@@ -38,11 +38,36 @@ const PASTEUR = /** @type {GameMap} */ (json('public/maps/osm-pasteur.json'));
 const PASTEUR_SIGNAL = 'sig-w678315474-f';
 const PARAMS = /** @type {import('../contracts/index.js').TrafficParams} */ (json('src/generated/traffic-params.json'));
 const CHECKPOINT_TICKS = Math.round(REPLAY_CHECKPOINT_S / DT);
-/** The shipped population with every rider taking a cut-in into the ego's path when it can. */
-const CUTTING_RIDERS = structuredClone(PARAMS);
-for (const row of Object.values(CUTTING_RIDERS.personalities)) row.violations.cutIn = 1;
-/** A run seed on which a vehicle cuts in on the cruising ego early in the run, with no other contact for 16 s. */
-const CUT_IN_SEED = 16;
+/**
+ * Osm-pasteur with no traffic and one scripted car. It waits in the lane beside the ego's, starts
+ * at `atS`, then crosses into the ego's lane ahead of it and creeps on there at 2 m/s.
+ * @param {GameMap} map Pasteur map.
+ * @returns {GameMap} Map with the cutter.
+ */
+function withCutter(map) {
+  const out = structuredClone(map);
+  const traffic = /** @type {NonNullable<GameMap['traffic']>} */ (out.traffic);
+  out.traffic = {
+    ...traffic,
+    densityPerKm: Object.fromEntries(Object.keys(traffic.densityPerKm).map((k) => [k, 0])),
+    sources: traffic.sources.map((src) => ({ ...src, ratePerH: 0 })),
+  };
+  out.actors = [
+    {
+      id: 'cutter',
+      kind: 'car',
+      model: 'npc-sedan',
+      lengthM: 4.5,
+      widthM: 1.8,
+      loop: false,
+      trigger: { atS: 5 },
+      speed: 2,
+      violations: ['unsafe-lane-change'],
+      path: [[117.082, 124.834], [116.599, 119.541], [90.447, 94.803]],
+    },
+  ];
+  return out;
+}
 
 beforeAll(async () => {
   await RAPIER.init();
@@ -654,23 +679,26 @@ describe('session with traffic (dev build checks)', () => {
   it('turns a contact with a vehicle cutting in on osm-pasteur into a notice on the HUD and the result, while the ego holds its speed', { timeout: 120_000 }, async () => {
     /** @type {Frame[]} */
     const recorded = [];
-    // On this seed a car changes lane into the ego's path without checking, while the ego cruises
-    // at a steady 7 m/s in its lane; the car latches `unsafe-lane-change` before the contact, and
-    // the ego has not sped up since.
+    // The cutter starts once the ego has reached its steady 7 m/s cruise, and the ego does not
+    // speed up after that, so the car's `unsafe-lane-change` flag excuses the contact.
     const h = trafficHarness({
-      loadMap: async () => structuredClone(PASTEUR),
-      loadTrafficParams: async () => CUTTING_RIDERS,
+      loadMap: async () => withCutter(PASTEUR),
       createSim: recordingSim(recorded),
       createInput: cruiseInput(recorded, 7),
     });
-    await h.game.start('osm-pasteur', 'car-sedan', { seed: CUT_IN_SEED });
-    runFor(h, 16);
+    await h.game.start('osm-pasteur', 'car-sedan', { seed: 1 });
+    // The map has no traffic, so the shared traffic runner, which expects agents, is not used.
+    h.frames.tick(0);
+    while (h.game.debugInfo().tick < 16 / DT && h.game.debugInfo().status === 'running') h.frames.tick(1000 / 60);
     const hits = recorded.flatMap((f) =>
       f.events.flatMap((ev) => (ev.type === 'collision' && ev.otherViolations.includes('unsafe-lane-change') ? [{ tick: f.tick, ev }] : [])),
     );
     expect(hits.length).toBeGreaterThan(0);
     const [first] = hits;
     expect(first.ev).toMatchObject({ striker: 'ego' });
+    const flagged = recorded.find((f) => f.actors.some((a) => a.id === 'cutter' && a.violations.includes('unsafe-lane-change')));
+    expect(flagged).toBeDefined();
+    expect(first.ev.egoSpeed - /** @type {Frame} */ (flagged).ego.speed).toBeLessThanOrEqual(BUNDLE.collisionPolicy.excuseMaxSpeedGainMps);
     expect(h.states.some((s) => s.notices.some((n) => n.tick === first.tick))).toBe(true);
     h.game.quit();
     const report = h.states.at(-1)?.report;

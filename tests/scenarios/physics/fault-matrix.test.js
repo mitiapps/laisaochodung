@@ -138,20 +138,19 @@ describe('fault table end to end on tutorial 02', () => {
 
   it('pulling away on green into a red-light runner crossing from the left is a notice', async () => {
     // The signal phases are swapped so the ego has green from t 0; it starts from rest 13 m before
-    // its stop line. The only traffic is a stream down the northern approach whose drivers all run
-    // the red. Seed 9 gives a glancing contact with a rider: the ego gains several m/s between the
-    // rider's red-light flag first showing and the contact, and keeps most of its speed after it.
-    const map = stage([]);
-    const traffic = /** @type {NonNullable<GameMap['traffic']>} */ (map.traffic);
-    traffic.sources = traffic.sources.map((s) => ({ ...s, ratePerH: s.laneId === 'bac-b0' ? 1800 : 0 }));
+    // its stop line. The runner is a scripted motorbike that comes down the northern approach from
+    // the left and carries the red-light flag from t 0. It crosses the ego's lane just ahead of
+    // the ego, so the ego strikes its rear corner while the rider is still moving. The ego gains
+    // several m/s from rest between the flag and the contact, and the right-of-way excuse keeps
+    // that contact a notice.
+    const map = stage([
+      { id: 'runner', kind: 'motorbike', model: 'motorbike', lengthM: 1.9, widthM: 0.8, speed: 6, violations: ['red-light'], path: [[-1.75, -20], [-1.75, 40]] },
+    ]);
     for (const sig of map.signals) sig.cycle = { ...sig.cycle, offset: sig.cycle.offset === 30 ? 0 : 30 };
     const startX = -30;
     map.route.start = { ...map.route.start, pos: { x: startX, z: LANE_Z } };
-    const params = structuredClone(PARAMS);
-    for (const p of Object.values(params.personalities)) p.violations.redLight = 1;
-    params.violations.carScale = 1;
     const run = await drivePhysics(map, 'car-sedan', {
-      sim: { traffic: 'map', runSeed: 9, params },
+      sim: { traffic: 'map', runSeed: 1, params: PARAMS },
       aware: false,
       cruiseMps: 12,
       path: straightLine(startX, 15, LANE_Z),

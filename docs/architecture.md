@@ -74,6 +74,9 @@ run with a fresh random run seed. `createSim` defaults to traffic off, so tests 
   `src/contracts/traffic.js`), adding the TT 38 default limits from
   `data/legal/speed-defaults.yaml` as `speedDefaults` ([maps.md](maps.md) lists the groups). Per-map values (density, sources, sinks, mix, `maxAgents`) are in
   the map.
+- **Scripted violations.** A scripted actor's pose carries the `violations` its map actor declares,
+  while the actor is active, plus `wrong-way` for a car against its lane. The fault table reads them
+  as it reads a traffic agent's latched flags, and nothing else acts on them.
 - **Frame actor order.** `frame.actors` lists the scripted actors in map order, then the traffic
   agents in ascending spawn index (`npc-<spawnIndex>`).
 - **Mirror and contacts.** Traffic motion stays in `src/world/`. The sim mirrors the agents near

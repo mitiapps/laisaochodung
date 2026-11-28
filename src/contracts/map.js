@@ -22,6 +22,7 @@
 
 /** @typedef {import('./telemetry.js').Vec2} Vec2 */
 /** @typedef {import('./telemetry.js').Pos2} Pos2 */
+/** @typedef {import('./telemetry.js').NpcViolation} NpcViolation */
 /** @typedef {Vec2[]} Polygon Ring of `[x, z]`, closing edge implied. */
 /** @typedef {Vec2[]} Polyline Open chain of `[x, z]`, at least 2 points. */
 /** @typedef {[Vec2, Vec2]} Segment Line segment. */
@@ -256,15 +257,20 @@
  * point to the first. A non-looping actor stops at the last point and becomes inactive.
  * @typedef {object} MapActor
  * @property {string} id Actor id.
- * @property {'pedestrian' | 'car'} kind Actor kind.
+ * @property {'pedestrian' | 'car' | 'motorbike'} kind Actor kind.
  * @property {string} model Renderer model key: `npc-sedan`, `npc-hatchback` or `pedestrian`; an
- *   unknown key renders as a generic box car or a primitive pedestrian.
+ *   unknown key renders as a generic box car or a primitive pedestrian. A motorbike is drawn as a
+ *   ridden motorbike whatever its key.
  * @property {number} lengthM Length along the path.
  * @property {number} widthM Width across the path.
  * @property {Polyline} path Path; the actor starts at its first point.
  * @property {number} speed Cruise speed in m/s.
  * @property {PolygonTrigger | TimeTrigger} trigger Start condition.
  * @property {boolean} loop Closed looping path.
+ * @property {NpcViolation[]} [violations] Violations the actor carries while it is active, as
+ *   facts of its pose: the scorer reads them on a contact with it, as it reads a traffic agent's
+ *   latched flags. Absent means none. A car that travels against its lane also carries
+ *   `wrong-way`, whatever is listed here.
  */
 
 /**
@@ -331,7 +337,7 @@ export const MANOEUVRES = Object.freeze(['left', 'right', 'uturn']);
 export const ENTRY_CLASSES = Object.freeze(['car', 'motorbike', 'moped', 'all']);
 export const SIGN_SOURCES = Object.freeze(['osm', 'override', 'tutorial']);
 export const OBSTACLE_KINDS = Object.freeze(['building', 'parked-car', 'barrier']);
-export const ACTOR_KINDS = Object.freeze(['pedestrian', 'car']);
+export const ACTOR_KINDS = Object.freeze(['pedestrian', 'car', 'motorbike']);
 export const BUILDING_USES = Object.freeze(['shophouse', 'civic', 'tower', 'landmark', 'compound']);
 export const PROP_KINDS = Object.freeze([
   'tree',

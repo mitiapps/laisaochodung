@@ -96,7 +96,8 @@
  *   `crashed` a wrecked car, `fallen` a fallen motorbike and rider.
  * @property {readonly NpcViolation[]} violations Flags true within the last `crashCauseWindowS`
  *   (latched by the traffic module). The empty case is the shared `NO_VIOLATIONS` array. A
- *   scripted actor carries only `wrong-way`, while it travels against the lane it is on.
+ *   scripted actor carries the violations its map actor declares, plus `wrong-way` while a car
+ *   travels against the lane it is on, and only while it is active.
  */
 
 /**

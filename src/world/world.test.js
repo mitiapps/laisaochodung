@@ -10,6 +10,7 @@ import {
   createRouteState,
   finishTarget,
   signalState,
+  actorStoppingDistance,
   stepActors,
   stepRoute,
   trafficLightStates,
@@ -177,6 +178,30 @@ describe('stepActors', () => {
     expect(noEgo.poses.find((p) => p.id === 'npc-1')).toMatchObject({ active: true, speed: 10 });
     expect(noEgo.poses.find((p) => p.id === 'ped-1')?.active).toBe(false);
     expect(() => stepActors(createActorState(MAP), MAP, /** @type {never} */ (AWAY), 0, DT)).toThrow(TypeError);
+  });
+
+  it('carries the declared violations only while the actor is active, with wrong-way ahead of them against the lane', () => {
+    const declared = structuredClone(MAP);
+    const carOf = (/** @type {GameMap} */ m) => /** @type {GameMap['actors'][number]} */ (m.actors.find((a) => a.id === 'npc-1'));
+    carOf(declared).violations = ['unsafe-lane-change'];
+    const flagsOf = (/** @type {GameMap} */ m, /** @type {number} */ t) => {
+      const state = { ...createActorState(m), t };
+      return stepActors(state, m, [AWAY], 0, DT).poses.find((p) => p.id === 'npc-1')?.violations;
+    };
+    expect(flagsOf(declared, 0)).toEqual(['unsafe-lane-change']);
+    const later = structuredClone(declared);
+    carOf(later).trigger = { atS: 1 };
+    expect(flagsOf(later, 0)).toBe(NO_VIOLATIONS);
+    expect(flagsOf(later, 1)).toEqual(['unsafe-lane-change']);
+    const against = structuredClone(declared);
+    const npc = carOf(MAP);
+    carOf(against).path = npc.path.map(([x, z]) => /** @type {[number, number]} */ ([x, -z]));
+    expect(flagsOf(against, 0)).toEqual(['wrong-way', 'unsafe-lane-change']);
+  });
+
+  it('brakes a scripted motorbike at the motorbike deceleration', () => {
+    const npc = /** @type {GameMap['actors'][number]} */ (MAP.actors.find((a) => a.id === 'npc-1'));
+    expect(actorStoppingDistance({ ...npc, kind: 'motorbike', speed: 8 })).toBeCloseTo(8);
   });
 
   it('fills the traffic pose fields from the map actor with the shared constants', () => {

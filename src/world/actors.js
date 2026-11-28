@@ -14,8 +14,9 @@
  *    the last point back to the first; a non-looping actor stops at the last point and becomes
  *    inactive.
  *
- * Violation flags are facts of the pose: an active car on a lane, heading against that lane's
- * direction of travel, carries `wrong-way` (the fault table judges a contact with it).
+ * Violation flags are facts of the pose, carried while the actor is active: the map's declared
+ * `violations` of the actor, and `wrong-way` for an active car on a lane, heading against that lane's
+ * direction of travel. The fault table judges a contact with the actor by them.
  */
 
 import { ACTOR_LIGHTS, NO_VIOLATIONS } from '../contracts/telemetry.js';
@@ -34,15 +35,60 @@ import {
 /** @typedef {import('../contracts/map.js').MapActor} MapActor */
 /** @typedef {import('../contracts/telemetry.js').ActorPose} ActorPose */
 /** @typedef {import('../contracts/telemetry.js').Vec2} Vec2 */
+/** @typedef {import('../contracts/telemetry.js').NpcViolation} NpcViolation */
 
 /** Deceleration assumed for an actor's stopping distance, m/s², by kind. */
-export const ACTOR_DECEL_MPS2 = Object.freeze({ car: 4, pedestrian: 2 });
+export const ACTOR_DECEL_MPS2 = Object.freeze({ car: 4, motorbike: 4, pedestrian: 2 });
 
 /** Extra clearance ahead of an actor's front, in metres. */
 export const HOLD_MARGIN_M = 2;
 
 /** The flags of an actor travelling against its lane. */
 const WRONG_WAY = Object.freeze(/** @type {const} */ (['wrong-way']));
+
+/**
+ * Frozen flag lists of an actor: its declared `violations`, and those with `wrong-way` added.
+ * @typedef {object} FlagLists
+ * @property {readonly NpcViolation[]} declared Declared flags.
+ * @property {readonly NpcViolation[]} wrongWay Declared flags with `wrong-way` added.
+ */
+
+/**
+ * Flag lists of each actor, by its map object, so a step allocates none.
+ * @type {WeakMap<MapActor, FlagLists>}
+ */
+const FLAG_LISTS = new WeakMap();
+
+/**
+ * Flag lists of an actor, built once per map object (a map is not changed once it is stepped).
+ * @param {MapActor} actor Actor.
+ * @returns {FlagLists} Lists.
+ */
+function flagListsOf(actor) {
+  let lists = FLAG_LISTS.get(actor);
+  if (lists === undefined) {
+    const declared = [...new Set(actor.violations ?? [])];
+    lists = {
+      declared: declared.length === 0 ? NO_VIOLATIONS : Object.freeze(declared),
+      wrongWay: Object.freeze([...new Set([...WRONG_WAY, ...declared])]),
+    };
+    FLAG_LISTS.set(actor, lists);
+  }
+  return lists;
+}
+
+/**
+ * Violation flags of a pose.
+ * @param {MapActor} actor Actor.
+ * @param {boolean} active The actor is active this step.
+ * @param {boolean} travellingAgainst A car travels against its lane.
+ * @returns {readonly NpcViolation[]} Flags.
+ */
+function poseFlags(actor, active, travellingAgainst) {
+  if (!active) return NO_VIOLATIONS;
+  const lists = flagListsOf(actor);
+  return actor.kind === 'car' && travellingAgainst ? lists.wrongWay : lists.declared;
+}
 
 /**
  * Whether a point heading `heading` travels against the lane it stands on: inside a lane polygon
@@ -204,7 +250,7 @@ export function stepActors(actorState, map, blockers, egoSpeed, dt) {
       widthM: actor.widthM,
       lights: ACTOR_LIGHTS.off,
       state: speed > 0 ? 'moving' : 'stopped',
-      violations: active && actor.kind === 'car' && againstLane(map, here.point, here.heading) ? WRONG_WAY : NO_VIOLATIONS,
+      violations: poseFlags(actor, active, active && actor.kind === 'car' && againstLane(map, here.point, here.heading)),
     });
     let s = rt.s + speed * dt;
     let done = rt.done;

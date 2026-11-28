@@ -118,6 +118,9 @@ describe('assertMap', () => {
     ['speed limit without a value', (m) => delete m.zones[1].valueKmh, /valueKmh/],
     ['non-finite number', (m) => (m.signals[0].pos.x = Number.NaN), /signals\[0\]\.pos\.x/],
     ['trigger with both forms', (m) => (m.actors[1].trigger.polygon = [[0, 0], [1, 0], [1, 1]]), /exactly one/],
+    ['actor kind outside the table', (m) => (m.actors[1].kind = 'bicycle'), /actors\[1\]\.kind/],
+    ['actor violation outside the table', (m) => (m.actors[1].violations = ['inattentive']), /actors\[1\]\.violations\[0\]/],
+    ['actor violations that are not a list', (m) => (m.actors[1].violations = 'red-light'), /actors\[1\]\.violations/],
     ['unknown sign code', (m) => (m.signs[0].code = 'P.999'), /unknown sign code/],
     ['OSM map without attribution', (m) => (m.kind = 'osm'), /attribution/],
     ['missing collection', (m) => delete m.entries, /entries/],
@@ -133,6 +136,12 @@ describe('assertMap', () => {
 });
 
 describe('assertMap with a lane graph and traffic', () => {
+  it('accepts a scripted motorbike that declares its violations', () => {
+    const m = clone(MAP);
+    m.actors[1] = { ...m.actors[1], kind: 'motorbike', model: 'motorbike', violations: ['red-light', 'unsafe-lane-change'] };
+    expect(checkMap(m, { signCodes: SIGN_CODES })).toEqual([]);
+  });
+
   it('accepts the junction fixture', () => {
     expect(checkMap(JUNCTION, { signCodes: SIGN_CODES })).toEqual([]);
   });

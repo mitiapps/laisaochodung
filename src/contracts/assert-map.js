@@ -24,7 +24,7 @@ import {
   ZONE_SOURCES,
   ZONE_TYPES,
 } from './map.js';
-import { WEATHERS } from './telemetry.js';
+import { NPC_VIOLATIONS, WEATHERS } from './telemetry.js';
 
 /**
  * @typedef {object} MapCheckOptions
@@ -261,6 +261,9 @@ export function checkMap(map, options = {}) {
     c.polyline(a.path, `${p}.path`);
     c.number(a.speed, `${p}.speed`, { min: 0 });
     c.boolean(a.loop, `${p}.loop`);
+    if (a.violations !== undefined && c.array(a.violations, `${p}.violations`)) {
+      a.violations.forEach((v, j) => c.oneOf(v, NPC_VIOLATIONS, `${p}.violations[${j}]`));
+    }
     if (c.object(a.trigger, `${p}.trigger`)) {
       const hasPoly = a.trigger.polygon !== undefined;
       const hasTime = a.trigger.atS !== undefined;
