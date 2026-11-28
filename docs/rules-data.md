@@ -9,7 +9,7 @@ unknown source id or an unknown clause id.
 | --- | --- |
 | `data/legal/sources.yaml` | Legal texts: number, edition, dates, URL, `official` |
 | `data/legal/clauses.yaml` | One record per cited điểm of ND 168: fine band, licence points, suspension, quote |
-| `data/legal/speed-defaults.yaml` | TT 38 default limits by class, built-up area and road type |
+| `data/legal/speed-defaults.yaml` | TT 38 default limits by class, built-up area and road type; `npm run build:traffic` also copies them for traffic |
 | `data/rules/<id>.yaml` | One rule per file (the file name is the rule id) |
 | `data/scoring/scoring.yaml` | Deductions per danger level and the scorer's timing and impulse thresholds |
 | `data/scoring/collision-policy.yaml` | How a collision picks its clause |
@@ -53,7 +53,15 @@ old record once nothing cites it.
   scale, separate from the legal penalty.
 - **`detection`**: `type` names a detector in `src/scoring/detectors/`. `params` are its
   thresholds. Every param needs a `paramBasis` entry, and every `paramBasis` key must be a
-  param.
+  param. The validator also checks `params` against the detector's exported `paramSpec`: every
+  required key present, no key the detector does not read, and each value of its declared shape
+  (a finite number, an enum, an enum list or a record).
+- **Episode severity**: a breach inside an open episode is re-emitted only when its severity
+  rises. The severity is the tier index unless the detector returns its own. `stopping` takes it
+  from `placeSeverity` (per decree group and place, following the cited fine bands): for cars a
+  stop that moves from a crosswalk or P.130 zone into a junction or its buffer escalates, one
+  that moves the other way keeps the heavier breach, and a motorbike stop never escalates, since
+  every place cites 7.2.e.
 
 ## Flags
 
@@ -119,8 +127,10 @@ Other contacts:
 - A lighter hit on the car ahead in the same lane cites 6.4.l or 7.3.i.
 - Other car contacts, static objects, kerbs and falls deduct score only.
 - A contact while the ego is slower than `contactMinEgoSpeed` is never charged. A vehicle contact
-  the fault table would charge gives a notice instead (`ego-slow`: the player touched it at a
-  crawl and should keep a safe distance) and opens the aftermath window, so a struck, stopped
+  the fault table would charge gives a notice instead and opens the aftermath window. Its text
+  is `ego-slow` (the player touched it at a crawl and should keep a safe distance) only when the
+  player struck (striker `ego` or `both`, or a fall); when the other vehicle struck, the notice
+  keeps its violation, `from-behind` or `none` text. The window opens either way, so a struck, stopped
   player, or one creeping into another vehicle, still sees a notice. A pedestrian contact below
   that speed is a notice too (`pedestrian-slow`, worded neutrally, as a pedestrian may walk into a
   standing vehicle), never a deduction and never a run end. A static object or kerb touched below

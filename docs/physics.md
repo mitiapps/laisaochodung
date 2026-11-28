@@ -19,8 +19,9 @@ world logic (lights, actors, route) comes from `src/world/` and is not copied he
    update and `updateVehicle(DT)`; then `world.step(eventQueue)`.
 4. `limitEgo` of the traffic mirror caps the ego velocity after a contact it drove into (see
    Collisions below). Contact-force events of the chassis become `collision` events, one per
-   contact episode and other body (re-armed after `COLLISION_REARM_S` without contact,
-   `src/sim/world-colliders.js`). A scripted fall emits `fall` and schedules the reset for the
+   contact episode and other body (`drainCollisions`); then `holdContacts` keeps each open
+   episode alive while its body still touches the chassis. A body re-arms after
+   `COLLISION_REARM_S` without contact (`src/sim/world-colliders.js`). A scripted fall emits `fall` and schedules the reset for the
    next step.
 5. `stepRoute`, `trafficLightStates` and `clockAt` at `t = tick · DT`.
 
@@ -88,8 +89,10 @@ isotropic correction (`skid.js`, `isotropicFrictionSlip`) scales `frictionSlip` 
   `fall.holdS` (`vehicles/scooter.js`).
 - **Collisions**: the chassis collider has contact-force events above
   `CONTACT_FORCE_THRESHOLD_N` (`vehicle.js`). One body is a kind plus a map id, so the wall boxes
-  of one obstacle count as one body, and so do all kerbs. The same body re-arms after
-  `COLLISION_REARM_S` without contact.
+  of one obstacle count as one body, and so do all kerbs. Only a contact-force event above the
+  threshold opens an episode; any live contact with the body, at any force, keeps it open
+  (`holdContacts` reads Rapier's contact manifolds after each `world.step`). The same body re-arms
+  after `COLLISION_REARM_S` without contact.
   Traffic agents touch the ego through kinematic mirror bodies (`src/sim/traffic-mirror.js`). An
   agent that reaches the ego pushes it at the momentum-share velocity `v · m_npc / (m_npc + m_ego)`.
   An ego that drives into an agent (its velocity along the agent's push direction below

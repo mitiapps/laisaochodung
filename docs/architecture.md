@@ -32,8 +32,8 @@ rules JSON (rules + clauses + collisionPolicy) ─► scorer
   at context creation. On a software rasteriser (`softwareRenderer`: SwiftShader, llvmpipe) it
   draws without antialiasing, at half a drawing-buffer pixel per CSS pixel, with Lambert scenery
   materials, no shadows, and a 150 m far plane (`LOW_FAR_M`) with the clear-day fog thickened to
-  hide it. In SwiftShader at 1280 × 720, `osm-pasteur` runs at about 34 frames per second and
-  tutorial 01 at about 58. A hardware GPU keeps antialiasing, standard materials, the device pixel
+  hide it. Its measured frame rates are in [known-issues.md](known-issues.md#physics-and-maps).
+  A hardware GPU keeps antialiasing, standard materials, the device pixel
   ratio (at most 2), shadows and the 300 m far plane.
 - **Camera.** The renderer draws one of two views (`CameraMode`, `src/contracts/controls.js`): a
   smoothed chase camera high behind the vehicle, or a rigid cockpit camera at the driver's or
@@ -71,7 +71,8 @@ run with a fresh random run seed. `createSim` defaults to traffic off, so tests 
 - **Parameters.** Driver and vehicle parameters live once in `data/traffic/params.yaml`, every
   number with a `paramBasis`; `npm run build:traffic` (`scripts/traffic/build.js`) checks and
   compiles them to `src/generated/traffic-params.json` (`TrafficParams`,
-  `src/contracts/traffic.js`). Per-map values (density, sources, sinks, mix, `maxAgents`) are in
+  `src/contracts/traffic.js`), adding the TT 38 default limits from
+  `data/legal/speed-defaults.yaml` as `speedDefaults` ([maps.md](maps.md) lists the groups). Per-map values (density, sources, sinks, mix, `maxAgents`) are in
   the map.
 - **Frame actor order.** `frame.actors` lists the scripted actors in map order, then the traffic
   agents in ascending spawn index (`npc-<spawnIndex>`).

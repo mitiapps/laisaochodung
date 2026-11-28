@@ -187,6 +187,12 @@ says what happens and where.
 - **All signal heads stand on side poles.** No map data says which heads hang on a cantilever.
 - **Civic fences are drawn only.** They have no collider, so the player can drive through them.
 - **Signal countdowns** count red and green only, as the countdown lamps in Ho Chi Minh City do.
+- **Traffic applies a P.127 zone to the whole lane.** The scorer reads a speed-limit zone only
+  inside its polygon, but traffic binds it to every lane the zone lists, end to end. Where a zone
+  covers part of a lane (`z-s-p127-40` on `rong-f0` and `rong-f1` of tutorial 01 and tutorial 03
+  covers x 240 to 420 of a lane that runs 220 to 512), agents keep to 40 km/h along the whole lane
+  and can be flagged `speeding` at 41 to 50 km/h outside the zone, where the player's limit is the
+  TT 38 default. Fixing it needs limits that change along a lane.
 
 ## Physics and maps
 
@@ -203,17 +209,28 @@ says what happens and where.
 - **A low frame rate runs the game in slow motion.** The loop takes at most
   `MAX_STEPS_PER_FRAME` fixed steps per rendered frame (`src/game/loop.js`), so below
   `1 / (MAX_STEPS_PER_FRAME · DT)` frames per second simulated time falls behind the clock.
-- In software GL (SwiftShader, 1280 x 720, production build) the low-cost path draws osm-pasteur at
-  about 35 frames per second and tutorial 01 at about 57.
+- In software GL (SwiftShader, 1280 × 720, dev server) the low-cost path draws `osm-pasteur` at
+  about 34 frames per second and tutorial 01 at about 58.
 - The straight side of a T-junction has no pavement or kerb: corner pavements fill only real
   corners. On `tutorial-02-nga-tu` the larger trim at j4 widens that open side from about 9 m to
   16 m.
+- **A `laneLine` spec is read in the way's own frame for both directions** (`scripts/maps/lib/lanes.js`).
+  Its stretches are measured from the way's first node and its `crossable` side is taken against
+  the node order, for the backward lane lines too. On `tutorial-01-co-ban`, the "solid before the
+  junction" stretch of `rong` is also solid for the first 52 m after the junction for westbound
+  traffic (`rong-lb1-2`, x 460 to 512), and a `mixed` line on a two-way way would allow the
+  opposite lane change to backward traffic. No source uses a `mixed` line, and the tutorial route
+  drives `rong` eastbound only.
 - The lane-change detector has been checked only against scripted and autopilot drivers. If a
   human play-test shows false breaches from jerky steering, add a dwell or depth threshold to
   `lane-line-cross` from that evidence, not from bot data.
 
 ## Data licences
 
-The repository is private, so `data/maps/LICENSE-ODbL.md` does not reach players. The credits
-page says the OSM-derived map files the game downloads are released under ODbL 1.0 and links the
-licence; there is no licence file next to `maps/osm-pasteur.json` itself.
+The ODbL notice for the OSM-derived map data is `data/maps/LICENSE-ODbL.md` in the public
+repository; the release gate fails without it. The built site does not ship it: the build copies
+`public/` beside the bundle, and `public/maps/` has no licence file next to
+`maps/osm-pasteur.json`. Players get
+the "© OpenStreetMap contributors, ODbL" attribution on the play screen and the credits page,
+which says the OSM-derived map files the game downloads are released under ODbL 1.0 and links
+the licence text.

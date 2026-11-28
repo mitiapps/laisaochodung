@@ -14,8 +14,9 @@ npx vitest run scripts/maps     # converter tests, snapshots and byte-stability 
 
 `scripts/maps/build.js` reads every `data/maps/*/source.yaml`, converts it with
 `scripts/maps/lib/`, checks it with `assertMap` against the sign codes in `data/signs/signs.yaml`,
-and writes JSON with sorted keys, collections sorted by id and numbers rounded to millimetres, so
-two builds are byte-identical.
+and writes JSON with sorted keys, collections sorted by id and numbers rounded to millimetres
+(1e-7° under `origin`, 1e-9 for a traffic mix `share`, so shares still sum to 1), so two builds
+are byte-identical.
 
 | Module | Job |
 | --- | --- |
@@ -37,8 +38,8 @@ two builds are byte-identical.
   than its two cuts fails the build with the way id; an OSM override can set `trimM` or a
   hand-placed `polygon` for that junction.
 - Zones, each with its `source` and the `laneIds` it binds:
-  - `speed-limit` only from a placed P.127, along the lanes it faces, ending at the next junction
-    or a DP.134 (QCVN 41 Điều 26.8). OSM `maxspeed` is never a zone source.
+  - `speed-limit` only from a placed P.127, along the lanes it faces, ending at the next junction,
+    a DP.134 or the next P.127 facing the same traffic (QCVN 41 Điều 26.8). OSM `maxspeed` is never a zone source.
   - `no-stopping` from a placed P.130, to the next junction.
   - `built-up` from R.420. R.421 is not in the sign set, so the zone covers the whole map and
     every lane; a map without an R.420 fails the build.
@@ -146,7 +147,11 @@ breaking is drawn), `motorbike` (lateral slots and filtering), `behaviour` (turn
 changes, junction deadlock breaking, rain braking), `incidentBand`, the mirror limits
 (`mirrorRadiusM`, `maxMirrored`), wreck clearing and spawn and despawn distances. Every model key
 of a map's `mix` must be a key of `models`, and the release gate checks that each one draws from a
-credited model file or a procedural builder.
+credited model file or a procedural builder. The build also adds `speedDefaults`, the TT 38
+default limits copied from `data/legal/speed-defaults.yaml` without their citations (no
+`paramBasis`; a `speedDefaults` key in `params.yaml` fails the build). Agents drive at a share of
+the lane's P.127 limit, else of the TT 38 default for their legal class, as the scorer reads it,
+and the `speeding` flag uses the same limit.
 
 ## OSM sources
 
@@ -154,7 +159,8 @@ credited model file or a procedural builder.
   `checkpoints`, `finish`). Travel directions come from the node order of the extract; a route
   that drives a one-way way backwards fails the build.
 - `raw.overpass.json`: written once by `npm run fetch:osm -- <id>` and committed. Never fetched in
-  CI or on build.
+  CI or on build. An Overpass answer whose `remark` reports a runtime error (a truncated extract)
+  counts as a failed attempt: the fetch retries, then fails without writing the file.
 - `overrides.yaml`: `environment`, `timeLimitS`, and lists that each carry a `reason`: `ways`
   (lane counts, lines, pavements), `junctions` (`signals`, `trimM`, `polygon` as `[lat, lon]`),
   `signs`, `crosswalks`, `actors`, `obstacles`. Positions are `{way, s}` or
@@ -237,4 +243,4 @@ default road therefore meets that constraint without a fallback:
 None of the extract's 17 traffic_signals nodes lies within 30 m of Pasteur × Nguyễn Du (nearest
 146 m) or Pasteur × Hàn Thuyên, so those junctions have no stop lines in the game. Way 678315474 is tagged `sidewalk=no`, so it has no
 pavement. The extract has no traffic signs, so the only placed sign is the R.420 at the start
-(see `overrides.yaml`); no speed-limit zone exists and the TT 38 defaults apply.
+(see `overrides.yaml`); no speed-limit zone exists and the TT 38 defaults apply, to the player and to traffic.

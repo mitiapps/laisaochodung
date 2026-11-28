@@ -10,7 +10,8 @@ string in Vietnamese (`{vi, en?}` texts, `en` left empty). Architecture:
   the maintainer, never ad hoc.
 - Plain JavaScript with JSDoc (TypeScript-flavour types, linted by eslint-plugin-jsdoc). No
   TypeScript files.
-- Gates before handing work over: `npm run lint`, `npm test`, `npx vite build`.
+- Gates before handing work over: `npm run lint`, `npm test`, `npm run build` (the data build,
+  the release gate and the Vite bundle, as CI and both deploy hosts run it).
 
 ## Purity guard
 
