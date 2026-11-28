@@ -93,8 +93,18 @@ import { NPC_VIOLATIONS } from '../../../src/contracts/telemetry.js';
 /** OSM map attribution required by the ODbL. */
 export const OSM_ATTRIBUTION = '© OpenStreetMap contributors, ODbL';
 
-/** Default light cycle (s), a game value: red equals green plus yellow so crossing axes alternate. */
-export const DEFAULT_CYCLE = Object.freeze({ green: 27, yellow: 3, red: 30 });
+/**
+ * All-red clearance at each change between the two axes of a signalised junction (s,
+ * `paramBasis: design`; QCVN 41:2024 sets no all-red length).
+ */
+export const ALL_RED_S = 2;
+
+/**
+ * Default light cycle (s). Green 25 s is over the 15 s minimum of QCVN 41:2024 Phụ lục A.2; yellow
+ * 3 s; red 32 s = green + yellow + 2 × `ALL_RED_S`. The cross axis runs half a period (30 s) later,
+ * so each change carries `ALL_RED_S` of all-red (`paramBasis: design`).
+ */
+export const DEFAULT_CYCLE = Object.freeze({ green: 25, yellow: 3, red: 32 });
 
 /** Default crosswalk width (m), a game value. */
 export const CROSSWALK_WIDTH_M = 4;
@@ -440,8 +450,10 @@ function parseJunctions(v, nodeOf, polygonOf, file) {
         yellow: num(c.yellow ?? DEFAULT_CYCLE.yellow, `${w}.signals.yellow`, { min: 1 }),
         red: num(c.red ?? DEFAULT_CYCLE.red, `${w}.signals.red`, { min: 1 }),
       };
-      if (spec.signals.red < spec.signals.green + spec.signals.yellow) {
-        throw new Error(`${w}.signals: red must be at least green + yellow so crossing axes never both go`);
+      // The cross axis runs half a period later, so each change has (red − green − yellow) / 2 of
+      // all-red.
+      if (spec.signals.red < spec.signals.green + spec.signals.yellow + 2 * ALL_RED_S) {
+        throw new Error(`${w}.signals: red must be at least green + yellow + ${2 * ALL_RED_S} s, for ${ALL_RED_S} s of all-red at each change`);
       }
     }
     if (j.trimM !== undefined) spec.trimM = num(j.trimM, `${w}.trimM`, { min: 1, max: 40 });
@@ -503,6 +515,7 @@ export function tutorialSpec(id, src, loadLayout) {
       backward,
       centerLine: parseLineSpec(x.centerLine ?? 'dashed', `${w}.centerLine`),
       laneLine: parseLineSpec(x.laneLine ?? 'dashed', `${w}.laneLine`),
+      authoredLines: { center: x.centerLine !== undefined, lane: x.laneLine !== undefined },
       pavement: pavement(x.pavement, `${w}.pavement`, PAVEMENT_M),
     });
   });
@@ -578,7 +591,7 @@ export function osmSpec(id, src, raw, overrides) {
   });
 
   const stubM = num(src.stubM ?? STUB_M, `${file} stubM`, { min: 1 });
-  const { network, routeDirs, osmNodes, stubNotes } = osmCorridor(raw, routeWays, proj, (w, oneway) => {
+  const { network, routeDirs, osmNodes, stubNotes, stubNodeSources } = osmCorridor(raw, routeWays, proj, (w, oneway) => {
     const tags = /** @type {Record<string, string>} */ (w.tags);
     const o = wayOverrides.get(w.id) ?? {};
     const where = `${ofile} ways(${w.id})`;
@@ -610,6 +623,7 @@ export function osmSpec(id, src, raw, overrides) {
       backward,
       centerLine: parseLineSpec(o.centerLine ?? (forward >= 2 && backward >= 2 ? 'solid' : 'dashed'), `${where}.centerLine`),
       laneLine: parseLineSpec(o.laneLine ?? 'dashed', `${where}.laneLine`),
+      authoredLines: { center: o.centerLine !== undefined, lane: o.laneLine !== undefined },
       pavement: pavement(o.pavement, `${where}.pavement`, noSidewalk ? 0 : PAVEMENT_M),
     };
   }, { stubM, laneWidth: LANE_WIDTH_M });
@@ -640,14 +654,16 @@ export function osmSpec(id, src, raw, overrides) {
 
   const elements = parseElements({ ...overrides, route: routeSpec }, at, wayOf, defaultDir, ofile);
 
-  // Marked OSM crossings on route ways become crosswalks.
+  // Marked OSM crossings on every corridor way, side-road stubs included, become crosswalks.
   const crosswalkIds = new Set(elements.crosswalks.map((c) => c.id));
   for (const way of network.ways) {
-    if (way.osmWayId === undefined || !routeWays.includes(way.osmWayId) || !routeDirs.has(way.id)) continue;
+    if (way.osmWayId === undefined) continue;
     for (const nid of way.nodeIds) {
-      const tags = osmNodes.get(nid)?.tags;
+      // A stub vertex carries its own id; its OSM node is looked up through the stub's sources.
+      const osmId = stubNodeSources.get(nid) ?? nid;
+      const tags = osmNodes.get(osmId)?.tags;
       if (!tags || tags.highway !== 'crossing' || !isMarkedCrossing(tags)) continue;
-      const cid = `cw-${nid}`;
+      const cid = `cw-${osmId}`;
       if (crosswalkIds.has(cid)) continue;
       crosswalkIds.add(cid);
       elements.crosswalks.push({ id: cid, at: { way: way.id, s: nodeDistance(network, way, nid) }, widthM: CROSSWALK_WIDTH_M, clamp: true });

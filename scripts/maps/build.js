@@ -20,6 +20,7 @@ import { frontageRows, importOsmBuildings, parseLandmarks, typeTutorialRows } fr
 import { buildLaneGraph } from './lib/connectors.js';
 import { compileMap, routeLength, topologyOf } from './lib/elements.js';
 import { wayPoints } from './lib/graph.js';
+import { buildLaneArrows } from './lib/lane-arrows.js';
 import { createProjection } from './lib/project.js';
 import {
   Blockers,
@@ -194,8 +195,8 @@ export function corridorProblems(spec, map) {
 }
 
 /**
- * Adds the lane graph to a compiled map and, when its source has a `traffic` key, the traffic
- * block and the traffic time limit.
+ * Adds the lane graph and the lane arrows it implies to a compiled map and, when its source has a
+ * `traffic` key, the traffic block and the traffic time limit.
  * @param {GameMap} map Compiled map (changed in place).
  * @param {SourceYaml | undefined} trafficSrc Value of the source's `traffic` key.
  * @param {string} where Source file name for messages.
@@ -207,7 +208,9 @@ export function addLaneGraphAndTraffic(map, trafficSrc, where) {
   map.conflicts = graph.conflicts;
   // A plain join hands a lane to the next road with no junction.
   map.laneJoins = graph.joins.map((j) => ({ fromLaneId: j.fromLaneId, toLaneId: j.toLaneId }));
-  const notes = [];
+  const arrows = buildLaneArrows(map);
+  if (arrows.arrows.length > 0) map.laneArrows = arrows.arrows;
+  const notes = [...arrows.notes];
   if (trafficSrc !== undefined && graph.joins.length > 0) {
     notes.push(`plain joins: ${graph.joins.map((j) => `${j.fromLaneId}→${j.toLaneId}`).join(', ')}`);
   }
@@ -325,9 +328,9 @@ export async function buildOne(mapsDir, id, signCodes, options = {}) {
   for (const s of spec.signs) {
     if (!signCodes.includes(s.code)) throw new Error(`${id}: sign ${s.id} uses code ${s.code}, which is not in data/signs/signs.yaml`);
   }
-  const compiled = compileMap(spec);
-  const src = await readYaml(path.join(mapsDir, id, 'source.yaml'));
   const notes = (spec.stubNotes ?? []).map((n) => `stub of way ${n.osmWayId} at ${n.nodeId} (${n.side}) kept at ${n.lengthM.toFixed(0)} m: ${n.reason}`);
+  const compiled = compileMap(spec, notes);
+  const src = await readYaml(path.join(mapsDir, id, 'source.yaml'));
   notes.push(...addLaneGraphAndTraffic(compiled, src.traffic, `${id}/source.yaml`));
   if (options.scenery !== false) notes.push(...addScenery(compiled, spec, await scenerySource(mapsDir, id, src)));
   const json = serializeMap(compiled);

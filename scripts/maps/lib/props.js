@@ -215,6 +215,11 @@ export function mapBlockers(map) {
   for (const j of map.junctions) out.add(j.polygon, `junction ${j.id}`);
   for (const c of map.crosswalks) out.add(growPolygon(c.polygon, CROSSWALK_CLEAR_M), `crosswalk ${c.id}`);
   for (const post of [...map.signs, ...map.signals]) out.add(footprint(post.pos, post.heading, POST_CLEAR_M, POST_CLEAR_M), `post ${post.id}`);
+  for (const s of map.signals) {
+    for (const h of s.repeaters ?? []) {
+      out.add(footprint(h.mastPos ?? h.pos, s.heading, POST_CLEAR_M, POST_CLEAR_M), `repeater post of ${s.id}`);
+    }
+  }
   for (const o of map.obstacles) out.add(o.footprint, `obstacle ${o.id}`);
   return out;
 }

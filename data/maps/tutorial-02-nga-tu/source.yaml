@@ -52,7 +52,10 @@ ways:
     nodes: [j4, f5]
 
 junctions:
-  - { node: j1, signals: { green: 27, yellow: 3, red: 30 } }
+  # The default cycle (green 25, yellow 3, red 32: 2 s all-red at each change). The build adds the
+  # crosswalks on bac, nam and giua (cw-tay is written), far-side repeater posts, and the solid
+  # approach on bac and nam; tay and giua keep their written centre lines.
+  - { node: j1, signals: true }
   # Wider corners for the right turns kerb lane to kerb lane: a 6.25 m arc, drivable at a car's
   # lock up to about 25 km/h.
   - { node: j3, trimM: 8 }

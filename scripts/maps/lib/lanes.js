@@ -96,11 +96,20 @@ export function directionLaneIds(road, dir) {
 }
 
 /**
+ * Line specs that replace a way's own for one road (way distances).
+ * @typedef {object} RoadLines
+ * @property {LineStretch[]} [forward] Lines between the forward lanes.
+ * @property {LineStretch[]} [backward] Lines between the backward lanes.
+ * @property {LineStretch[]} [center] Centre line.
+ */
+
+/**
  * Road contract object with lanes and lane lines.
  * @param {TopoRoad} road Topology road.
+ * @param {RoadLines} [lines] Line specs replacing the way's own.
  * @returns {Road} Road.
  */
-export function buildRoad(road) {
+export function buildRoad(road, lines = {}) {
   const { way, points } = road;
   const len = polylineLength(points);
   /** @type {Road['lanes']} */
@@ -146,16 +155,16 @@ export function buildRoad(road) {
   };
   for (let i = 1; i < way.forward; i += 1) {
     const { lo } = laneSpan(way, 'forward', i, LANE_WIDTH_M);
-    addLine(`${road.id}-lf${i}`, way.laneLine, lo, laneId(road.id, 'forward', i), laneId(road.id, 'forward', i - 1));
+    addLine(`${road.id}-lf${i}`, lines.forward ?? way.laneLine, lo, laneId(road.id, 'forward', i), laneId(road.id, 'forward', i - 1));
   }
   for (let i = 1; i < way.backward; i += 1) {
     const { hi } = laneSpan(way, 'backward', i, LANE_WIDTH_M);
-    addLine(`${road.id}-lb${i}`, way.laneLine, hi, laneId(road.id, 'backward', i - 1), laneId(road.id, 'backward', i));
+    addLine(`${road.id}-lb${i}`, lines.backward ?? way.laneLine, hi, laneId(road.id, 'backward', i - 1), laneId(road.id, 'backward', i));
   }
   if (!way.oneway && way.backward > 0) {
     addLine(
       `${road.id}-lc`,
-      way.centerLine,
+      lines.center ?? way.centerLine,
       0,
       laneId(road.id, 'backward', way.backward - 1),
       laneId(road.id, 'forward', way.forward - 1),

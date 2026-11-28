@@ -33,6 +33,9 @@ import { cumulativeLengths, offsetPolyline, polygonsIntersect, slicePolyline } f
  * @property {number} backward Backward lane count (0 when one-way).
  * @property {LineStretch[]} centerLine Centre line between directions (two-way only).
  * @property {LineStretch[]} laneLine Lines between lanes of the same direction.
+ * @property {{center: boolean, lane: boolean}} [authoredLines] Which line specs the source wrote
+ *   (absent: neither). The build's solid approach before a stop line never overrides an authored
+ *   spec.
  * @property {{left: number, right: number}} pavement Pavement widths left and right of the reference direction.
  */
 
@@ -392,6 +395,7 @@ export function osmOneway(tags) {
  * @property {string} nodeId Route node.
  * @property {'in' | 'out'} side Side.
  * @property {Vec2[]} points Available polyline, outward from the route node.
+ * @property {string[]} pointNodeIds OSM node id of each point.
  * @property {number} lengthM Length to keep.
  * @property {string | null} reason Why it is shorter than asked, or null.
  */
@@ -408,7 +412,7 @@ export function osmOneway(tags) {
  * @param {import('./project.js').Projection} proj Projection.
  * @param {WayAttributes} attributes Lane and line attributes per way.
  * @param {{stubM?: number, laneWidth?: number}} [options] Stub length and the lane width for its overlap check.
- * @returns {{network: Network, routeDirs: Map<string, 'forward' | 'backward'>, osmNodes: Map<string, OsmElement>, stubNotes: StubNote[]}}
+ * @returns {{network: Network, routeDirs: Map<string, 'forward' | 'backward'>, osmNodes: Map<string, OsmElement>, stubNotes: StubNote[], stubNodeSources: Map<string, string>}}
  *   Network, travel direction per route way id, tagged OSM nodes by network node id, and the
  *   stubs kept shorter than asked.
  */
@@ -524,6 +528,8 @@ export function osmCorridor(raw, routeWayIds, proj, attributes, options = {}) {
 
   /** @type {StubPlan[]} */
   const plans = [];
+  /** @type {Map<string, string>} */
+  const stubNodeSources = new Map();
   for (const w of sideWays) {
     const { ids, geom } = travelOrder(w);
     ids.forEach((id, i) => {
@@ -536,7 +542,7 @@ export function osmCorridor(raw, routeWayIds, proj, attributes, options = {}) {
         if (lengthM < 1) continue;
         const way = toNetWay(w, `w${w.id}-${id.slice(1)}-${side}`, []);
         const reason = lengthM < stubM - 1e-6 ? chain.reason : null;
-        plans.push({ w, way, nodeId: id, side, points: chain.points, lengthM, reason });
+        plans.push({ w, way, nodeId: id, side, points: chain.points, pointNodeIds: chain.nodeIds, lengthM, reason });
       }
     });
   }
@@ -577,6 +583,8 @@ export function osmCorridor(raw, routeWayIds, proj, attributes, options = {}) {
       const nid = k === piece.length - 1 ? base : `${base}-p${k}`;
       nodes.set(nid, { id: nid, pos: piece[k] });
       outIds.push(nid);
+      const src = plan.points[k];
+      if (src && Math.hypot(src[0] - piece[k][0], src[1] - piece[k][1]) < 1e-6) stubNodeSources.set(nid, plan.pointNodeIds[k]);
     }
     plan.way.nodeIds = plan.side === 'in' ? outIds.reverse() : outIds;
     netWays.push(plan.way);
@@ -585,7 +593,7 @@ export function osmCorridor(raw, routeWayIds, proj, attributes, options = {}) {
     }
   }
 
-  return { network: { nodes, ways: netWays }, routeDirs, osmNodes, stubNotes };
+  return { network: { nodes, ways: netWays }, routeDirs, osmNodes, stubNotes, stubNodeSources };
 }
 
 /**
@@ -608,14 +616,15 @@ function travelOrder(w) {
  * @param {number} i Index of the route node in the travel order of `w`.
  * @param {'in' | 'out'} side `out` walks along the travel order, `in` against it.
  * @param {{proj: import('./project.js').Projection, routeNodes: Set<string>, sideWaysAt: Map<string, OsmElement[]>, limitM: number}} ctx Context.
- * @returns {{points: Vec2[], lengthM: number, routeNodeAtM: number, reason: string}} Points outward
- *   from the route node, their length, the distance to the next route node (Infinity when none)
- *   and why the street ends where it does.
+ * @returns {{points: Vec2[], nodeIds: string[], lengthM: number, routeNodeAtM: number, reason: string}} Points
+ *   outward from the route node and their OSM node ids, their length, the distance to the next
+ *   route node (Infinity when none) and why the street ends where it does.
  */
 function outwardChain(w, i, side, ctx) {
   const { ids, geom } = travelOrder(w);
   /** @type {Vec2[]} */
   const points = [ctx.proj.toXZ(geom[i].lat, geom[i].lon)];
+  const nodeIds = [ids[i]];
   let lengthM = 0;
   let routeNodeAtM = Infinity;
   const visited = new Set([w.id]);
@@ -626,7 +635,7 @@ function outwardChain(w, i, side, ctx) {
     const next = cur.k + cur.step;
     if (next < 0 || next >= cur.ids.length) {
       // The way ends at the route node itself: the street beyond is the stub of its own way.
-      if (lengthM === 0) return { points, lengthM, routeNodeAtM, reason: '' };
+      if (lengthM === 0) return { points, nodeIds, lengthM, routeNodeAtM, reason: '' };
       const end = cur.ids[cur.k];
       const candidates = (ctx.sideWaysAt.get(end) ?? []).filter((o) => {
         const tags = /** @type {Record<string, string>} */ (o.tags);
@@ -637,7 +646,7 @@ function outwardChain(w, i, side, ctx) {
         return order[0] === end || order[order.length - 1] === end;
       });
       if (candidates.length === 0) {
-        return { points, lengthM, routeNodeAtM, reason: `the street ends after ${lengthM.toFixed(0)} m in the extract (no continuation of ${name ?? 'the unnamed way'} ${w.id})` };
+        return { points, nodeIds, lengthM, routeNodeAtM, reason: `the street ends after ${lengthM.toFixed(0)} m in the extract (no continuation of ${name ?? 'the unnamed way'} ${w.id})` };
       }
       const o = candidates[0];
       visited.add(o.id);
@@ -651,12 +660,13 @@ function outwardChain(w, i, side, ctx) {
     const last = points[points.length - 1];
     lengthM += Math.hypot(p[0] - last[0], p[1] - last[1]);
     points.push(p);
+    nodeIds.push(cur.ids[next]);
     cur.k = next;
     if (ctx.routeNodes.has(cur.ids[next])) {
       routeNodeAtM = lengthM;
-      return { points, lengthM, routeNodeAtM, reason: `the street meets the route again after ${lengthM.toFixed(0)} m` };
+      return { points, nodeIds, lengthM, routeNodeAtM, reason: `the street meets the route again after ${lengthM.toFixed(0)} m` };
     }
-    if (lengthM >= ctx.limitM) return { points, lengthM, routeNodeAtM, reason: '' };
+    if (lengthM >= ctx.limitM) return { points, nodeIds, lengthM, routeNodeAtM, reason: '' };
   }
 }
 
