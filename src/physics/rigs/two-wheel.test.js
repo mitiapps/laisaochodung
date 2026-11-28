@@ -137,6 +137,17 @@ describe('scooter push-back on the bench', () => {
     bench.dispose();
   });
 
+  it('drops the feet-down hold once a pushed scooter has stood still', () => {
+    const bench = createBench(RAPIER, scooter);
+    hold(bench, 2, { pushBack: true });
+    hold(bench, 2, {});
+    // Struck backwards later, with no new push: only the coast brake.
+    bench.launch(-0.8);
+    const r = hold(bench, 0.5, {});
+    expect(r[r.length - 1].speed).toBeLessThan(-0.4);
+    bench.dispose();
+  });
+
   it('does not move with a brake held for 2 s', () => {
     for (const brake of [{ brakeFront: 1 }, { brakeRear: 1 }, { brakeFront: 0.1 }]) {
       const bench = createBench(RAPIER, scooter);

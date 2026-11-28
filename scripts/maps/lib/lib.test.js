@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { pointInPolygon, polylineLength } from '../../../src/geometry/index.js';
 import { polygonSignedArea, polygonsIntersect } from '../../../src/geometry/index.js';
@@ -14,7 +15,7 @@ import {
   typeOsmBuilding,
 } from './buildings.js';
 import { REPEATER_MAX_ARM_M, compileMap, topologyOf, withSolidStretches } from './elements.js';
-import { Blockers, roadSides } from './props.js';
+import { Blockers, mapBlockers, roadSides } from './props.js';
 import { STUB_M, carriageway, continuation, laneSpan, locateOnWay, osmCorridor, splitNetwork } from './graph.js';
 import { buildRoad, convexHull, growPolygon, parseLineSpec } from './lanes.js';
 import { bboxCentre, createProjection } from './project.js';
@@ -777,5 +778,34 @@ describe('buildings', () => {
     expect(() => addScenery(compileMap(spec), spec, { file: 't/source.yaml', props: [{ kind: 'bus-stop', way: 'w1', side: 'left', s: 50, offsetM: 0 }], osm: null })).toThrow(
       /touches lane/,
     );
+  });
+});
+
+describe('mapBlockers pedestrian posts', () => {
+  /** @type {import('../../../src/contracts/map.js').GameMap} */
+  const junction = JSON.parse(readFileSync(new URL('../../../tests/fixtures/map-junction.json', import.meta.url), 'utf8'));
+
+  it('blocks scenery at every pedestrian post and reports none dropped on the junction fixture', () => {
+    /** @type {string[]} */
+    const notes = [];
+    const blockers = mapBlockers(junction, notes);
+    expect(blockers.items.filter((it) => it.what === 'pedestrian post at cw-w')).toHaveLength(2);
+    expect(notes).toEqual([]);
+  });
+
+  it('notes a pedestrian post dropped for standing on the carriageway', () => {
+    const map = structuredClone(junction);
+    map.junctions[0].polygon = [
+      [-100, -100],
+      [100, -100],
+      [100, 100],
+      [-100, 100],
+    ];
+    /** @type {string[]} */
+    const notes = [];
+    const blockers = mapBlockers(map, notes);
+    expect(blockers.items.some((it) => it.what.startsWith('pedestrian post'))).toBe(false);
+    expect(notes).toHaveLength(2);
+    expect(notes[0]).toMatch(/pedestrian post of crosswalk cw-w .*dropped/);
   });
 });

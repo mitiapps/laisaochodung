@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { ACTOR_LIGHTS, DT, NO_VIOLATIONS } from '../../contracts/index.js';
 import { clone, junctionMap, mapVariant, minimalMap, realBundle, scoreScript, summary } from '../../../scripts/rules/lib/test-support.js';
+import * as junctionTurn from './junction-turn.js';
 
 /** @typedef {import('../../contracts/index.js').GameMap} GameMap */
 /** @typedef {import('../../contracts/index.js').FrameEvent} FrameEvent */
@@ -630,6 +631,52 @@ describe('reversing', () => {
     ]);
     expect(await runTrack(quiet(), 'scooter', track)).toEqual(['banned-turn:0:D7.3.a']);
     expect(await runTrack(unrestricted(), 'scooter', track)).toEqual(['turn-signal:0:D7.3.a']);
+  });
+});
+
+describe('junction-turn kept entry', () => {
+  // Every turn from rn-s banned; the kept entry is rn-s heading south, backed into rw.
+  const map = quiet((m) => {
+    m.restrictions[0].banned = ['left', 'right', 'uturn'];
+  });
+  const params = { mode: /** @type {const} */ ('restriction'), turnMinDeg: 45, uturnMinDeg: 135, backExemptMaxMps: 1.2 };
+  const kept = {
+    pass: { id: 'j1', entryLaneId: 'rn-s', entryRoadId: 'rn', entryHeading: -Math.PI / 2, entryOdo: 0, entryT: 0 },
+    intoRoadId: 'rw',
+  };
+  /**
+   * One forward exit, driving west (heading π).
+   * @param {string} id Junction id.
+   * @param {string} entryLaneId Lane the pass entered from.
+   * @param {string} entryRoadId Its road.
+   * @returns {import('./common.js').DetectorResult} Result.
+   */
+  const exitWest = (id, entryLaneId, entryRoadId) =>
+    junctionTurn.detect(
+      { kept },
+      /** @type {never} */ ({ ego: { speed: 3 } }),
+      /** @type {never} */ ({
+        env: { map },
+        junctionExit: { id, entryLaneId, entryRoadId, entryHeading: Math.PI, entryOdo: 10, entryT: 10, exitHeading: Math.PI, exitLaneId: 'rw-w', exitT: 12 },
+        indicator: { state: 'off', sinceT: 0, sinceOdo: 0 },
+        startOdo: 0,
+      }),
+      params,
+    );
+
+  it('judges an exit of the same junction re-entered from the arm backed into from the kept entry', () => {
+    const res = exitWest('j1', 'rw-e', 'rw');
+    expect(res.active).toBe(true);
+    expect(res.tierInput).toEqual({ manoeuvre: 'right' });
+    expect(res.detectorState).toEqual({ kept: null });
+  });
+
+  it('judges a re-entry from another road, or an exit of another junction, on its own', () => {
+    for (const res of [exitWest('j1', 're-w', 're'), exitWest('j2', 'rw-e', 'rw')]) {
+      expect(res.active).toBe(false);
+      expect(res.tierInput).toEqual({ manoeuvre: 'straight' });
+      expect(res.detectorState).toEqual({ kept: null });
+    }
   });
 });
 
