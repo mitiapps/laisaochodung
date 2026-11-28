@@ -22,7 +22,7 @@
  * @returns {GameApi & {calls: string[]}} Stub API; `calls` logs every call for tests. `start` is
  *   logged as `start:<map>:<vehicle>`, followed by `:<options JSON>` when options are given. Only
  *   `mode` changes the replay: a free run emits the recorded states with `mode: 'free'`, no `nav`
- *   and a `breachCount`, and finishes only on `quit`. `controls` calls are logged as `hold:<action>:<on>`,
+ *   and a `breachCount` counted from its toasts, and finishes only on `quit`. `controls` calls are logged as `hold:<action>:<on>`,
  *   `press:<action>` and `steer:<value>` and change nothing.
  */
 export function createStubGame(states, { stepMs = 1500 } = {}) {
@@ -38,8 +38,8 @@ export function createStubGame(states, { stepMs = 1500 } = {}) {
   let mode = 'scored';
 
   /**
-   * A recorded state in the current run's mode. A free state also carries `breachCount`, the field
-   * the session fills for the free mode's tally, counted from the recorded toasts.
+   * A recorded state in the current run's mode. A free state counts `breachCount` from the
+   * recorded toasts, as the session counts the run's breach episodes.
    * @param {HudState} state Recorded state.
    * @returns {HudState} State.
    */

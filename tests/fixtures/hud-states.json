@@ -24,6 +24,7 @@
     },
     "toasts": [],
     "notices": [],
+    "breachCount": 0,
     "runStatus": "ready",
     "controlPreset": "real",
     "mode": "scored"
@@ -53,6 +54,7 @@
     },
     "toasts": [],
     "notices": [],
+    "breachCount": 0,
     "runStatus": "running",
     "controlPreset": "real",
     "mode": "scored"
@@ -341,6 +343,7 @@
         }
       }
     ],
+    "breachCount": 4,
     "runStatus": "running",
     "controlPreset": "real",
     "mode": "scored"
@@ -388,6 +391,7 @@
         }
       }
     ],
+    "breachCount": 0,
     "runStatus": "paused",
     "controlPreset": "real",
     "mode": "scored"
@@ -435,6 +439,7 @@
         }
       }
     ],
+    "breachCount": 4,
     "runStatus": "finished",
     "report": {
       "score": 6.5,

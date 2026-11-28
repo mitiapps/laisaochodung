@@ -80,6 +80,7 @@ export function hudStateOf({ frame, context, score, breaches, notices = [], cont
     nav: frame.route ? { distanceM: frame.route.distanceM, bearingRad: frame.route.bearingRad } : null,
     toasts: breaches.slice(-HUD_TOAST_WINDOW),
     notices: visibleNotices(notices, frame.t),
+    breachCount: new Set(breaches.map((b) => b.episodeId)).size,
     controlPreset,
     mode,
     runStatus,

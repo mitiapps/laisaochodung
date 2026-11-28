@@ -33,9 +33,8 @@ describe('HUD rendering', () => {
   });
 
   it('shows the breach tally and no nav arrow in a free run', () => {
-    // `breachCount` joins `HudState` with the free mode; the session fills it.
-    const html = hudHtml(/** @type {HudState} */ ({ ...RUNNING, mode: 'free', nav: null, breachCount: 3 }), CAR);
-    expect(hudHtml({ ...RUNNING, mode: 'free', nav: null }, CAR)).toMatch(/data-testid="hud-tally"[^>]*>0 lỗi</u);
+    const html = hudHtml({ ...RUNNING, mode: 'free', nav: null, breachCount: 3 }, CAR);
+    expect(hudHtml({ ...RUNNING, mode: 'free', nav: null, breachCount: 0 }, CAR)).toMatch(/data-testid="hud-tally"[^>]*>0 lỗi</u);
     expect(html).toMatch(/data-testid="hud-tally"[^>]*>3 lỗi</u);
     expect(html).not.toContain('data-testid="hud-score"');
     expect(html).not.toContain('data-testid="hud-nav"');

@@ -59,7 +59,7 @@ describe('stub GameApi', () => {
     const run = seen.slice(1);
     expect(run.map((s) => s.runStatus)).toEqual(['ready', 'running', 'running']);
     expect(run.every((s) => s.mode === 'free' && s.nav === null)).toBe(true);
-    expect(run.map((s) => /** @type {{breachCount?: number}} */ (s).breachCount)).toEqual([0, 0, new Set(states.withToasts.toasts.map((b) => b.episodeId)).size]);
+    expect(run.map((s) => s.breachCount)).toEqual([0, 0, new Set(states.withToasts.toasts.map((b) => b.episodeId)).size]);
     game.pause();
     game.resume();
     vi.advanceTimersByTime(10_000);

@@ -64,6 +64,14 @@ describe('hudStateOf', () => {
     expect(state.toasts.map((b) => b.episodeId)).toEqual(breaches.slice(-HUD_TOAST_WINDOW).map((b) => b.episodeId));
   });
 
+  it('counts distinct breach episodes over the whole run, an escalation counting once', () => {
+    const frame = /** @type {Frame} */ (frames[0]);
+    const ids = ['a', 'b', 'a', ...Array.from({ length: HUD_TOAST_WINDOW }, () => 'c')];
+    const breaches = ids.map((episodeId) => /** @type {import('../contracts/score.js').Breach} */ (/** @type {unknown} */ ({ episodeId })));
+    expect(hudStateOf({ frame, context, score: 10, breaches, controlPreset: 'simple', mode: 'free', runStatus: 'running' }).breachCount).toBe(3);
+    expect(hudStateOf({ frame, context, score: 10, breaches: [], controlPreset: 'simple', mode: 'free', runStatus: 'running' }).breachCount).toBe(0);
+  });
+
   it('shows two notices raised within one second, newest last, and a later breach does not clear them', () => {
     const notices = [notice(2), notice(2.6)];
     const first = hudStateOf({ frame: frameAt(3), context, score: 10, breaches: [], notices, controlPreset: 'simple', mode: 'scored', runStatus: 'running' });

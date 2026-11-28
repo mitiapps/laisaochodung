@@ -23,6 +23,8 @@
  *   `bearingRad` is the world bearing. Null when the frame has no route (a free run).
  * @property {import('./score.js').Breach[]} toasts Breaches to show, newest last.
  * @property {import('./score.js').Notice[]} notices Contacts the player did not cause, newest last.
+ * @property {number} breachCount Distinct breach episodes of the run so far (escalations share an
+ *   episode); the free mode's tally shows it.
  * @property {import('./controls.js').ControlPreset} controlPreset Control preset the session applied.
  * @property {RunMode} mode Run mode the session applied.
  * @property {'ready' | 'running' | 'paused' | 'finished'} runStatus Run status.

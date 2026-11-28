@@ -48,12 +48,6 @@
   let { state: hud, vehicle, toasts, controls, cameraMode = 'chase', voiceMuted = null, ontogglevoice = () => {}, onpause, ondismiss, runKey = 0 } = $props();
 
   const free = $derived(hud.mode === 'free');
-  /**
-   * Distinct breach episodes of the run, from `HudState.breachCount`, which the session fills; that
-   * field joins the HUD contract with the free mode, so a state without it reads as 0 until then.
-   */
-  const breachCount = $derived(/** @type {{breachCount?: number}} */ (hud).breachCount ?? 0);
-
   const isCar = $derived(vehicle.legalClass === 'car');
   const paused = $derived(hud.runStatus === 'paused');
   const layout = $derived(controlLayout(vehicle.legalClass, hud.controlPreset));
@@ -240,7 +234,7 @@
         <div class="rounded-lg border border-white/60 bg-white/90 px-3 py-1.5 shadow-md backdrop-blur">
           {#if free}
             <p class="text-xs text-stone-600">Lái tự do</p>
-            <p class="text-2xl font-bold" data-testid="hud-tally">{formatTally(breachCount)}</p>
+            <p class="text-2xl font-bold" data-testid="hud-tally">{formatTally(hud.breachCount)}</p>
           {:else}
             <p class="text-xs text-stone-600">Điểm</p>
             <p class="text-2xl font-bold" data-testid="hud-score">{formatScore(hud.score)}</p>
