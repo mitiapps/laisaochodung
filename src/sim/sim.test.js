@@ -4,7 +4,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { assertFrame } from '../contracts/assert-frame.js';
 import { DT, kmhToMps } from '../contracts/units.js';
 import { createSim, sanitizeInput } from './index.js';
-import { parseAssists } from './sim.js';
+import { parseAssists, parseRoute } from './sim.js';
+import { MAP_EDGE_RESET_M } from './free-run.js';
 import { footprint, polygonsIntersect } from '../geometry/index.js';
 import { createDriver } from '../../tests/scenarios/physics/driver.js';
 
@@ -246,6 +247,20 @@ describe('createSim', () => {
     const stop = /** @type {Frame} */ (frames.find((f) => f.ego.input.brakeRear === 1 && f.ego.speed <= 0.01));
     expect(stop.ego.pos.x - x0).toBeGreaterThan(11);
     expect(stop.ego.pos.x - x0).toBeLessThan(16);
+  });
+
+  it('lets the scooter rider push it back in gear R in valid frames, and the car ignores the push', () => {
+    const bike = createSim(RAPIER, MAP, SCOOTER);
+    const bikeFrames = run(bike, 180, () => ({ pushBack: true }));
+    bike.dispose();
+    for (const f of bikeFrames) assertFrame(f);
+    expect(bikeFrames.slice(1).every((f) => f.ego.gear === 'R' && f.ego.speed < 0)).toBe(true);
+    expect(MAP.route.start.pos.x - bikeFrames[179].ego.pos.x).toBeGreaterThanOrEqual(1);
+    const car = createSim(RAPIER, MAP, CAR);
+    const carFrames = run(car, 180, () => ({ pushBack: true }));
+    car.dispose();
+    expect(carFrames.every((f) => f.ego.gear === 'N')).toBe(true);
+    expect(Math.abs(carFrames[179].ego.pos.x - MAP.route.start.pos.x)).toBeLessThan(0.05);
   });
 
   it('counts a corner hit across two faces of one obstacle as one collision', () => {
@@ -690,5 +705,97 @@ describe('createSim traffic option', () => {
     const cancel = frames.findIndex((x, i) => i > 0 && frames[i - 1].ego.indicators === 'left' && x.ego.indicators === 'off' && x.ego.input.signalCmd === null);
     expect(cancel).toBeGreaterThan(0);
     expect(frames[cancel].ego.pos.z).toBeLessThan(-7);
+  });
+});
+
+describe('createSim route option', () => {
+  /**
+   * Event types of a run.
+   * @param {Frame[]} frames Frames.
+   * @returns {string[]} Types.
+   */
+  const kinds = (frames) => frames.flatMap((f) => f.events.map((e) => e.type));
+
+  it('accepts map or off and rejects anything else', () => {
+    expect(parseRoute(undefined)).toBe('map');
+    expect(parseRoute('off')).toBe('off');
+    expect(() => parseRoute('free')).toThrow(RangeError);
+    expect(() => createSim(RAPIER, MAP, CAR, /** @type {import('../contracts/index.js').SimOptions} */ (/** @type {unknown} */ ({ route: 1 })))).toThrow(RangeError);
+  });
+
+  it('runs twice the time limit over every checkpoint and the finish with no route event and a null route', () => {
+    const map = mapWith({ route: { ...MAP.route, timeLimitS: 20 } });
+    const sim = createSim(RAPIER, map, CAR, { route: 'off' });
+    const drive = cruise(kmhToMps(30));
+    // Stop short of the lanes' far end, so the run stays well inside the map edge.
+    const frames = run(sim, Math.round(40 / DT), (prev, k) => (prev && prev.ego.pos.x > 192 ? { brakeFront: 1 } : drive(prev, k)));
+    sim.dispose();
+    for (const f of frames) assertFrame(f);
+    expect(Math.max(...frames.map((f) => f.ego.pos.x))).toBeGreaterThan(190);
+    expect(frames[frames.length - 1].t).toBeGreaterThan(2 * 20 - 0.1);
+    expect(frames.every((f) => f.route === null)).toBe(true);
+    const k = kinds(frames);
+    for (const type of ['checkpoint', 'finish', 'timeout', 'reset']) expect(k).not.toContain(type);
+    expect(k).toContain('run-start');
+  });
+
+  it('resets a fallen scooter onto the nearest lane point, facing along it, within 5 m of the fall', () => {
+    const sim = createSim(RAPIER, MAP, SCOOTER, { route: 'off' });
+    let braking = false;
+    const frames = run(sim, 600, (prev) => {
+      if (prev && prev.ego.speed >= kmhToMps(40)) braking = true;
+      return braking ? { brakeFront: 1 } : { throttle: 1 };
+    });
+    sim.dispose();
+    const fallAt = frames.findIndex((f) => f.events.some((e) => e.type === 'fall'));
+    expect(fallAt).toBeGreaterThan(0);
+    const fell = frames[fallAt].ego.pos;
+    const after = frames[fallAt + 1];
+    expect(after.events).toContainEqual({ type: 'reset' });
+    expect(Math.hypot(after.ego.pos.x - fell.x, after.ego.pos.z - fell.z)).toBeLessThan(5);
+    // Never back to the start: the lane rw-e runs east along z = 1.75.
+    expect(after.ego.pos.x - MAP.route.start.pos.x).toBeGreaterThan(10);
+    expect(after.ego.pos.z).toBeCloseTo(1.75, 1);
+    expect(Math.abs(after.ego.heading)).toBeLessThan(0.01);
+    expect(Math.abs(after.ego.speed)).toBeLessThan(0.2);
+    expect(after.route).toBeNull();
+  });
+
+  it('puts reset() on the nearest lane point too, not on a checkpoint', () => {
+    const sim = createSim(RAPIER, MAP, CAR, { route: 'off' });
+    const frames = run(sim, 600, cruise(kmhToMps(30)));
+    const x = frames[frames.length - 1].ego.pos.x;
+    sim.reset();
+    const f = sim.step(sanitizeInput({}));
+    sim.dispose();
+    expect(f.events).toContainEqual({ type: 'reset' });
+    expect(Math.abs(f.ego.pos.x - x)).toBeLessThan(1);
+    expect(f.ego.pos.z).toBeCloseTo(1.75, 1);
+  });
+
+  it('resets an ego that rides more than 60 m outside the lanes back onto the nearest lane', () => {
+    // Start 50 m west of the lanes (they begin at x 0) heading west, away from them.
+    const map = mapWith({ route: { ...MAP.route, start: { pos: { x: -50, z: 1.75 }, heading: Math.PI } } });
+    const sim = createSim(RAPIER, map, SCOOTER, { route: 'off' });
+    const frames = run(sim, 900, () => ({ throttle: 0.5 }));
+    sim.dispose();
+    const at = frames.findIndex((f) => f.events.some((e) => e.type === 'reset'));
+    expect(at).toBeGreaterThan(0);
+    expect(frames.filter((f) => f.events.some((e) => e.type === 'reset'))).toHaveLength(1);
+    // The step before the reset is the first one past the margin.
+    expect(-frames[at - 1].ego.pos.x).toBeGreaterThan(MAP_EDGE_RESET_M);
+    expect(-frames[at - 2].ego.pos.x).toBeLessThanOrEqual(MAP_EDGE_RESET_M);
+    expect(frames[at].ego.pos.x).toBeCloseTo(0, 0);
+    expect(frames[at].ego.pos.z).toBeCloseTo(1.75, 1);
+    expect(Math.abs(frames[at].ego.heading)).toBeLessThan(0.01);
+  });
+
+  it('does not reset at the map edge with the route on', () => {
+    const map = mapWith({ route: { ...MAP.route, start: { pos: { x: -50, z: 1.75 }, heading: Math.PI } } });
+    const sim = createSim(RAPIER, map, SCOOTER);
+    const frames = run(sim, 600, () => ({ throttle: 0.5 }));
+    sim.dispose();
+    expect(kinds(frames)).not.toContain('reset');
+    expect(frames[frames.length - 1].ego.pos.x).toBeLessThan(-60);
   });
 });

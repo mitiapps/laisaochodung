@@ -43,4 +43,5 @@ export const carSedan = {
     autoShift: { upRpm: 2100, downRpm: 1100, minIntervalS: 0.8 },
   },
   fall: null,
+  pushBack: null,
 };

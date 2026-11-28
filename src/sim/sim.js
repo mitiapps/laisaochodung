@@ -4,8 +4,10 @@
  * the caller owns the fixed-timestep loop.
  *
  * One `step(input)`:
- * 1. Sanitise the input; on the first step emit `run-start`; apply a pending reset (fall or
- *    `reset()`) by placing the ego at the last passed checkpoint, or the start, and emit `reset`.
+ * 1. Sanitise the input; on the first step emit `run-start`; apply a pending reset (fall,
+ *    `reset()` or, with the route off, the map edge) by placing the ego at the last passed
+ *    checkpoint, or the start, and emit `reset`. With the route off the ego goes instead to the
+ *    nearest lane centreline point to where it was, facing along the lane (`free-run.js`).
  * 2. `stepWorld` with the pre-step ego pose and indicators, the reset flag, the light states at
  *    `t` and last step's actor contacts: scripted actors, then traffic when it runs. Scripted
  *    poses go to their kinematic bodies; traffic agents near the ego to the mirror pool
@@ -14,9 +16,12 @@
  *    indicator off; then electrics, `vehicle.prepare` (gearbox, steering, wheels, `updateVehicle`), `world.step`.
  * 4. With traffic, `mirror.limitEgo` caps the ego velocity after a contact it drove into; drain
  *    contact forces into `collision` events and the touched actors fed to traffic next step;
- *    read the ego; a scripted fall emits `fall` and schedules the reset for the next step.
- * 5. `stepRoute` and `clockAt` at `t = tick · DT`; build the frame with the scripted poses, then
- *    the traffic poses.
+ *    read the ego; a scripted fall emits `fall` and schedules the reset for the next step. With
+ *    the route off, an ego more than `MAP_EDGE_RESET_M` outside the lanes' bounding box also
+ *    schedules it.
+ * 5. `stepRoute` (with the route option) and `clockAt` at `t = tick · DT`; build the frame with
+ *    the scripted poses, then the traffic poses. With the route off `frame.route` is null and no
+ *    route event fires.
  *
  * With `traffic: 'off'` (the default) or a map without a traffic block, no mirror pool exists and
  * collision events carry no attribution fields, so frames are those of a sim without traffic.
@@ -39,6 +44,7 @@ import { createSignalCancel, stepSignalCancel } from './signal-cancel.js';
 import { buildWorldColliders, drainCollisions, holdContacts } from './world-colliders.js';
 import { createActorBodies } from './actors.js';
 import { createTrafficMirror } from './traffic-mirror.js';
+import { MAP_EDGE_RESET_M, distanceOutside, laneBounds, nearestLanePose } from './free-run.js';
 
 /** @typedef {typeof import('@dimforge/rapier3d-compat').default} Rapier */
 /** @typedef {import('../contracts/map.js').GameMap} GameMap */
@@ -134,11 +140,22 @@ export function parseTraffic(options, map) {
 }
 
 /**
+ * Validates the route option.
+ * @param {unknown} raw `options.route`.
+ * @returns {'map' | 'off'} Route mode; default `map`.
+ */
+export function parseRoute(raw) {
+  const route = raw ?? 'map';
+  if (route !== 'map' && route !== 'off') throw new RangeError(`options.route must be 'map' or 'off', got ${String(route)}`);
+  return route;
+}
+
+/**
  * Creates the simulation.
  * @param {unknown} rapier Initialised `@dimforge/rapier3d-compat` module.
  * @param {GameMap} map Map.
  * @param {VehicleInfo} vehicleInfo Vehicle.
- * @param {SimOptions} [options] Traffic and assist options.
+ * @param {SimOptions} [options] Traffic, assist and route options.
  * @returns {Sim} Simulation.
  */
 export function createSim(rapier, map, vehicleInfo, options = {}) {
@@ -157,6 +174,9 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
   const assists = parseAssists(options.assists);
   const cancelCfg = assists.signalAutoCancel;
   const trafficOpts = parseTraffic(options, map);
+  const routeMode = parseRoute(options.route);
+  const routeOff = routeMode === 'off';
+  const bounds = routeOff ? laneBounds(map) : null;
   const params = trafficOpts.params;
   if (options.now !== undefined && typeof options.now !== 'function') throw new TypeError('options.now must be a function');
   const now = options.now ?? null;
@@ -218,8 +238,14 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
   /** @type {string[]} */
   let touched = [];
 
-  /** @returns {{pos: {x: number, z: number}, heading: number}} Last passed checkpoint or the start. */
-  const resetPose = () => (routeState.next > 0 ? map.route.checkpoints[routeState.next - 1] : start);
+  /**
+   * @returns {{pos: {x: number, z: number}, heading: number}} With the route off, the nearest lane
+   *   point to the ego; otherwise the last passed checkpoint or the start.
+   */
+  const resetPose = () => {
+    if (routeOff) return nearestLanePose(map, vehicle.pose().pos);
+    return routeState.next > 0 ? map.route.checkpoints[routeState.next - 1] : start;
+  };
 
   return {
     step(rawInput) {
@@ -294,7 +320,8 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
         events.push({ type: 'fall' });
         pendingReset = true;
       }
-      const route = stepRoute(routeState, map, { x: ego.pos.x, z: ego.pos.z }, t);
+      if (bounds !== null && distanceOutside(bounds, ego.pos) > MAP_EDGE_RESET_M) pendingReset = true;
+      const route = stepRoute(routeState, map, { x: ego.pos.x, z: ego.pos.z }, t, { route: routeMode });
       routeState = route.state;
       events.push(...route.events);
 

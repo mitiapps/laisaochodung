@@ -16,6 +16,7 @@ import { GROUP, interactionGroups } from './collision-groups.js';
 /**
  * @typedef {object} Bench
  * @property {import('./vehicle.js').PhysicsVehicle} vehicle Vehicle.
+ * @property {import('@dimforge/rapier3d-compat').World} world World, for tests that add colliders.
  * @property {(input: Partial<ControlInput>) => VehicleReadout} step One DT with the given input.
  * @property {(speedMps: number) => void} launch Set a forward speed along the current heading.
  * @property {() => void} dispose Free the world.
@@ -46,6 +47,7 @@ export function createBench(R, tuning, surfaceGrip = 1) {
   for (let i = 0; i < 60; i += 1) step({});
   return {
     vehicle,
+    world,
     step,
     launch(speedMps) {
       vehicle.setForwardSpeed(speedMps);

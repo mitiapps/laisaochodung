@@ -82,6 +82,19 @@
  * @property {GearboxSpec} gearbox Gearbox.
  * @property {{minSpeedKmh: number, holdS: number} | null} fall Scripted fall on a sustained front
  *   skid (motorbikes); null for cars.
+ * @property {PushBackSpec | null} pushBack The rider pushing the bike backwards with the feet
+ *   (`ControlInput.pushBack`, motorbikes); null for cars, which reverse through their R gear.
+ */
+
+/**
+ * Push-back of a stopped motorbike by the rider's feet. It acts while `pushBack` is held with the
+ * throttle at most `PUSH_BACK_MAX_THROTTLE`, both brakes released and a signed forward speed at
+ * most `engageMaxForwardMps`. The force fades linearly from `forceN` at standstill (or rolling
+ * forward) to 0 at `maxSpeedMps` backwards, as the CVT drive force fades to its top speed.
+ * @typedef {object} PushBackSpec
+ * @property {number} forceN Backward force at standstill in newtons.
+ * @property {number} maxSpeedMps Backward speed at which the force reaches zero.
+ * @property {number} engageMaxForwardMps Highest signed forward speed at which the push acts.
  */
 
 export {};
