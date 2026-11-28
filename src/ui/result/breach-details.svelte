@@ -8,8 +8,11 @@
     formatSuspension,
   } from '../lib/format.js';
 
-  /** @type {{breach: import('../../contracts/score.js').Breach, compact?: boolean}} */
-  let { breach, compact = false } = $props();
+  /**
+   * `scored` is false in a free run, which has no score: the game-score deduction line goes.
+   * @type {{breach: import('../../contracts/score.js').Breach, compact?: boolean, scored?: boolean}}
+   */
+  let { breach, compact = false, scored = true } = $props();
 
   const clause = $derived(breach.clause);
   const fine = $derived(clause ? formatFineBand(clause.fineVnd) : null);
@@ -28,10 +31,14 @@
 </script>
 
 <div class={compact ? 'space-y-0.5 text-xs' : 'space-y-1 text-sm'}>
-  <p class="font-medium text-kepi-600" data-testid="breach-deduction">{formatDeduction(breach.deduction)}</p>
+  {#if scored}
+    <p class="font-medium text-kepi-600" data-testid="breach-deduction">{formatDeduction(breach.deduction)}</p>
+  {/if}
   {#if breach.scoreOnly || !clause}
     {#if !(compact && breach.note)}
-      <p class="text-stone-700" data-testid="breach-score-only">Chỉ trừ điểm trò chơi, không có mức phạt theo luật.</p>
+      <p class="text-stone-700" data-testid="breach-score-only">
+        {scored ? 'Chỉ trừ điểm trò chơi, không có mức phạt theo luật.' : 'Không có mức phạt theo luật.'}
+      </p>
     {/if}
   {:else}
     {#if fine}

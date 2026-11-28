@@ -125,4 +125,22 @@ describe('result screen', () => {
     expect(text.indexOf('Ô tô phía sau không giữ khoảng cách.')).toBeGreaterThan(text.indexOf('Xe máy vượt đèn đỏ va vào bạn.'));
     expect(text).toContain('1:15');
   });
+  it('drops the game-score deduction from toasts and the result list in a free run', () => {
+    const scoreOnly = { ...FULL, episodeId: 'synthetic-1', scoreOnly: true, clause: null };
+    const scoredToast = textOf(render(BreachToast, { props: { breach: FULL, ondismiss: () => {} } }).body);
+    expect(scoredToast).toContain('−1 điểm');
+    for (const breach of [FULL, scoreOnly]) {
+      const { body } = render(BreachToast, { props: { breach, scored: false, ondismiss: () => {} } });
+      expect(body).not.toContain('data-testid="breach-deduction"');
+      expect(textOf(body)).not.toContain('−1 điểm');
+    }
+    const freeOnly = textOf(render(BreachToast, { props: { breach: scoreOnly, scored: false, ondismiss: () => {} } }).body);
+    expect(freeOnly).not.toContain('trừ điểm trò chơi');
+    const report = /** @type {ScoreReport} */ ({ ...hudStates.finished.report, breaches: [FULL, scoreOnly] });
+    const free = render(ResultScreen, { props: { report, mode: 'free', onretry: () => {}, onchangemap: () => {} } }).body;
+    expect(free).not.toContain('data-testid="breach-deduction"');
+    expect(textOf(free)).toContain('Phạt tiền');
+    const scored = render(ResultScreen, { props: { report, onretry: () => {}, onchangemap: () => {} } }).body;
+    expect(scored.match(/data-testid="breach-deduction"/gu)).toHaveLength(2);
+  });
 });

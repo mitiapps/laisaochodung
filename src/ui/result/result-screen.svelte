@@ -62,7 +62,7 @@
               <span class="font-semibold">{breach.title.vi}</span>
               <span class="text-xs tabular-nums text-stone-600">{formatClock(breach.t)}</span>
             </p>
-            <BreachDetails {breach} />
+            <BreachDetails {breach} scored={mode !== 'free'} />
           </li>
         {/each}
       </ol>

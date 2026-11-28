@@ -72,7 +72,8 @@
     <h1 class="text-3xl font-bold">Lái sao cho đúng</h1>
     <p class="mt-2 text-stone-700">
       Lái xe từ điểm xuất phát tới đích và nhận điểm trên thang 10. Mỗi lỗi vi phạm hiện mức phạt theo
-      Nghị định 168/2024/NĐ-CP kèm trích dẫn.
+      Nghị định 168/2024/NĐ-CP kèm trích dẫn. Muốn đi dạo tự do thì chọn chế độ Lái tự do: không lộ
+      trình, không giới hạn thời gian, không tính điểm, nhưng lỗi vẫn được báo.
     </p>
     <p class="mt-2 text-sm text-stone-600" data-testid="home-disclaimer">
       Kết quả chỉ để tham khảo, không phải tư vấn pháp lý.

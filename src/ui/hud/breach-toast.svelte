@@ -5,16 +5,20 @@
   /**
    * @type {{
    *   breach: import('../../contracts/score.js').Breach,
+   *   scored?: boolean,
    *   ondismiss: () => void,
    * }}
    */
-  let { breach, ondismiss } = $props();
+  let { breach, scored = true, ondismiss } = $props();
 
   // Below 480 px of viewport height (a landscape phone) the toast shows its label, title and
   // penalty line only, so it does not cover the road; a tap on that line opens the details.
   let expanded = $state(false);
   const fine = $derived(breach.scoreOnly || !breach.clause ? null : formatFineBand(breach.clause.fineVnd));
-  const penalty = $derived(fine ? `${formatDeduction(breach.deduction)} · ${fine}` : formatDeduction(breach.deduction));
+  // A free run (`scored` false) has no score, so the line drops the game-score deduction.
+  const penalty = $derived(
+    [scored ? formatDeduction(breach.deduction) : null, fine].filter(Boolean).join(' · ') || 'Không có mức phạt theo luật',
+  );
 </script>
 
 <article
@@ -48,6 +52,6 @@
     >
   {/if}
   <div class={expanded ? '' : '[@media(max-height:480px)]:hidden'} data-testid="breach-toast-details">
-    <BreachDetails {breach} compact />
+    <BreachDetails {breach} {scored} compact />
   </div>
 </article>

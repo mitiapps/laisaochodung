@@ -314,7 +314,7 @@
         {#each [...toasts].reverse() as toast (toast.episodeId)}
           {@const isNewest = newest.key === `toast:${toast.episodeId}`}
           <div class={`relative shrink-0 ${isNewest ? '' : SHORT_HIDDEN}`}>
-            <BreachToast breach={toast.breach} ondismiss={() => ondismiss(toast.episodeId)} />
+            <BreachToast breach={toast.breach} scored={!free} ondismiss={() => ondismiss(toast.episodeId)} />
             {#if isNewest && newest.more > 0}{@render moreCount()}{/if}
           </div>
         {/each}
