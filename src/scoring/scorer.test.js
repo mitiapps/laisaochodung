@@ -108,6 +108,59 @@ describe('scorer core', () => {
     expect(last?.runEnded).toBe('crash');
   });
 
+  describe('a free run (endOnPedestrianHit: false)', () => {
+    const pedestrian = hit({ otherKind: 'pedestrian', otherId: 'p', impulse: 300, egoSpeed: 10, relSpeed: 10 });
+    /**
+     * A slow run along rw-e with the route off, so neither finish nor timeout ends it.
+     * @param {{t: number, event: FrameEvent}[]} events Injected events.
+     * @returns {Promise<Awaited<ReturnType<typeof scoreScript>> & {runEnded: (null | 'crash')[]}>} Score, frames and each step's `runEnded`.
+     */
+    const freeRun = async (events) => {
+      const script = { map: emptyMap(), laneId: 'rw-e', startS: 5, speed: 2, durationS: 12, route: /** @type {const} */ ('off'), events };
+      const scored = await scoreScript({ ...script, quit: true, endOnPedestrianHit: false });
+      const scorer = createScorer(await realBundle(), script.map, vehicle('car-sedan'), { endOnPedestrianHit: false });
+      let state = scorer.initial;
+      /** @type {(null | 'crash')[]} */
+      const runEnded = [];
+      for (const f of scored.frames) {
+        const r = scorer.step(state, f);
+        state = r.state;
+        runEnded.push(r.runEnded);
+      }
+      return { ...scored, runEnded };
+    };
+
+    it('records the crash, keeps going with runEnded null and scores 0; the replay agrees', async () => {
+      const { report, frames, live, runEnded } = await freeRun([{ t: 1, event: pedestrian }]);
+      expect(report.endedBy).toBe('quit');
+      expect(report.score).toBe(0);
+      expect(summary(report)).toEqual(['crash:1:D6.10.a']);
+      expect(runEnded.every((r) => r === null)).toBe(true);
+      expect(frames.length).toBe(Math.round(12 / DT));
+      expect(live[Math.round(1 / DT)].map((b) => b.ruleId)).toEqual(['crash']);
+      expect(scoreRun(await realBundle(), emptyMap(), vehicle('car-sedan'), frames, { quit: true, endOnPedestrianHit: false })).toEqual(report);
+      // The default still ends the run on the same frames.
+      expect(scoreRun(await realBundle(), emptyMap(), vehicle('car-sedan'), frames, { quit: true }).endedBy).toBe('crash');
+    });
+
+    it('closes the crash episode after rearmS, so a later hit opens a new one', async () => {
+      const { rearmS } = (await realBundle()).scoring;
+      const within = await freeRun([{ t: 1, event: pedestrian }, { t: 1 + rearmS / 2, event: pedestrian }]);
+      expect(within.report.breaches.map((b) => b.episodeId)).toEqual([`crash@${Math.round(1 / DT)}`]);
+      const after = await freeRun([{ t: 1, event: pedestrian }, { t: 2 + rearmS, event: pedestrian }]);
+      expect(after.report.breaches.map((b) => b.episodeId)).toEqual([`crash@${Math.round(1 / DT)}`, `crash@${Math.round((2 + rearmS) / DT)}`]);
+    });
+
+    it('closes the crash episode at a reset', async () => {
+      const { report } = await freeRun([
+        { t: 1, event: pedestrian },
+        { t: 1.5, event: { type: 'reset' } },
+        { t: 2, event: pedestrian },
+      ]);
+      expect(report.breaches.map((b) => b.episodeId)).toEqual([`crash@${Math.round(1 / DT)}`, `crash@${Math.round(2 / DT)}`]);
+    });
+  });
+
   it('re-arms an episode only after rearmS clear', async () => {
     const over = 60 / 3.6;
     const ok = 45 / 3.6;

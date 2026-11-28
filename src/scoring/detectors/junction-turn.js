@@ -7,6 +7,8 @@
  * `signalFromM` before the junction entry (or from the run start, if nearer) to the exit.
  * Mode `restriction`: a manoeuvre a map restriction bans from the approach lane.
  * Both modes fire on the exit step, so `banned-turn` and `turn-signal` coincide for supersession.
+ * An exit made on a step whose signed speed is below `minSignedSpeedMps` is no manoeuvre: at 0,
+ * backing out of a junction on full lock (push-back or R gear) swings the heading without a turn.
  */
 
 import { angleDiff } from '../../geometry/index.js';
@@ -20,6 +22,8 @@ import { DEG, NUMBER, OPTIONAL_NUMBER } from './common.js';
  * @property {number} uturnMinDeg Smallest heading change that is a U-turn.
  * @property {number} [signalFromM] Signal mode: distance before the junction from which the
  *   indicator must be on.
+ * @property {number} minSignedSpeedMps An exit on a step with a signed ego speed below this is
+ *   ignored.
  */
 
 /** @type {import('./common.js').ParamSpecs} Parameters the rule's `detection.params` must give. */
@@ -28,6 +32,7 @@ export const paramSpec = Object.freeze({
   turnMinDeg: NUMBER,
   uturnMinDeg: NUMBER,
   signalFromM: OPTIONAL_NUMBER,
+  minSignedSpeedMps: NUMBER,
 });
 
 /** @returns {State} Fresh state. */
@@ -58,7 +63,7 @@ export function manoeuvreOf(pass, params) {
  */
 export function detect(state, frame, ctx, params) {
   const pass = ctx.junctionExit;
-  if (!pass) return { detectorState: state, active: false, tierInput: {} };
+  if (!pass || frame.ego.speed < params.minSignedSpeedMps) return { detectorState: state, active: false, tierInput: {} };
   const manoeuvre = manoeuvreOf(pass, params);
   if (manoeuvre === 'straight') return { detectorState: state, active: false, tierInput: { manoeuvre } };
 
