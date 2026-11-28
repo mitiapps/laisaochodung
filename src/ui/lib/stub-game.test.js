@@ -47,4 +47,28 @@ describe('stub GameApi', () => {
     game.controls.steer(null);
     expect(game.calls).toEqual(['start:m:v:{"controlPreset":"real"}', 'hold:throttle:true', 'press:signalLeft', 'steer:-0.5', 'steer:null']);
   });
+
+  it('replays a free run with no nav, never finishing until the player quits', async () => {
+    vi.useFakeTimers();
+    const game = createStubGame(states, { stepMs: 100 });
+    /** @type {import('../../contracts/hud.js').HudState[]} */
+    const seen = [];
+    game.subscribe((s) => seen.push(s));
+    await game.start('m', 'v', { controlPreset: 'simple', mode: 'free' });
+    vi.advanceTimersByTime(10_000);
+    const run = seen.slice(1);
+    expect(run.map((s) => s.runStatus)).toEqual(['ready', 'running', 'running']);
+    expect(run.every((s) => s.mode === 'free' && s.nav === null)).toBe(true);
+    expect(run.map((s) => /** @type {{breachCount?: number}} */ (s).breachCount)).toEqual([0, 0, new Set(states.withToasts.toasts.map((b) => b.episodeId)).size]);
+    game.pause();
+    game.resume();
+    vi.advanceTimersByTime(10_000);
+    expect(seen.at(-1)?.runStatus).toBe('running');
+    game.quit();
+    expect(seen.at(-1)).toMatchObject({ runStatus: 'finished', mode: 'free', nav: null, report: { endedBy: 'quit' } });
+    game.restart();
+    expect(seen.at(-1)).toMatchObject({ runStatus: 'ready', mode: 'free' });
+    await game.start('m', 'v');
+    expect(seen.at(-1)?.mode).toBe('scored');
+  });
 });

@@ -1,29 +1,36 @@
 <script>
   import BreachDetails from './breach-details.svelte';
   import { formatClock, formatFineBand, formatScore } from '../lib/format.js';
-  import { LICENCE_NOTE, endReasonLabel, licenceLabel } from '../lib/result.js';
+  import { LICENCE_NOTE, endReasonLabel, licenceLabel, resultVariant } from '../lib/result.js';
 
   /**
    * @type {{
    *   report: import('../../contracts/score.js').ScoreReport,
+   *   mode?: import('../../contracts/hud.js').RunMode,
    *   onretry: () => void,
    *   onchangemap: () => void,
    * }}
    */
-  let { report, onretry, onchangemap } = $props();
+  let { report, mode = 'scored', onretry, onchangemap } = $props();
+  const variant = $derived(resultVariant(mode));
   const total = $derived(formatFineBand(report.fineTotalVnd) ?? '0 ₫');
 </script>
 
 <section
   class="mx-auto flex max-h-full w-full max-w-3xl flex-col gap-4 overflow-y-auto rounded-xl border-t-4 border-police-500 bg-white p-6 text-stone-900 shadow-2xl"
   data-testid="result-screen"
+  data-mode={mode === 'free' ? 'free' : 'scored'}
 >
   <header class="flex items-baseline justify-between gap-4">
     <div>
-      <h2 class="text-2xl font-bold">Kết quả</h2>
-      <p class="text-stone-700" data-testid="result-ended-by">{endReasonLabel(report.endedBy)}</p>
+      <h2 class="text-2xl font-bold" data-testid="result-title">{variant.title}</h2>
+      {#if variant.showEndReason}
+        <p class="text-stone-700" data-testid="result-ended-by">{endReasonLabel(report.endedBy)}</p>
+      {/if}
     </div>
-    <p class="text-4xl font-bold" data-testid="result-score">{formatScore(report.score)}</p>
+    {#if variant.showScore}
+      <p class="text-4xl font-bold" data-testid="result-score">{formatScore(report.score)}</p>
+    {/if}
   </header>
 
   <dl class="grid grid-cols-2 gap-3 rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm">
@@ -31,12 +38,15 @@
       <dt class="text-stone-600">Tổng tiền phạt <span class="text-police-700">(ước tính)</span></dt>
       <dd class="text-lg font-semibold" data-testid="result-fine-total">{total}</dd>
     </div>
-    <div>
-      <dt class="text-stone-600">Điểm giấy phép lái xe</dt>
-      <dd class="text-lg font-semibold" data-testid="result-licence">{licenceLabel(report.licence)}</dd>
-    </div>
+    {#if variant.showLicence}
+      <div>
+        <dt class="text-stone-600">Điểm giấy phép lái xe</dt>
+        <dd class="text-lg font-semibold" data-testid="result-licence">{licenceLabel(report.licence)}</dd>
+      </div>
+    {/if}
     <p class="col-span-2 text-xs text-stone-600">
-      Tổng tiền phạt cộng khung phạt của từng lỗi, trừ lỗi đã tính trong mức phạt gây tai nạn, chỉ để tham khảo. {LICENCE_NOTE}
+      Tổng tiền phạt cộng khung phạt của từng lỗi, trừ lỗi đã tính trong mức phạt gây tai nạn, chỉ để tham khảo.
+      {#if variant.showLicence}{LICENCE_NOTE}{/if}
     </p>
   </dl>
 

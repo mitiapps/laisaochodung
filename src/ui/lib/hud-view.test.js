@@ -15,6 +15,7 @@ import {
   noticeItems,
   pedalControl,
   rpmFraction,
+  showsReverseChip,
   sliderSteer,
   steeringTurnDeg,
 } from './hud-view.js';
@@ -77,6 +78,9 @@ describe('HUD view helpers', () => {
     const hazard = { ...RUNNING, indicators: /** @type {const} */ ('hazard') };
     expect(['signalLeft', 'hazard', 'signalRight'].map((a) => buttonView(/** @type {never} */ (a), hazard).on)).toEqual([true, true, true]);
     expect(() => buttonView('throttle', state)).toThrow(RangeError);
+    // The push-back button is a hold button that lights while the sim reports the bike in R.
+    expect(buttonView('pushBack', state)).toMatchObject({ mode: 'hold', label: 'Lùi xe bằng chân (xe máy)', text: 'Lùi', testId: 'hud-push-back', on: false, blink: false });
+    expect(buttonView('pushBack', { ...RUNNING, gear: 'R' }).on).toBe(true);
   });
 
   it('lays the controls out in cabin order: stalk, left lever, steering, horn, pedals or right grip, gears, console', () => {
@@ -110,9 +114,10 @@ describe('HUD view helpers', () => {
       // Front brake lever in front of the throttle grip, top to bottom.
       rightGrip: ['brake', 'throttle'],
       gears: [],
-      console: [],
+      // The push-back button, between the grip and the speed panel.
+      console: ['pushBack'],
     });
-    expect(controlLayout('motorbike', 'simple')).toMatchObject({ leftLever: ['brake'], rightGrip: ['throttle'] });
+    expect(controlLayout('motorbike', 'simple')).toMatchObject({ leftLever: ['brake'], rightGrip: ['throttle'], console: ['pushBack'] });
     expect(controlLayout('moped', 'real')).toBe(real);
   });
 
@@ -123,9 +128,17 @@ describe('HUD view helpers', () => {
     expect([...car].sort()).toEqual(all.filter((a) => !['brakeRear', 'pushBack'].includes(a)).sort());
     const bike = layoutActions(controlLayout('motorbike', 'real'));
     expect(new Set(bike).size).toBe(bike.length);
-    // The motorbike has no on-screen push-back control yet.
-    expect([...bike].sort()).toEqual(all.filter((a) => !['gearUp', 'gearDown', 'handbrake', 'pushBack'].includes(a)).sort());
+    expect([...bike].sort()).toEqual(all.filter((a) => !['gearUp', 'gearDown', 'handbrake'].includes(a)).sort());
     expect(layoutActions(controlLayout('motorbike', 'simple'))).not.toContain('brakeRear');
+    expect(layoutActions(controlLayout('motorbike', 'simple'))).toContain('pushBack');
+    expect(layoutActions(controlLayout('car', 'simple'))).not.toContain('pushBack');
+  });
+
+  it('shows the LÙI chip only on a motorbike in R', () => {
+    expect(showsReverseChip('motorbike', 'R')).toBe(true);
+    expect(showsReverseChip('moped', 'R')).toBe(true);
+    expect(showsReverseChip('motorbike', 'D')).toBe(false);
+    expect(showsReverseChip('car', 'R')).toBe(false);
   });
 
   it('turns the drawn wheel further than the handlebar', () => {

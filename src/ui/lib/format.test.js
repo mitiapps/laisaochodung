@@ -12,6 +12,7 @@ import {
   formatScore,
   formatSpeed,
   formatSuspension,
+  formatTally,
   formatVnd,
   sourceLabel,
 } from './format.js';
@@ -100,5 +101,14 @@ describe('numbers and labels', () => {
     expect(formatSuspension(null)).toBeNull();
     expect(formatDate('2026-08-15')).toBe('15/08/2026');
     expect(formatDate(null)).toBeNull();
+  });
+});
+
+describe('free-run tally', () => {
+  it('counts breaches in Vietnamese', () => {
+    expect(formatTally(0)).toBe('0 lỗi');
+    expect(formatTally(3)).toBe('3 lỗi');
+    expect(formatTally(Number.NaN)).toBe('0 lỗi');
+    expect(formatTally(-2)).toBe('0 lỗi');
   });
 });

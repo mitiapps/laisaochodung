@@ -20,8 +20,9 @@
  * @param {StubStates} states Recorded states (e.g. `tests/fixtures/hud-states.json`).
  * @param {{stepMs?: number}} [options] Delay between replayed states.
  * @returns {GameApi & {calls: string[]}} Stub API; `calls` logs every call for tests. `start` is
- *   logged as `start:<map>:<vehicle>`, followed by `:<options JSON>` when options are given; the
- *   options change nothing in the replay. `controls` calls are logged as `hold:<action>:<on>`,
+ *   logged as `start:<map>:<vehicle>`, followed by `:<options JSON>` when options are given. Only
+ *   `mode` changes the replay: a free run emits the recorded states with `mode: 'free'`, no `nav`
+ *   and a `breachCount`, and finishes only on `quit`. `controls` calls are logged as `hold:<action>:<on>`,
  *   `press:<action>` and `steer:<value>` and change nothing.
  */
 export function createStubGame(states, { stepMs = 1500 } = {}) {
@@ -33,6 +34,21 @@ export function createStubGame(states, { stepMs = 1500 } = {}) {
   const calls = [];
   /** @type {HudState} */
   let last = states.ready;
+  /** @type {import('../../contracts/hud.js').RunMode} */
+  let mode = 'scored';
+
+  /**
+   * A recorded state in the current run's mode. A free state also carries `breachCount`, the field
+   * the session fills for the free mode's tally, counted from the recorded toasts.
+   * @param {HudState} state Recorded state.
+   * @returns {HudState} State.
+   */
+  const inMode = (state) =>
+    mode === 'free'
+      ? /** @type {HudState} */ ({ ...state, mode: 'free', nav: null, breachCount: new Set(state.toasts.map((b) => b.episodeId)).size })
+      : { ...state, mode: 'scored' };
+  /** @returns {HudState[]} What a run replays after `ready`. */
+  const run = () => (mode === 'free' ? [states.running, states.withToasts] : [states.running, states.withToasts, states.finished]);
 
   /** @param {HudState} state State to emit. */
   const emit = (state) => {
@@ -46,21 +62,22 @@ export function createStubGame(states, { stepMs = 1500 } = {}) {
   /** @param {HudState[]} sequence States to emit one per step. */
   const play = (sequence) => {
     clearTimers();
-    sequence.forEach((state, i) => timers.push(setTimeout(() => emit(state), stepMs * (i + 1))));
+    sequence.forEach((state, i) => timers.push(setTimeout(() => emit(inMode(state)), stepMs * (i + 1))));
   };
   /** @param {Partial<import('../../contracts/score.js').ScoreReport>} [overrides] Report fields. */
   const finish = (overrides) => {
     clearTimers();
     const report = states.finished.report ? { ...states.finished.report, ...overrides } : undefined;
-    emit({ ...states.finished, report });
+    emit(inMode({ ...states.finished, report }));
   };
 
   return {
     calls,
     async start(mapId, vehicleId, options) {
       calls.push(options === undefined ? `start:${mapId}:${vehicleId}` : `start:${mapId}:${vehicleId}:${JSON.stringify(options)}`);
-      emit(states.ready);
-      play([states.running, states.withToasts, states.finished]);
+      mode = options?.mode === 'free' ? 'free' : 'scored';
+      emit(inMode(states.ready));
+      play(run());
     },
     pause() {
       calls.push('pause');
@@ -72,12 +89,12 @@ export function createStubGame(states, { stepMs = 1500 } = {}) {
       calls.push('resume');
       if (last.runStatus !== 'paused') return;
       emit({ ...last, runStatus: 'running' });
-      play([states.finished]);
+      play(mode === 'free' ? [] : [states.finished]);
     },
     restart() {
       calls.push('restart');
-      emit(states.ready);
-      play([states.running, states.withToasts, states.finished]);
+      emit(inMode(states.ready));
+      play(run());
     },
     quit() {
       calls.push('quit');

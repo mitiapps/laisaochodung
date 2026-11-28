@@ -15,11 +15,12 @@
    *   voice?: import('../../game/voice-cues.js').VoiceCues | null,
    *   mapId: string | null,
    *   vehicleId: string | null,
+   *   mode?: import('../../contracts/hud.js').RunMode,
    *   vehicles: ReadonlyArray<import('../../contracts/vehicle.js').VehicleInfo>,
    *   mapEntry: import('../../contracts/catalog.js').MapIndexEntry | null,
    * }}
    */
-  let { game, canvas, camera = null, voice = null, mapId, vehicleId, vehicles, mapEntry } = $props();
+  let { game, canvas, camera = null, voice = null, mapId, vehicleId, mode = 'scored', vehicles, mapEntry } = $props();
 
   /** @type {import('../../contracts/controls.js').CameraMode} */
   let cameraMode = $state('chase');
@@ -43,6 +44,8 @@
   let hud = $state(/** @type {import('../../contracts/hud.js').HudState | null} */ (null));
   let error = $state(/** @type {string | null} */ (null));
   let stack = $state(emptyToastStack());
+  /** The run is free; read from the state the session applied, so a state without it is scored. */
+  const free = $derived(hud?.mode === 'free');
   /** Counts restarts; the HUD rebuilds its on-screen controls when it changes. */
   let runKey = $state(0);
 
@@ -72,7 +75,7 @@
         hud = state;
         stack = ingestBreaches(stack, state.toasts, performance.now());
       });
-      g.start(map, v.id, { controlPreset: readControlPreset() }).catch((/** @type {unknown} */ err) => {
+      g.start(map, v.id, { controlPreset: readControlPreset(), mode }).catch((/** @type {unknown} */ err) => {
         console.error('Failed to start the run', err);
         if (active) error = 'Không khởi động được lượt chơi. Hãy thử lại hoặc chọn bản đồ khác.';
       });
@@ -163,7 +166,7 @@
             Chơi lại
           </button>
           <button type="button" class="rounded-lg bg-kepi-500 px-4 py-2 text-white hover:bg-kepi-600" data-testid="pause-quit" onclick={() => game?.quit()}>
-            Kết thúc lượt chơi
+            {free ? 'Thoát' : 'Kết thúc lượt chơi'}
           </button>
         </div>
       </div>
@@ -172,7 +175,7 @@
     {#if hud.runStatus === 'finished'}
       <div class="absolute inset-0 flex items-center justify-center bg-stone-900/50 px-6 pb-8 pt-6">
         {#if hud.report}
-          <ResultScreen report={hud.report} onretry={restart} onchangemap={changeMap} />
+          <ResultScreen report={hud.report} mode={hud.mode} onretry={restart} onchangemap={changeMap} />
         {:else}
           <div class="rounded-xl border border-stone-200 bg-white p-6 text-center shadow-xl" data-testid="result-missing">
             <p class="mb-4">Lượt chơi đã kết thúc nhưng không có kết quả.</p>

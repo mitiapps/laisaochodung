@@ -14,8 +14,21 @@ describe('hash routes', () => {
 
   it('round-trips play selections', () => {
     const href = playHref('fixture-osm', 'car-sedan');
-    expect(parseHash(href)).toEqual({ name: 'play', mapId: 'fixture-osm', vehicleId: 'car-sedan' });
-    expect(parseHash('#/play')).toEqual({ name: 'play', mapId: null, vehicleId: null });
+    expect(href).toBe('#/play?map=fixture-osm&vehicle=car-sedan');
+    expect(parseHash(href)).toEqual({ name: 'play', mapId: 'fixture-osm', vehicleId: 'car-sedan', mode: 'scored' });
+    expect(parseHash('#/play')).toEqual({ name: 'play', mapId: null, vehicleId: null, mode: 'scored' });
+  });
+
+  it('reads the run mode: only mode=free is free, anything else is scored', () => {
+    const free = playHref('fixture-osm', 'scooter', 'free');
+    expect(free).toBe('#/play?map=fixture-osm&vehicle=scooter&mode=free');
+    expect(parseHash(free)).toEqual({ name: 'play', mapId: 'fixture-osm', vehicleId: 'scooter', mode: 'free' });
+    expect(playHref('m', 'v', 'scored')).toBe(playHref('m', 'v'));
+    expect(parseHash('#/play?map=m&vehicle=v&mode=scored').mode).toBe('scored');
+    expect(parseHash('#/play?map=m&vehicle=v&mode=FREE').mode).toBe('scored');
+    expect(parseHash('#/play?map=m&vehicle=v&mode=').mode).toBe('scored');
+    expect(parseHash('#/play?map=m&vehicle=v&seed=3&mode=free').mode).toBe('free');
+    expect(parseHash('#/lien-he?mode=free').mode).toBe('scored');
   });
 
   it('builds page links', () => {

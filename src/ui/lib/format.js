@@ -90,6 +90,16 @@ export function formatScore(score) {
 }
 
 /**
+ * Formats the breach tally a free run shows in the score box instead of a score.
+ * @param {number} count Distinct breach episodes so far; anything not finite or below 0 reads as 0.
+ * @returns {string} E.g. `3 lỗi`.
+ */
+export function formatTally(count) {
+  const n = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
+  return `${n} lỗi`;
+}
+
+/**
  * Formats elapsed time as `m:ss`, or `h:mm:ss` from one hour.
  * @param {number} seconds Elapsed seconds; negative or non-finite values read as 0.
  * @returns {string} Clock string.
