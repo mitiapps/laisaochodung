@@ -7,11 +7,11 @@ import { badgeFor } from '../../src/ui/lib/key-label.js';
 import { readToastFit } from './toast-fit.js';
 
 /**
- * Control presets, camera modes and the on-screen controls on the shipped build: Đơn giản is the
- * default, every action of the vehicle has a working on-screen control with its key badge in cabin
- * order, touch drives the same input as the keys, the camera switches by key and button, and the
- * one layout fits a desktop window and landscape phones without overlapping, centred where the
- * screen is wide enough.
+ * Control presets, camera modes, run modes and the on-screen controls on the shipped build: Đơn
+ * giản is the default, every action of the vehicle has a working on-screen control with its key
+ * badge in cabin order, touch drives the same input as the keys (the scooter's Lùi button as R),
+ * the camera switches by key and button, the one layout fits a desktop window and landscape phones
+ * without overlapping, centred where the screen is wide enough, and Lái tự do runs with no score.
  */
 
 /** Keys of one action, from the game's own bindings. */
@@ -335,6 +335,89 @@ test.describe('touch', () => {
     await throttleIs(0, 'released');
     expect(problems).toEqual([]);
   });
+
+  test('holding R and holding the Lùi button push the stopped scooter back alike, and it stops on release', async ({ page }) => {
+    const problems = watchProblems(page);
+    await startRun(page, 'scooter');
+    const button = page.getByTestId('hud-push-back');
+    const chip = page.getByTestId('hud-reverse');
+    await expect(button).toHaveAttribute('data-on', 'false');
+    await expect(chip).toHaveCount(0);
+    const cdp = await page.context().newCDPSession(page);
+    const { x, y } = await centre(page.locator('[data-action="pushBack"]'));
+    for (const [how, down, up] of /** @type {const} */ ([
+      ['R', () => page.keyboard.down(KEY.pushBack), () => page.keyboard.up(KEY.pushBack)],
+      [
+        'Lùi',
+        () => cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }] }),
+        () => cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }),
+      ],
+    ])) {
+      await down();
+      // The push acts: the frame gear reads R, so the button lights and the speed panel shows LÙI.
+      await expect(button, how).toHaveAttribute('data-on', 'true');
+      await expect(chip, how).toBeVisible();
+      await expect.poll(async () => Number(await page.getByTestId('hud-speed').innerText()), { message: how }).toBeGreaterThan(0);
+      await up();
+      // Feet down: the push ends and the scooter stands still again.
+      await expect(button, how).toHaveAttribute('data-on', 'false');
+      await expect(chip, how).toHaveCount(0);
+      await expect.poll(async () => Number(await page.getByTestId('hud-speed').innerText()), { message: how, timeout: 3000 }).toBe(0);
+    }
+    expect(problems).toEqual([]);
+  });
+});
+
+test.describe('run modes', () => {
+  /**
+   * Starts tutorial 01 by car in a run mode from the home page.
+   * @param {import('@playwright/test').Page} page Page.
+   * @param {'scored' | 'free'} mode Run mode.
+   */
+  const startIn = async (page, mode) => {
+    await page.goto('/#/');
+    await page.getByTestId('vehicle-car-sedan').check();
+    await page.getByTestId('map-tutorial-01-co-ban').check();
+    await page.getByTestId(`mode-${mode}`).check();
+    await page.getByTestId('start-button').click();
+    await expect(page.getByTestId('hud')).toBeVisible();
+    await expect(page.getByTestId('hud-speed')).not.toHaveText('');
+  };
+
+  test('Lái tự do: no score and no nav arrow; pause, then Thoát shows the free summary', async ({ page }) => {
+    const problems = watchProblems(page);
+    await startIn(page, 'free');
+    await expect(page).toHaveURL(/mode=free/u);
+    await expect(page.getByTestId('hud-tally')).toHaveText('0 lỗi');
+    await expect(page.getByTestId('hud-score')).toHaveCount(0);
+    await expect(page.getByTestId('hud-nav')).toHaveCount(0);
+    await page.keyboard.press(KEY.pause);
+    await expect(page.getByTestId('pause-quit')).toHaveText('Thoát');
+    await page.getByTestId('pause-quit').click();
+    await expect(page.getByTestId('result-screen')).toHaveAttribute('data-mode', 'free');
+    await expect(page.getByTestId('result-title')).toHaveText('Kết thúc lái tự do');
+    await expect(page.getByTestId('result-score')).toHaveCount(0);
+    await expect(page.getByTestId('result-licence')).toHaveCount(0);
+    expect(problems).toEqual([]);
+  });
+
+  test('Chấm điểm stays the default and unchanged: score, nav arrow, Kết thúc lượt chơi and a scored result', async ({ page }) => {
+    const problems = watchProblems(page);
+    await page.goto('/#/');
+    await expect(page.getByTestId('mode-scored')).toBeChecked();
+    await startIn(page, 'scored');
+    await expect(page.getByTestId('hud-score')).toBeVisible();
+    await expect(page.getByTestId('hud-nav')).toBeVisible();
+    await expect(page.getByTestId('hud-tally')).toHaveCount(0);
+    await page.keyboard.press(KEY.pause);
+    await expect(page.getByTestId('pause-quit')).toHaveText('Kết thúc lượt chơi');
+    await page.getByTestId('pause-quit').click();
+    await expect(page.getByTestId('result-screen')).toHaveAttribute('data-mode', 'scored');
+    await expect(page.getByTestId('result-title')).toHaveText('Kết quả');
+    await expect(page.getByTestId('result-score')).toBeVisible();
+    await expect(page.getByTestId('result-ended-by')).toHaveText('Bỏ cuộc');
+    expect(problems).toEqual([]);
+  });
 });
 
 /**
@@ -400,10 +483,17 @@ function readFastSpeedPanel(page) {
 const CAR_SPEED_PANEL_MAX_W = 218;
 
 /**
- * Viewports of the layout test. On the narrower ones the HUD box is too narrow for the car's
- * groups on both sides of a centred wheel, so the row shifts left and only containment is checked
- * there. At 774 × 390 the HUD box is 750 px, the box a notched 844 px phone leaves inside its
- * safe-area insets, with 2 px to spare for the car: it pins that tight case.
+ * Widest row of bottom controls and speed panel, the HUD box each vehicle needs, from the clamp
+ * bounds in `hud.svelte`: car 340 + 408 px, scooter 356 + 384 px (its right side holds the grip
+ * column, the Lùi push-back button and the speed panel). The layout test measures the row.
+ */
+const MIN_HUD_W = { car: 748, motorbike: 740 };
+
+/**
+ * Viewports of the layout test. On the narrower ones the HUD box is too narrow for the groups on
+ * both sides of a centred steering, so the row shifts left and only containment is checked there.
+ * At 774 × 390 the HUD box is 750 px, the box a notched 844 px phone leaves inside its safe-area
+ * insets, with 2 px to spare for the car and 10 px for the scooter: it pins that tight case.
  */
 const LAYOUT_VIEWPORTS = [
   { width: 1280, height: 720, centred: true },
@@ -442,6 +532,10 @@ for (const { centred, ...viewport } of LAYOUT_VIEWPORTS) {
             expect(overlap(c, layout.speed), `${name} on the speed panel`).toBe(false);
             expect(overlap(c, layout.toasts), `${name} on the toast stack`).toBe(false);
           }
+          // The row of bottom controls and the speed panel is as wide as the documented minimum.
+          const row = [...layout.controls.filter((c) => !c.actions.some((a) => zones.top.includes(/** @type {never} */ (a)))), layout.speed];
+          const rowW = Math.max(...row.map((b) => b.x + b.w)) - Math.min(...row.map((b) => b.x));
+          expect(rowW, 'the width of the control row').toBeCloseTo(MIN_HUD_W[legalClass], 0);
           for (let i = 0; i < layout.controls.length; i += 1) {
             for (let j = i + 1; j < layout.controls.length; j += 1) {
               const [a, b] = [layout.controls[i], layout.controls[j]];
@@ -517,6 +611,10 @@ for (const { centred, ...viewport } of LAYOUT_VIEWPORTS) {
             expect(cx(boxOf('hazard'))).toBeLessThan(cx(steering));
             expect(Math.abs(boxOf('hazard').y - boxOf('lightsCycle').y)).toBeLessThanOrEqual(1);
             await expect(page.getByTestId('hud-gear')).toHaveCount(0);
+            // The Lùi push-back button between the grip column and the speed panel.
+            const push = boxOf('pushBack');
+            expect(push.x).toBeGreaterThanOrEqual(right(throttle));
+            expect(right(push)).toBeLessThanOrEqual(layout.speed.x);
           }
           await expect(page.getByTestId('hud-steer')).toHaveAttribute('data-shape', legalClass === 'car' ? 'wheel' : 'handlebar');
         });
