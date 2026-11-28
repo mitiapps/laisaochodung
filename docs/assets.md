@@ -9,10 +9,13 @@ missing file, a CC BY record lacks its credit line, or the model payload reaches
 
 | Files | Source | Licence | Used as |
 | --- | --- | --- | --- |
-| `models/car-kit/sedan.glb` | [Kenney Car Kit 3.1](https://kenney.nl/assets/car-kit) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | Player car (`car-sedan`); traffic `car` |
-| `models/car-kit/taxi.glb`, `hatchback-sports.glb` | same | CC0 1.0 | Scripted cars (`npc-sedan`, `npc-hatchback`); traffic `taxi` and `car` |
-| `models/car-kit/suv.glb` | same | CC0 1.0 | Traffic `car` |
-| `models/car-kit/van.glb`, `truck.glb`, `delivery.glb`, `truck-flat.glb` | same | CC0 1.0 | Traffic `truck` |
+| `models/tripo/scooter.glb`, `underbone.glb`, `sportbike.glb` | Generated with [Tripo AI](https://www.tripo3d.ai) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (Tripo free plan) | Traffic motorbikes (one per variant) and the player's scooter |
+| `models/tripo/bus.glb` | same | CC BY 4.0 | Traffic `bus` |
+| `models/tripo/sedan.glb`, `taxi.glb`, `suv.glb`, `van.glb`, `truck.glb` | same | CC BY 4.0 | Replace the Car Kit bodies of the same name: player car (`car-sedan`), traffic and scripted cars |
+| `models/car-kit/sedan.glb` | [Kenney Car Kit 3.1](https://kenney.nl/assets/car-kit) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | Fallback of the Tripo sedan (player car `car-sedan`, traffic `car`) |
+| `models/car-kit/taxi.glb`, `hatchback-sports.glb` | same | CC0 1.0 | Scripted cars (`npc-sedan`, `npc-hatchback`); traffic `taxi` and `car`; `taxi.glb` is the Tripo taxi's fallback |
+| `models/car-kit/suv.glb` | same | CC0 1.0 | Fallback of the Tripo SUV (traffic `car`) |
+| `models/car-kit/van.glb`, `truck.glb`, `delivery.glb`, `truck-flat.glb` | same | CC0 1.0 | Traffic `truck`; `van.glb` and `truck.glb` are fallbacks of the Tripo bodies |
 | `models/car-kit/debris-bumper.glb`, `debris-door.glb`, `debris-tire.glb` | same | CC0 1.0 | Debris beside a wreck |
 | `models/car-kit/Textures/colormap.png` | same | CC0 1.0 | Shared texture the Car Kit GLBs reference by relative path |
 | `models/mini-characters/character-male-b.glb`, `character-female-b.glb` | [Kenney Mini Characters 2.0](https://kenney.nl/assets/mini-characters) | CC0 1.0 | Motorbike riders (`drive` clip baked), the player's rider, fallen riders (`die` clip) |
@@ -28,14 +31,25 @@ The licences were read on each Kenney page and in each kit's `License.txt`. Each
 face +Z with left at +X, and each wheel is a separate node (`wheel-front-left`,
 `wheel-front-right`, `wheel-back-left`, `wheel-back-right`).
 
+### Tripo models
+
+Each Tripo file (`src/render/vehicles/tripo.js`) is one textured mesh with its wheels baked in, so
+those wheels neither spin nor steer, and it keeps its own colours: no paint variants or taxi
+liveries. The files were simplified (about 1,200 triangles per motorbike and 1,800 per car or bus,
+to stay inside the 250,000-triangle actor budget of `src/render/actors-instanced.test.js`), their
+textures cut to 1024 px, and their meshopt geometry compression kept to stay inside the 5 MB
+payload; `createGltfLoader` in `src/render/assets.js` decodes it. Each model's `yaw` turns its
+front to +Z, measured on textured orthographic views of the file. The procedural or Car Kit model
+of the same key is drawn until the file loads, and for good when it fails.
+
 ### Procedural models
 
 No CC0 motor scooter or city bus exists in the Kenney style, so these are our own code
-(Apache-2.0 with the game), built in `src/render/vehicles/`:
+(Apache-2.0 with the game), built in `src/render/vehicles/`, and stand in for the Tripo models:
 
 - `motorbike.js`: a scooter (xe tay ga) and an underbone (xe số), extruded side-profile outlines
   (body, seat, leg shield, mudguards) plus rods, 500–550 triangles each without the two separate
-  wheels. Traffic motorbikes and the player's scooter use them, with a baked rider.
+  wheels, with a baked rider. The underbone also stands in for the sport bike.
 - `bus.js`: a 10.5 m city bus in a green and white livery.
 
 Their UVs point at cells of the Mini Characters colour map, so a motorbike and its baked rider

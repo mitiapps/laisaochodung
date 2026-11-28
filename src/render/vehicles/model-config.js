@@ -17,6 +17,8 @@
  *   procedural model.
  * @property {import('./motorbike.js').MotorbikeType} [procedural] Draw this procedural motorbike
  *   (with a rider) instead of a GLB or the primitive scooter.
+ * @property {string} [tripo] `TRIPO_MODELS` key of a textured car body (wheels baked in) drawn in
+ *   place of `glb`; `glb` stays the fallback when it fails to load.
  */
 
 /** Kenney Car Kit wheel node names in car `WheelState` order. */

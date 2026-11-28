@@ -4,8 +4,9 @@
  *
  * Each model is one textured mesh with its wheels baked in, so the wheels do not spin. The body
  * keeps its own colours: its `paint` attribute is all `FIXED`, so the look shader leaves it alone.
- * The procedural model of the same key stays the stand-in until the GLB loads, and for good when
- * it fails.
+ * The procedural or Kenney model of the same key stays the stand-in until the GLB loads, and for
+ * good when it fails. The files are simplified to fit the actor triangle budget and keep their
+ * meshopt geometry compression to fit the model payload budget (`createGltfLoader` decodes it).
  */
 
 import { BufferAttribute, Mesh } from 'three';
@@ -37,15 +38,27 @@ import { FIXED, merge } from './procedural.js';
  * @property {import('three').Texture | null} map The model's base colour texture.
  */
 
+/** Quarter turn about +Y. */
+const QUARTER = Math.PI / 2;
+
 /**
- * Tripo bodies by key: motorbike types and `bus`. Yaws measured from the files: the handlebar
- * and leg shield of both bikes stand towards +Z. The bus front was not confirmed.
+ * Tripo bodies by key: the motorbike types, `bus`, and the `KENNEY_BODIES` keys they replace
+ * (the Kenney model stays the stand-in and the fallback). Car bodies are refitted to each pose's
+ * footprint, so their `lengthM` only sets the native scale. Yaws were measured from textured
+ * orthographic views of each file: headlamps, grille and windscreen mark the front, tail lamps
+ * and the number plate the rear; the bus door then sits on the right (−X) side.
  * @type {Readonly<Record<string, TripoModel>>}
  */
 export const TRIPO_MODELS = Object.freeze({
-  scooter: { glb: 'models/tripo/scooter.glb', yaw: 0, lengthM: MOTORBIKE_LENGTH_M, seat: [-0.32, 0.87], pillion: [-0.66, 0.88] },
-  underbone: { glb: 'models/tripo/underbone.glb', yaw: 0, lengthM: MOTORBIKE_LENGTH_M, seat: [-0.28, 0.86], pillion: [-0.66, 0.86] },
-  bus: { glb: 'models/tripo/bus.glb', yaw: 0, lengthM: BUS_SIZE.lengthM, widthM: BUS_SIZE.widthM },
+  scooter: { glb: 'models/tripo/scooter.glb', yaw: -QUARTER, lengthM: MOTORBIKE_LENGTH_M, seat: [-0.3, 0.86], pillion: [-0.65, 0.9] },
+  underbone: { glb: 'models/tripo/underbone.glb', yaw: -QUARTER, lengthM: MOTORBIKE_LENGTH_M, seat: [-0.28, 0.79], pillion: [-0.68, 0.84] },
+  sportbike: { glb: 'models/tripo/sportbike.glb', yaw: 0, lengthM: MOTORBIKE_LENGTH_M, seat: [-0.3, 0.78], pillion: [-0.72, 0.88] },
+  bus: { glb: 'models/tripo/bus.glb', yaw: -QUARTER, lengthM: BUS_SIZE.lengthM, widthM: BUS_SIZE.widthM },
+  sedan: { glb: 'models/tripo/sedan.glb', yaw: 0, lengthM: 4.5 },
+  taxi: { glb: 'models/tripo/taxi.glb', yaw: -QUARTER, lengthM: 4.5 },
+  suv: { glb: 'models/tripo/suv.glb', yaw: QUARTER, lengthM: 4.5 },
+  van: { glb: 'models/tripo/van.glb', yaw: Math.PI, lengthM: 6 },
+  truck: { glb: 'models/tripo/truck.glb', yaw: 0, lengthM: 6 },
 });
 
 /**

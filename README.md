@@ -44,5 +44,5 @@ More: [docs/architecture.md](docs/architecture.md). Known limits:
 - OpenStreetMap-derived map data (`data/maps/osm-*`, built into `public/maps/`): © OpenStreetMap
   contributors, [ODbL 1.0](data/maps/LICENSE-ODbL.md).
 - 3D models and sign drawings: listed with their licences in
-  [data/credits/credits.json](data/credits/credits.json) (Kenney models are CC0 1.0; the sign
-  drawings are this project's own, Apache-2.0).
+  [data/credits/credits.json](data/credits/credits.json) (Kenney models are CC0 1.0; the Tripo AI
+  vehicle models are CC BY 4.0; the sign drawings are this project's own, Apache-2.0).

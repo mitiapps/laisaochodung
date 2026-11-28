@@ -2,7 +2,8 @@
  * Procedural motorbikes: a scooter (xe tay ga) and an underbone (xe số), the two shapes that make
  * up most of the traffic in Ho Chi Minh City. No CC0 motor scooter exists, so both are our own
  * meshes, built from extruded side-profile outlines (body, seat, leg shield, mudguards) plus a
- * few rods (fork, handlebar, exhaust). Wheels are separate (`unitWheel`) so they can spin.
+ * few rods (fork, handlebar, exhaust). Wheels are separate (`unitWheel`) so they can spin. The
+ * third type, a sport bike, has a Tripo body only; the underbone mesh is its procedural stand-in.
  *
  * Kenney frame: front +Z, left +X, up +Y, ground at y = 0, centred between the axles. Sizes are
  * real metres for a 1.9 m bike (Honda Vision and Wave class); instances scale them uniformly to
@@ -11,7 +12,7 @@
 
 import { boxPart, CELL, FIXED, merge, PAINT_BODY, profilePart, rodPart } from './procedural.js';
 
-/** @typedef {'scooter' | 'underbone'} MotorbikeType */
+/** @typedef {'scooter' | 'underbone' | 'sportbike'} MotorbikeType */
 
 /**
  * @typedef {object} WheelSpec
@@ -36,8 +37,8 @@ import { boxPart, CELL, FIXED, merge, PAINT_BODY, profilePart, rodPart } from '.
  *   Lamp centres in the Kenney frame.
  */
 
-/** Motorbike types in variant order. */
-export const MOTORBIKE_TYPES = Object.freeze(/** @type {MotorbikeType[]} */ (['scooter', 'underbone']));
+/** Motorbike types in variant order (`TrafficParams.models.motorbike.variants` picks one each). */
+export const MOTORBIKE_TYPES = Object.freeze(/** @type {MotorbikeType[]} */ (['scooter', 'underbone', 'sportbike']));
 
 /** Nominal length of both procedural bikes, metres. */
 export const MOTORBIKE_LENGTH_M = 1.9;
@@ -349,5 +350,7 @@ function underbone() {
 export function buildMotorbike(type) {
   if (type === 'scooter') return scooter();
   if (type === 'underbone') return underbone();
+  // No procedural sport bike: the underbone stands in until (or instead of) its Tripo body.
+  if (type === 'sportbike') return { ...underbone(), type: 'sportbike' };
   throw new Error(`Unknown motorbike type ${String(type)}`);
 }

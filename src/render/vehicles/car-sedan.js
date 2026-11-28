@@ -1,10 +1,14 @@
 import { KENNEY_WHEELS } from './model-config.js';
 
-/** @type {import('./model-config.js').ModelConfig} Player car: Kenney Car Kit "sedan" (CC0). */
+/**
+ * Player car: the Tripo "sedan" body, with the Kenney Car Kit "sedan" (CC0) as its fallback.
+ * @type {import('./model-config.js').ModelConfig}
+ */
 export default Object.freeze({
   id: 'car-sedan',
   kind: 'car',
   glb: 'models/car-kit/sedan.glb',
+  tripo: 'sedan',
   wheelNodes: [...KENNEY_WHEELS],
   wheelRadiusM: 0.32,
   heightM: 1.45,

@@ -51,20 +51,41 @@ export function paintFromUv(geometry, cells) {
   return geometry;
 }
 
+/** Component getters by index, for any buffer attribute kind. */
+const GETTERS = /** @type {const} */ (['getX', 'getY', 'getZ', 'getW']);
+
+/**
+ * Plain float copy of an attribute, expanded through an index when given: denormalizes quantized
+ * data (`KHR_mesh_quantization`) and flattens interleaved views, so transforms cannot clamp it.
+ * @param {import('three').BufferAttribute | import('three').InterleavedBufferAttribute} attr Attribute.
+ * @param {import('three').BufferAttribute | null} index Index, or null for a non-indexed mesh.
+ * @returns {BufferAttribute} Float attribute.
+ */
+function floatAttribute(attr, index) {
+  const n = attr.itemSize;
+  const count = index ? index.count : attr.count;
+  const out = new Float32Array(count * n);
+  for (let i = 0; i < count; i += 1) {
+    const src = index ? index.getX(i) : i;
+    for (let c = 0; c < n; c += 1) out[i * n + c] = attr[GETTERS[c]](src);
+  }
+  return new BufferAttribute(out, n);
+}
+
 /**
  * Copy of a mesh geometry in the model root frame, non-indexed, with only position, normal
- * and uv.
+ * and uv, all as plain floats.
  * @param {Mesh} mesh Mesh.
  * @param {import('three').Matrix4} toRoot Mesh-to-root matrix.
  * @returns {BufferGeometry} Geometry.
  */
 export function rootGeometry(mesh, toRoot) {
-  const src = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
+  const src = mesh.geometry;
   const out = new BufferGeometry();
   for (const name of ['position', 'normal', 'uv']) {
     const attr = src.getAttribute(name);
     if (!attr) throw new Error(`Mesh ${mesh.name} lacks ${name}`);
-    out.setAttribute(name, attr);
+    out.setAttribute(name, floatAttribute(attr, src.index));
   }
   out.applyMatrix4(toRoot);
   return out;

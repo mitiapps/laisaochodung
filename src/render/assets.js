@@ -5,6 +5,7 @@
 
 import { CanvasTexture, SRGBColorSpace, TextureLoader } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { SIGN_TEXTURE_PX, signArt, signArtPath, signValueText } from './sign-art.js';
 
 /**
@@ -87,6 +88,15 @@ export function createSignTexture(code, value) {
   return texture;
 }
 
+/**
+ * A glTF loader that also reads meshopt-compressed geometry (`EXT_meshopt_compression`, used by
+ * the Tripo models to stay inside the model payload budget).
+ * @returns {GLTFLoader} Loader.
+ */
+export function createGltfLoader() {
+  return new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+}
+
 /** @type {Map<string, Promise<import('three/addons/loaders/GLTFLoader.js').GLTF>>} */
 const modelCache = new Map();
 /** @type {Map<string, Promise<import('three').Texture>>} */
@@ -134,7 +144,7 @@ export function loadModel(path) {
       const magic = new TextDecoder().decode(new Uint8Array(data, 0, Math.min(4, data.byteLength)));
       if (magic !== 'glTF') throw new Error(`${url} is not a GLB file`);
       const resourcePath = url.slice(0, url.lastIndexOf('/') + 1);
-      return new GLTFLoader().parseAsync(data, resourcePath);
+      return createGltfLoader().parseAsync(data, resourcePath);
     })();
     // A failed load is not cached, so a later renderer retries it.
     const entry = pending;

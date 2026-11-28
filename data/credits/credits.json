@@ -444,6 +444,66 @@
     "ownWork": false
   },
   {
+    "file": "models/tripo/sportbike.glb",
+    "title": "Sport motorbike (AI-generated 3D model)",
+    "author": "Generated with Tripo AI (tripo3d.ai)",
+    "sourceUrl": "https://www.tripo3d.ai",
+    "licence": "CC BY 4.0 (Tripo free plan)",
+    "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "creditLine": "3D model generated with Tripo AI (tripo3d.ai)",
+    "ownWork": false
+  },
+  {
+    "file": "models/tripo/sedan.glb",
+    "title": "Compact hatchback car (AI-generated 3D model)",
+    "author": "Generated with Tripo AI (tripo3d.ai)",
+    "sourceUrl": "https://www.tripo3d.ai",
+    "licence": "CC BY 4.0 (Tripo free plan)",
+    "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "creditLine": "3D model generated with Tripo AI (tripo3d.ai)",
+    "ownWork": false
+  },
+  {
+    "file": "models/tripo/taxi.glb",
+    "title": "Taxi sedan (AI-generated 3D model)",
+    "author": "Generated with Tripo AI (tripo3d.ai)",
+    "sourceUrl": "https://www.tripo3d.ai",
+    "licence": "CC BY 4.0 (Tripo free plan)",
+    "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "creditLine": "3D model generated with Tripo AI (tripo3d.ai)",
+    "ownWork": false
+  },
+  {
+    "file": "models/tripo/suv.glb",
+    "title": "SUV (AI-generated 3D model)",
+    "author": "Generated with Tripo AI (tripo3d.ai)",
+    "sourceUrl": "https://www.tripo3d.ai",
+    "licence": "CC BY 4.0 (Tripo free plan)",
+    "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "creditLine": "3D model generated with Tripo AI (tripo3d.ai)",
+    "ownWork": false
+  },
+  {
+    "file": "models/tripo/van.glb",
+    "title": "16-seat minibus (AI-generated 3D model)",
+    "author": "Generated with Tripo AI (tripo3d.ai)",
+    "sourceUrl": "https://www.tripo3d.ai",
+    "licence": "CC BY 4.0 (Tripo free plan)",
+    "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "creditLine": "3D model generated with Tripo AI (tripo3d.ai)",
+    "ownWork": false
+  },
+  {
+    "file": "models/tripo/truck.glb",
+    "title": "Small box truck (AI-generated 3D model)",
+    "author": "Generated with Tripo AI (tripo3d.ai)",
+    "sourceUrl": "https://www.tripo3d.ai",
+    "licence": "CC BY 4.0 (Tripo free plan)",
+    "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "creditLine": "3D model generated with Tripo AI (tripo3d.ai)",
+    "ownWork": false
+  },
+  {
     "file": "audio/tutorial-02/start.mp3",
     "title": "Tutorial 02 voice line: start",
     "author": "ElevenLabs voice Mai Anh – Vietnamese News Anchor",

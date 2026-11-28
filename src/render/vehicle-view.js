@@ -388,7 +388,9 @@ export function createVehicleView(options) {
   const lampKit = options.lamps ? buildLamps(kit, model, lenses, kind, L, W, config.heightM) : null;
   castShadows(root);
 
-  if (config.glb) {
+  /** Swaps in the Kenney-style GLB of `config.glb`, with its named wheel nodes. */
+  const loadGlb = () => {
+    if (!config.glb) return;
     loadModel(config.glb)
       .then((gltf) => {
         if (disposed) return;
@@ -420,6 +422,28 @@ export function createVehicleView(options) {
       .catch((err) => {
         console.error(`Model ${config.glb}: ${err instanceof Error ? err.message : String(err)}; drawing the generated ${kind}.`);
       });
+  };
+  const tripo = config.tripo ? TRIPO_MODELS[config.tripo] : undefined;
+  if (tripo) {
+    // A Tripo body has its wheels baked in: the generated wheels hide, their pivots stay for
+    // `update`. The GLB is the fallback, so the two loads never race.
+    loadModel(tripo.glb)
+      .then((gltf) => {
+        if (disposed) return;
+        const parts = tripoParts(gltf, tripo);
+        const mesh = new Mesh(kit.own(parts.body), kit.own(createLookMaterial({ map: parts.map, roughness: 0.9 })));
+        mesh.castShadow = true;
+        body.remove(content);
+        content = fitToFootprint(mesh, L, W);
+        body.add(content);
+        wheels = built.wheels;
+      })
+      .catch((err) => {
+        console.error(`Model ${tripo.glb}: ${err instanceof Error ? err.message : String(err)}; drawing ${config.glb ?? `the generated ${kind}`}.`);
+        loadGlb();
+      });
+  } else {
+    loadGlb();
   }
 
   return {

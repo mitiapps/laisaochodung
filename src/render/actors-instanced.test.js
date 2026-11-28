@@ -2,12 +2,12 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { InstancedMesh, Matrix4, Quaternion, ShaderLib, Texture, Vector3 } from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import map from '../../tests/fixtures/map-minimal.json' with { type: 'json' };
 import frames from '../../tests/fixtures/frames-straight.json' with { type: 'json' };
 import trafficParams from '../generated/traffic-params.json' with { type: 'json' };
 import { ACTOR_LIGHTS, NO_VIOLATIONS } from '../contracts/index.js';
 import { FADE_S, carLampPositions, createActorViews } from './actors.js';
+import { createGltfLoader } from './assets.js';
 import { blinkOn } from './math.js';
 import { bakeFallenRider, bakePose, bakeRider, CHARACTER_HEIGHT_M } from './rider-bake.js';
 import { BUS_SIZE, buildBus } from './vehicles/bus.js';
@@ -72,7 +72,7 @@ let pending = [];
 function loadFile(path) {
   let p = cache.get(path);
   if (!p) {
-    p = new GLTFLoader().parseAsync(glbWithoutTexture(path), '');
+    p = createGltfLoader().parseAsync(glbWithoutTexture(path), '');
     cache.set(path, p);
   }
   pending.push(p);
@@ -201,8 +201,8 @@ describe('instanced traffic view', () => {
     const names = meshes.map((m) => m.name);
     expect(new Set(names).size).toBe(names.length);
     expect(meshes.length).toBeLessThanOrEqual(40);
-    // Every agent is drawn: one body (Tripo bike, ridden bike, Kenney body or bus) per pose.
-    const bodies = meshes.filter((m) => /^(tripo|bike|kenney|bus)(:|$)/.test(m.name)).reduce((n, m) => n + m.count, 0);
+    // Every agent is drawn: one body (Tripo bike or car, ridden bike, Kenney body or bus) per pose.
+    const bodies = meshes.filter((m) => /^(tripo|tripo-car|bike|kenney|bus)(:|$)/.test(m.name)).reduce((n, m) => n + m.count, 0);
     expect(bodies).toBe(poses.length);
     // Kenney bodies are the loaded Car Kit meshes, not the box-car stand-in.
     expect(meshes.filter((m) => m.name.startsWith('kenney:')).every((m) => triangles(m.geometry) > 500)).toBe(true);
@@ -211,6 +211,10 @@ describe('instanced traffic view', () => {
     // Loaded Tripo bodies replace the procedural bikes, with their riders in sets of their own.
     expect(meshes.filter((m) => m.name.startsWith('bike:'))).toEqual([]);
     expect(meshes.filter((m) => m.name.startsWith('tripo:')).map((m) => m.name).sort()).toEqual(MOTORBIKE_TYPES.map((t) => `tripo:${t}`).sort());
+    // Car bodies with a Tripo model draw it in place of the Kenney body.
+    const tripoCars = meshes.filter((m) => m.name.startsWith('tripo-car:')).map((m) => m.name.slice('tripo-car:'.length));
+    expect(tripoCars.length).toBeGreaterThan(0);
+    expect(tripoCars.every((key) => key in TRIPO_MODELS && !meshes.some((m) => m.name === `kenney:${key}`))).toBe(true);
     const riders = meshes.filter((m) => m.name.startsWith('rider:') && m.name !== 'rider:fallen');
     expect(riders.length).toBeGreaterThan(0);
     expect(riders.every((m) => triangles(m.geometry) > 300)).toBe(true);
@@ -405,7 +409,7 @@ describe('paint mask', () => {
 });
 
 describe('procedural models and riders', () => {
-  it('builds both motorbikes within 600 to 900 triangles with their two wheels', () => {
+  it('builds every motorbike type within 600 to 900 triangles with their two wheels', () => {
     const wheel = triangles(unitWheel());
     for (const type of MOTORBIKE_TYPES) {
       const bike = buildMotorbike(type);
@@ -450,7 +454,7 @@ describe('procedural models and riders', () => {
     expect(l.max.y).toBeLessThan(0.8);
   });
 
-  it('resolves looks deterministically, with both bike types and about a fifth carrying a passenger', () => {
+  it('resolves looks deterministically, with every bike type and about a fifth carrying a passenger', () => {
     const pose = { id: 'npc-7', kind: /** @type {const} */ ('motorbike'), model: 'motorbike', variant: 1 };
     expect(resolveLook(pose)).toEqual(resolveLook(pose));
     let passengers = 0;
@@ -486,7 +490,7 @@ describe('Tripo bodies', () => {
     pending = [];
   });
 
-  it('keeps the procedural bikes and bus, with their wheels, when the Tripo GLBs fail to load', async () => {
+  it('keeps the procedural bikes, the bus and the Kenney cars, with their wheels, when the Tripo GLBs fail to load', async () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
     const failing = {
       loadModel: (/** @type {string} */ path) => {
@@ -500,12 +504,13 @@ describe('Tripo bodies', () => {
       loadTexture: assets.loadTexture,
     };
     const view = createActorViews(fixture, failing);
-    const poses = [agent('npc-1', 'motorbike', 10), agent('npc-2', 'motorbike', 20, { variant: 1 }), agent('npc-3', 'bus', 40)];
+    const poses = [agent('npc-1', 'motorbike', 10), agent('npc-2', 'motorbike', 20, { variant: 1 }), agent('npc-3', 'bus', 40), agent('npc-4', 'taxi', 60)];
     view.update(null, frameWith(1, poses), 1, true);
     await settle();
     view.update(null, frameWith(2, poses), 1, true);
     const names = drawn(view.group).map((m) => m.name);
-    expect(names.filter((n) => n.startsWith('tripo:'))).toEqual([]);
+    expect(names.filter((n) => n.startsWith('tripo'))).toEqual([]);
+    expect(names).toContain('kenney:taxi');
     expect(names.filter((n) => n.startsWith('bike:')).length).toBe(2);
     // Two bikes with two wheels each, and the bus's generated wheels on both sides.
     expect(setNamed(view.group, 'wheel:unit').count).toBe(4 + 2 * buildBus().wheels.length);

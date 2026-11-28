@@ -166,9 +166,9 @@ says what happens and where.
   scope. A scripted actor that moves against its lane carries `wrong-way`.
 - **Design motorbike parameters.** Motorbike speeds, gaps, lateral slots and violation rates in
   `data/traffic/params.yaml` are game values (`paramBasis: design`), not measured HCMC data.
-- **Procedural motorbikes and bus.** The player's scooter, traffic motorbikes and the bus are
-  built from code, not from model files; cars, taxis, trucks, riders and pedestrians use Kenney
-  models.
+- **Generated vehicle bodies are static.** The Tripo motorbike, bus and car bodies have their
+  wheels baked in, so the wheels neither spin nor steer, and they keep their own colours, so
+  traffic cars lose their paint variants and taxis their fleet liveries.
 - **Wrecks leave a fixed time after the contact.** Every wrecked traffic vehicle, whether the
   player or another agent struck it, is removed `wreckClearS` (`data/traffic/params.yaml`) after
   the contact, sliding car wrecks included, or sooner once it lies more than `wreckClearDistM`

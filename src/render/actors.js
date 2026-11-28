@@ -11,9 +11,10 @@
  * - procedural motorbikes, each type merged with a baked Mini Characters rider (one mesh per type
  *   and rider), a pillion passenger, and their wheels;
  * - the procedural bus;
- * - Tripo AI bodies (`vehicles/tripo.js`) that replace a procedural motorbike type or the bus once
- *   their GLB loads: one textured set per model with its own material, its wheels baked in, and
- *   the rider in a set of its own;
+ * - Tripo AI bodies (`vehicles/tripo.js`) that replace a procedural motorbike type, the bus or a
+ *   Kenney car body once their GLB loads: one textured set per model with its own material and
+ *   colours (no paint variants), its wheels baked in (they do not spin), and a motorbike's rider
+ *   in a set of its own;
  * - brake and indicator lamps, emissive quads driven by `pose.lights` (indicators blink on the
  *   frame time);
  * - wrecks: a `crashed` car is darkened and tilted, a `fallen` motorbike lies on its side with
@@ -356,6 +357,7 @@ export function createActorViews(map, assets) {
    * A Tripo body: its geometry and material once the GLB loaded, null before and after a failure.
    * @typedef {object} TripoState
    * @property {import('three').BufferGeometry | null} body Fitted body geometry (owned).
+   * @property {import('three').Box3 | null} box Bounds of the fitted body.
    * @property {import('three').MeshStandardMaterial} material Look material with the model's map.
    * @property {(() => void)[]} waiting Sets to swap once the body is ready.
    */
@@ -372,7 +374,7 @@ export function createActorViews(map, assets) {
     if (!spec) return null;
     let state = tripo.get(key);
     if (!state) {
-      const created = /** @type {TripoState} */ ({ body: null, material: createLookMaterial({ roughness: 0.9 }), waiting: [] });
+      const created = /** @type {TripoState} */ ({ body: null, box: null, material: createLookMaterial({ roughness: 0.9 }), waiting: [] });
       state = created;
       tripo.set(key, created);
       assets
@@ -382,6 +384,7 @@ export function createActorViews(map, assets) {
           const parts = tripoParts(gltf, spec);
           created.material.map = parts.map;
           created.material.needsUpdate = true;
+          created.box = parts.box;
           created.body = parts.body;
           for (const swap of created.waiting) swap();
           created.waiting.length = 0;
@@ -661,7 +664,30 @@ export function createActorViews(map, assets) {
   const carLamps = (L, W, H) => carLampPositions(L, W, H, carLampsAt);
 
   /**
-   * Draws a Kenney car (or its box-car stand-in).
+   * Draws a car with a loaded Tripo body, fitted to the pose footprint like a Kenney body. Its
+   * wheels are baked in.
+   * @param {ActorPose} pose Pose.
+   * @param {AgentState} st State.
+   * @param {DrawPose} draw Draw pose.
+   * @param {number} fade Fade scale.
+   * @param {number} t Frame time.
+   * @param {TripoState} body Loaded Tripo body.
+   */
+  const drawTripoCar = (pose, st, draw, fade, t, body) => {
+    const box = /** @type {import('three').Box3} */ (body.box);
+    const size = box.getSize(v);
+    const sx = pose.widthM / size.x;
+    const sz = pose.lengthM / size.z;
+    const sy = Math.sqrt(sx * sz);
+    const crashed = pose.state === 'crashed';
+    const metres = frameM.copy(baseMatrix(draw, crashed ? 0.07 * st.sign : 0, crashed ? -0.03 : 0, 0, fade));
+    bodyM.copy(metres).multiply(m.makeScale(sx, sy, sz));
+    tripoSet(`tripo-car:${st.look.body}`, st.look.body, () => new BufferGeometry()).push(bodyM, keep, crashed ? WRECK_SHADE : 1, keep);
+    if (!crashed) lamps(pose, metres, carLamps(pose.lengthM, pose.widthM, size.y * sy), 1, t);
+  };
+
+  /**
+   * Draws a Kenney car (or its box-car stand-in), or its Tripo body once that loads.
    * @param {ActorPose} pose Pose.
    * @param {AgentState} st State.
    * @param {DrawPose} draw Draw pose.
@@ -669,6 +695,11 @@ export function createActorViews(map, assets) {
    * @param {number} t Frame time.
    */
   const drawCar = (pose, st, draw, fade, t) => {
+    const textured = tripoBody(st.look.body);
+    if (textured) {
+      drawTripoCar(pose, st, draw, fade, t, textured);
+      return;
+    }
     const k = kenneyState(st.look.body);
     const size = k.box.getSize(v);
     const sx = pose.widthM / size.x;
