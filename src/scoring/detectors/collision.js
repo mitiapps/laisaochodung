@@ -46,6 +46,9 @@ export function severityOf(o) {
   return (o.heavy ? HEAVY_RANK : 0) + KIND_RANK[o.kind];
 }
 
+/** @type {import('./common.js').ParamSpecs} Parameters the rule's `detection.params` must give. */
+export const paramSpec = Object.freeze({});
+
 /** @returns {State} Fresh state. */
 export function init() {
   return {};

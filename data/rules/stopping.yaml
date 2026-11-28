@@ -18,6 +18,13 @@ detection:
     corridorHalfWidthM: 2
     lineAheadM: 30
     yieldRadiusM: 15
+    # Episode severity per place, following the fine bands of the cited clauses: a stop that goes
+    # on into a place with a heavier clause escalates; one into the same or a lighter clause does
+    # not. D6: junction and buffer cite 6.3.đ, crosswalk and P.130 the lighter 6.2.đ. D7: every
+    # place cites 7.2.e.
+    placeSeverity:
+      D6: { junction: 1, buffer: 1, crosswalk: 0, no-stopping: 0 }
+      D7: { junction: 0, buffer: 0, crosswalk: 0, no-stopping: 0 }
   paramBasis:
     stoppedSpeedMps: design
     minStopS: design
@@ -27,6 +34,7 @@ detection:
     corridorHalfWidthM: design
     lineAheadM: design
     yieldRadiusM: design
+    placeSeverity: design
 obligation:
   - sourceId: law36-2024
     article: Điều 18

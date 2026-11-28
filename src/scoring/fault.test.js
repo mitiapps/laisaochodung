@@ -267,6 +267,22 @@ describe('below the contact-speed gate', () => {
     expect(report.breaches.map((b) => b.ruleId)).toEqual(['speeding']);
     expect(report.notices).toHaveLength(1);
     expect(report.notices[0].violations).toEqual(['red-light']);
+    // The other car struck: the notice names its violation, never says the player touched it.
+    expect(report.notices[0].text.vi).toBe('Ô tô vượt đèn đỏ va vào bạn. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm.');
+  });
+
+  it('gives a creeping player rear-ended after an unsignalled lane change the from-behind text', async () => {
+    // rw-e1 to the kerb lane rw-e0 across the dashed line rw-k (z 3.5) at about x −125, t 2.5,
+    // then creeping when a car runs into the back of the player at t 3.2.
+    const path = /** @type {[number, number][]} */ ([[-150, 1.75], [-130, 1.75], [-120, 5.25], [150, 5.25]]);
+    const event = hit({ otherFromBehind: true, egoSpeed: CREEP, relSpeed: 6 });
+    const { report } = await drive([{ t: 3.2, event }], {
+      path,
+      speed: [{ t: 0, value: LEGAL }, { t: 3, value: LEGAL }, { t: 3.01, value: CREEP }],
+      durationS: 5,
+    });
+    expect(report.breaches.map((b) => b.ruleId)).toEqual(['lane-change']);
+    expect(report.notices.map((n) => n.text.vi)).toEqual(['Xe khác va vào bạn từ phía sau. Trò chơi không ghi nhận lỗi của bạn, không trừ điểm.']);
   });
 
   it('turns creeping into the car ahead in the lane into a notice that asks for a safe distance', async () => {

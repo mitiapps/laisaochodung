@@ -5,10 +5,13 @@
  * carries `basisVerified: false`.
  */
 
-import { heldFor, holdSince } from './common.js';
+import { heldFor, holdSince, NUMBER } from './common.js';
 
 /** @typedef {{overSince: number | null}} State */
 /** @typedef {{minOverKmh: number, sustainS: number}} Params */
+
+/** @type {import('./common.js').ParamSpecs} Parameters the rule's `detection.params` must give. */
+export const paramSpec = Object.freeze({ minOverKmh: NUMBER, sustainS: NUMBER });
 
 /** @returns {State} Fresh state. */
 export function init() {

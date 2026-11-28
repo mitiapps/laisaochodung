@@ -8,10 +8,11 @@
 import { CLAUSE_ID_PATTERN, LICENCE_POINT_VALUES } from '../contracts/rule.js';
 import { NPC_VIOLATIONS } from '../contracts/telemetry.js';
 import { decreeGroupOf } from '../contracts/vehicle.js';
-import { DETECTOR_TYPES } from '../scoring/detectors/index.js';
+import { DETECTORS, DETECTOR_TYPES } from '../scoring/detectors/index.js';
 
 /** @typedef {import('../contracts/index.js').RulesBundle} RulesBundle */
 /** @typedef {import('../contracts/index.js').DecreeGroup} DecreeGroup */
+/** @typedef {import('../scoring/detectors/common.js').ParamSpec} ParamSpec */
 
 const RULE_CLASSES = Object.freeze(['car', 'motorbike']);
 const DECREE_GROUPS = Object.freeze(['D6', 'D7']);
@@ -386,6 +387,55 @@ function checkFaultPolicy(p, policy, ruleIds) {
 }
 
 /**
+ * Checks a rule's detection parameters against its detector's spec: every required key present,
+ * no key the detector does not read, each value of its declared shape.
+ * @param {Problems} p Problems.
+ * @param {Record<string, unknown>} params Parameters.
+ * @param {Readonly<Record<string, ParamSpec>>} spec Detector spec.
+ * @param {string} path Path.
+ * @param {string} type Detector type.
+ */
+function checkParams(p, params, spec, path, type) {
+  for (const [k, s] of Object.entries(spec)) {
+    if (k in params) checkParam(p, params[k], s, `${path}.${k}`);
+    else if (!('optional' in s && s.optional)) p.add(`${path}.${k}`, 'missing');
+  }
+  for (const k of Object.keys(params)) if (!(k in spec)) p.add(`${path}.${k}`, `not a parameter of ${type}`);
+}
+
+/**
+ * @param {Problems} p Problems.
+ * @param {unknown} v Value.
+ * @param {ParamSpec} s Spec.
+ * @param {string} path Path.
+ */
+function checkParam(p, v, s, path) {
+  switch (s.type) {
+    case 'number':
+      if (typeof v !== 'number' || !Number.isFinite(v)) p.add(path, 'expected a finite number');
+      break;
+    case 'enum':
+      if (!s.values.includes(/** @type {never} */ (v))) p.add(path, `expected one of ${s.values.join(', ')}`);
+      break;
+    case 'enum-list':
+      if (!Array.isArray(v)) p.add(path, 'expected an array');
+      else for (const x of v) if (!s.values.includes(x)) p.add(path, `unknown value "${String(x)}"`);
+      break;
+    case 'record':
+      if (!isObj(v)) {
+        p.add(path, 'expected an object');
+        break;
+      }
+      for (const k of s.keys) {
+        if (k in v) checkParam(p, v[k], s.of, `${path}.${k}`);
+        else p.add(`${path}.${k}`, 'missing');
+      }
+      for (const k of Object.keys(v)) if (!s.keys.includes(k)) p.add(`${path}.${k}`, 'unexpected key');
+      break;
+  }
+}
+
+/**
  * @param {Problems} p Problems.
  * @param {Record<string, unknown>} r Rule.
  * @param {string} path Path.
@@ -420,6 +470,8 @@ function checkRule(p, r, path, known) {
       }
       for (const k of Object.keys(params)) if (!(k in basis)) p.add(`${path}.detection.params.${k}`, 'has no paramBasis');
     }
+    const detector = DETECTOR_TYPES.includes(/** @type {never} */ (det.type)) ? DETECTORS[String(det.type)] : null;
+    if (params && detector) checkParams(p, params, detector.paramSpec, `${path}.detection.params`, String(det.type));
   }
 
   if (!Array.isArray(r.obligation) || r.obligation.length === 0) p.add(`${path}.obligation`, 'expected at least one citation');

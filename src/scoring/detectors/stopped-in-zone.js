@@ -11,11 +11,16 @@
  * ahead in the ego's path within `actorAheadM` (bumper gap) and `corridorHalfWidthM` plus the
  * actor's half width; and, inside a junction, any moving actor within `yieldRadiusM` (waiting to
  * turn across traffic or for a pedestrian).
+ *
+ * The rule's tiers are ordered by place, not by seriousness, so the detector gives each place its
+ * episode severity from `placeSeverity`: a stop that continues from a junction onto a crosswalk
+ * keeps the junction breach, and places that cite the same clause never escalate.
  */
 
+import { DECREE_GROUPS } from '../../contracts/vehicle.js';
 import { distance, pointInPolygon, polygonCentroid } from '../../geometry/index.js';
 import { crosswalksNear, crosswalksOverlapping, junctionsNear, stopLinesForLane } from '../../map-query/index.js';
-import { actorsAround, distanceAlong, egoFrame, heldFor, holdSince } from './common.js';
+import { actorsAround, distanceAlong, egoFrame, heldFor, holdSince, NUMBER } from './common.js';
 import { givesWayAt } from './stop-line-common.js';
 
 /** @typedef {{since: number | null}} State */
@@ -29,7 +34,27 @@ import { givesWayAt } from './stop-line-common.js';
  * @property {number} corridorHalfWidthM Half width of the ego's path for that test.
  * @property {number} lineAheadM Distance to a line or junction ahead that exempts the stop.
  * @property {number} yieldRadiusM In a junction, a moving actor this close exempts the stop.
+ * @property {Record<'D6' | 'D7', Record<Place, number>>} placeSeverity Episode severity per decree
+ *   group and place: a stop that goes on into a place of higher severity escalates, one into a
+ *   place of equal or lower severity keeps its breach.
  */
+/** @typedef {'junction' | 'buffer' | 'crosswalk' | 'no-stopping'} Place */
+
+/** Places a stop is forbidden in, in precedence order. */
+const PLACES = Object.freeze(['junction', 'buffer', 'crosswalk', 'no-stopping']);
+
+/** @type {import('./common.js').ParamSpecs} Parameters the rule's `detection.params` must give. */
+export const paramSpec = Object.freeze({
+  stoppedSpeedMps: NUMBER,
+  minStopS: NUMBER,
+  junctionBufferM: NUMBER,
+  bufferDecreeGroups: { type: 'enum-list', values: DECREE_GROUPS },
+  actorAheadM: NUMBER,
+  corridorHalfWidthM: NUMBER,
+  lineAheadM: NUMBER,
+  yieldRadiusM: NUMBER,
+  placeSeverity: { type: 'record', keys: DECREE_GROUPS, of: { type: 'record', keys: PLACES, of: NUMBER } },
+});
 
 /** @returns {State} Fresh state. */
 export function init() {
@@ -40,7 +65,7 @@ export function init() {
  * Forbidden place under the ego, or null.
  * @param {import('../context.js').StepContext} ctx Context.
  * @param {Params} params Params.
- * @returns {'junction' | 'buffer' | 'crosswalk' | 'no-stopping' | null} Place.
+ * @returns {Place | null} Place.
  */
 function placeOf(ctx, params) {
   const { map, group } = ctx.env;
@@ -107,9 +132,11 @@ export function detect(state, frame, ctx, params) {
   const place = stopped ? placeOf(ctx, params) : null;
   const cond = place !== null && !exempt(frame, ctx, params);
   const since = holdSince(state.since, cond, ctx.t);
+  const active = cond && heldFor(since, ctx.t, params.minStopS);
   return {
     detectorState: { since },
-    active: cond && heldFor(since, ctx.t, params.minStopS),
+    active,
     tierInput: { place },
+    ...(active && place !== null ? { severity: params.placeSeverity[ctx.env.group][place] } : {}),
   };
 }

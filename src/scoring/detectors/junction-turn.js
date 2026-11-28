@@ -10,7 +10,7 @@
  */
 
 import { angleDiff } from '../../geometry/index.js';
-import { DEG } from './common.js';
+import { DEG, NUMBER, OPTIONAL_NUMBER } from './common.js';
 
 /** @typedef {Record<string, never>} State */
 /**
@@ -21,6 +21,14 @@ import { DEG } from './common.js';
  * @property {number} [signalFromM] Signal mode: distance before the junction from which the
  *   indicator must be on.
  */
+
+/** @type {import('./common.js').ParamSpecs} Parameters the rule's `detection.params` must give. */
+export const paramSpec = Object.freeze({
+  mode: { type: 'enum', values: ['signal', 'restriction'] },
+  turnMinDeg: NUMBER,
+  uturnMinDeg: NUMBER,
+  signalFromM: OPTIONAL_NUMBER,
+});
 
 /** @returns {State} Fresh state. */
 export function init() {

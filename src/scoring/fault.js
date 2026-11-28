@@ -186,7 +186,8 @@ function capitalise(s) {
  * Notice text of a contact: the template of the other party's first violation, else
  * `from-behind`, else `none`; `aftermath` inside the aftermath window. A contact that would be
  * charged but for the contact speed gate takes `pedestrian-slow` with a pedestrian, else
- * `ego-slow`.
+ * `ego-slow` when the player struck (striker `ego` or `both`); when the other vehicle struck, the
+ * notice keeps the violation, `from-behind` or `none` text.
  * @param {CollisionPolicy} policy Collision policy.
  * @param {CollisionEvent | FallEvent} e Event.
  * @param {boolean} aftermath The notice comes from the aftermath row.
@@ -200,15 +201,19 @@ export function noticeText(policy, e, aftermath, slow = false) {
   let key = 'none';
   let kind = /** @type {CollisionEvent['otherKind'] | null} */ (null);
   let model = /** @type {string | null} */ (null);
+  // A fall has no other party: the player is the only one who can have struck.
+  let egoStruck = true;
   if (e.type === 'collision') {
     const c = contactFields(e);
     kind = e.otherKind;
     model = c.otherModel;
+    egoStruck = c.striker !== 'other';
     const first = c.otherViolations.find((v) => texts[v] !== undefined);
     if (first !== undefined) key = first;
     else if (c.otherFromBehind) key = 'from-behind';
   }
-  if (slow) key = kind === 'pedestrian' ? 'pedestrian-slow' : 'ego-slow';
+  if (slow && kind === 'pedestrian') key = 'pedestrian-slow';
+  else if (slow && egoStruck) key = 'ego-slow';
   if (aftermath) key = 'aftermath';
   const template = texts[key];
   if (!template) throw new Error(`Collision policy has no notice text "${key}" (the rules bundle was not validated)`);

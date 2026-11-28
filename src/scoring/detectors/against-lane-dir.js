@@ -14,7 +14,7 @@
 
 import { angleDiff, projectOntoPolyline } from '../../geometry/index.js';
 import { laneById, roadById, signById } from '../../map-query/index.js';
-import { DEG, lawfulCross } from './common.js';
+import { DEG, lawfulCross, NUMBER, OPTIONAL_NUMBER } from './common.js';
 
 /**
  * @typedef {object} State
@@ -29,6 +29,14 @@ import { DEG, lawfulCross } from './common.js';
  * @property {number} minSpeedMps Lowest speed that counts as travelling.
  * @property {number} [maxOpposingS] Two-way mode: longest lawful stay in the opposing lane.
  */
+
+/** @type {import('./common.js').ParamSpecs} Parameters the rule's `detection.params` must give. */
+export const paramSpec = Object.freeze({
+  mode: { type: 'enum', values: ['oneway', 'two-way'] },
+  againstAngleDeg: NUMBER,
+  minSpeedMps: NUMBER,
+  maxOpposingS: OPTIONAL_NUMBER,
+});
 
 /** @returns {State} Fresh state. */
 export function init() {

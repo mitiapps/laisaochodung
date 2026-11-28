@@ -9,10 +9,13 @@
 
 import { angleDiff, pointInPolygon } from '../../geometry/index.js';
 import { crosswalksOverlapping } from '../../map-query/index.js';
-import { actorsAround, DEG } from './common.js';
+import { actorsAround, DEG, NUMBER } from './common.js';
 
 /** @typedef {{onIds: string[]}} State Crosswalks the footprint is on and entered at speed. */
 /** @typedef {{minSpeedMps: number, turnMinDeg: number, turnWindowS: number}} Params */
+
+/** @type {import('./common.js').ParamSpecs} Parameters the rule's `detection.params` must give. */
+export const paramSpec = Object.freeze({ minSpeedMps: NUMBER, turnMinDeg: NUMBER, turnWindowS: NUMBER });
 
 /** @returns {State} Fresh state. */
 export function init() {

@@ -3,10 +3,13 @@
  * (minutes of day, wrapping midnight).
  */
 
-import { inClockWindow } from './common.js';
+import { inClockWindow, NUMBER } from './common.js';
 
 /** @typedef {Record<string, never>} State */
 /** @typedef {{fromMin: number, toMin: number}} Params */
+
+/** @type {import('./common.js').ParamSpecs} Parameters the rule's `detection.params` must give. */
+export const paramSpec = Object.freeze({ fromMin: NUMBER, toMin: NUMBER });
 
 /** @returns {State} Fresh state. */
 export function init() {

@@ -85,7 +85,8 @@ paramBasis:
   rightOfWayViolations: design
 # Notice texts, keyed by the other party's first violation, then `from-behind`, then `none`;
 # `aftermath` for contacts inside the aftermath window. A contact that is a notice only because
-# the player was below contactMinEgoSpeed takes `ego-slow` (a vehicle) or `pedestrian-slow`. `{vehicle}` is replaced by the other
+# the player was below contactMinEgoSpeed takes `pedestrian-slow` with a pedestrian, or `ego-slow`
+# when the player struck the vehicle (one that struck the player keeps its own text). `{vehicle}` is replaced by the other
 # vehicle's word (xe máy, ô tô, xe buýt…), capitalised at the start of the text. The game never
 # states a legal conclusion: only the police decide fault.
 noticeTexts:

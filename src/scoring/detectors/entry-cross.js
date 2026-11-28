@@ -4,10 +4,13 @@
  */
 
 import { angleDiff } from '../../geometry/index.js';
-import { DEG } from './common.js';
+import { DEG, NUMBER } from './common.js';
 
 /** @typedef {Record<string, never>} State */
 /** @typedef {{headingToleranceDeg: number}} Params */
+
+/** @type {import('./common.js').ParamSpecs} Parameters the rule's `detection.params` must give. */
+export const paramSpec = Object.freeze({ headingToleranceDeg: NUMBER });
 
 /** @returns {State} Fresh state. */
 export function init() {

@@ -25,11 +25,30 @@ import { headingVector, leftVector, segmentIntersection } from '../../geometry/i
  */
 
 /**
+ * Shape of one detector parameter, checked by the rules validator: a finite number, one of some
+ * strings, an array of such strings, or a record with exactly the given keys, each of shape `of`.
+ * An `optional` key may be left out of `detection.params`.
+ * @typedef {NumberSpec | EnumSpec | EnumListSpec | RecordSpec} ParamSpec
+ */
+/** @typedef {{type: 'number', optional?: boolean}} NumberSpec */
+/** @typedef {{type: 'enum', values: ReadonlyArray<string>, optional?: boolean}} EnumSpec */
+/** @typedef {{type: 'enum-list', values: ReadonlyArray<string>}} EnumListSpec */
+/** @typedef {{type: 'record', keys: ReadonlyArray<string>, of: ParamSpec}} RecordSpec */
+/** @typedef {Readonly<Record<string, ParamSpec>>} ParamSpecs Every parameter a detector reads. */
+
+/** A required finite number parameter. */
+export const NUMBER = Object.freeze({ type: /** @type {const} */ ('number') });
+/** An optional finite number parameter (the detector has a default). */
+export const OPTIONAL_NUMBER = Object.freeze({ type: /** @type {const} */ ('number'), optional: true });
+
+/**
  * @typedef {object} Detector
+ * @property {ParamSpecs} paramSpec The parameters `detection.params` must give, and no others.
  * @property {() => unknown} init Fresh state.
  * @property {(state: never, frame: Frame, ctx: StepContext, params: never) => DetectorResult} detect
  *   One step. Each detector declares its own state and params shapes; the scorer passes the
- *   detector's own state back and the rule's `detection.params`, which the validator checked.
+ *   detector's own state back and the rule's `detection.params`, which the validator checked
+ *   against `paramSpec`.
  */
 
 /** Degrees to radians. */

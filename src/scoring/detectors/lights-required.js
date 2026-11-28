@@ -3,7 +3,7 @@
  * to `nightToMin` (minutes of day, wrapping midnight) or in rain, held for `sustainS`.
  */
 
-import { heldFor, holdSince, inClockWindow } from './common.js';
+import { heldFor, holdSince, inClockWindow, NUMBER } from './common.js';
 
 /** @typedef {{since: number | null}} State */
 /**
@@ -13,6 +13,9 @@ import { heldFor, holdSince, inClockWindow } from './common.js';
  * @property {number} minSpeedMps Lowest speed that counts as moving.
  * @property {number} sustainS Seconds the condition must hold.
  */
+
+/** @type {import('./common.js').ParamSpecs} Parameters the rule's `detection.params` must give. */
+export const paramSpec = Object.freeze({ nightFromMin: NUMBER, nightToMin: NUMBER, minSpeedMps: NUMBER, sustainS: NUMBER });
 
 /** @returns {State} Fresh state. */
 export function init() {

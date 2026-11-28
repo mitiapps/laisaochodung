@@ -171,6 +171,22 @@ describe('stop-line-on-red', () => {
     expect(await run({ map: quiet(), path: STRAIGHT, speed, durationS: 74 })).toEqual([]);
   });
 
+  it('does not blame a contact on green on an overshoot that stopped on red', async () => {
+    // Front stops 0.5 m past the line at t ≈ 39.1 on red, waits, drives on at green (from 60);
+    // inside the junction a red-light runner strikes the player at 65.5.
+    const speed = steps([[31, 0], [8.125, 10], [25, 0], [10, 10]]);
+    const runner = hit({ striker: 'other', otherViolations: ['red-light'], relSpeed: 6, egoSpeed: 10 });
+    const { report } = await scoreScript({ map: quiet(), path: STRAIGHT, speed, durationS: 74, events: [{ t: 65.5, event: runner }] });
+    expect(summary(report)).toEqual(['red-light:0:D6.9.b']);
+    expect(report.notices).toHaveLength(1);
+  });
+
+  it('still escalates an overshoot that moves on into the junction while the light is red', async () => {
+    // Front stops 0.5 m past the line at t ≈ 39.1, waits 5 s on red, then drives on into j1.
+    const speed = steps([[31, 0], [8.125, 10], [5, 0], [10, 10]]);
+    expect(await run({ map: quiet(), path: STRAIGHT, speed, durationS: 54 })).toEqual(['red-light:1:D6.9.b']);
+  });
+
   it('on yellow fires only when the car could have stopped at the onset', async () => {
     // Front 20 m before the line when yellow starts at 10 m/s: 16.7 m to stop, so it must stop.
     expect(await run({ map: quiet(), path: STRAIGHT, speed: steps([[20.925, 0], [6, 10]]), durationS: 27 + 3 })).toEqual([
@@ -259,6 +275,58 @@ describe('stopped-in-zone', () => {
     expect(await run({ map: quiet(), vehicleId: 'scooter', path: [[5, 1.75], [92, 1.75]], speed: 10, durationS: 13 })).toEqual([
       'stopping:2:D7.2.e',
     ]);
+  });
+
+  describe('a stop that goes on while the place changes', () => {
+    /**
+     * Creeps below stoppedSpeedMps along a path and lists the live stopping breaches.
+     * @param {Partial<Parameters<typeof scoreScript>[0]>} script Script.
+     * @returns {Promise<{report: string[], live: string[]}>} Report summary and live breaches.
+     */
+    async function creep(script) {
+      const r = await scoreScript({ map: quiet(), path: STRAIGHT, speed: 0.25, durationS: 100, ...script });
+      const live = r.live.flat().filter((b) => b.ruleId === 'stopping').map((b) => `${b.kind}:${b.tierIndex}:${b.clause?.id ?? '-'}`);
+      return { report: summary(r.report), live };
+    }
+    /**
+     * The minimal map without actors, with sig-w held green so a creep past its stop line is
+     * never exempt.
+     * @returns {GameMap} Map.
+     */
+    const greenWest = () =>
+      quiet((m) => {
+        const sig = m.signals.find((s) => s.id === 'sig-w');
+        if (!sig) throw new Error('fixture changed');
+        sig.cycle = { ...sig.cycle, green: 1000 };
+      });
+
+    it('keeps the junction clause for a car that creeps out of the junction onto the crosswalk', async () => {
+      // Westbound from inside j1 (x 101) through the buffer onto cw-w.
+      const r = await creep({ path: [[101, -1.75], [80, -1.75]] });
+      expect(r.live).toEqual(['new:0:D6.3.đ']);
+      expect(r.report).toEqual(['stopping:0:D6.3.đ']);
+    });
+
+    it('escalates once, to the junction clause, for a car that creeps from the crosswalk into the junction', async () => {
+      // Eastbound from the crosswalk (front 89.25) through the buffer into j1.
+      const r = await creep({ map: greenWest(), path: [[87, 1.75], [105, 1.75]], durationS: 45 });
+      expect(r.live).toEqual(['new:2:D6.2.đ', 'escalated:1:D6.3.đ']);
+      expect(r.report).toEqual(['stopping:1:D6.3.đ']);
+    });
+
+    it('never escalates a motorbike, whose places all cite 7.2.e', async () => {
+      // A crosswalk right at the junction edge, so the creep goes from it straight into j1.
+      const map = quiet((m) => {
+        const sig = m.signals.find((s) => s.id === 'sig-w');
+        const line = m.stopLines.find((s) => s.id === 'sl-w');
+        if (!sig || !line) throw new Error('fixture changed');
+        sig.cycle = { ...sig.cycle, green: 1000 };
+        line.segment = [[92, 0], [92, 3.5]];
+        m.crosswalks = [{ id: 'cw-j', polygon: [[93, -3.5], [96.5, -3.5], [96.5, 3.5], [93, 3.5]], signalId: 'sig-w' }];
+      });
+      const r = await creep({ map, vehicleId: 'scooter', path: [[92, 1.75], [105, 1.75]], durationS: 45 });
+      expect(r.live).toEqual(['new:2:D7.2.e']);
+    });
   });
 });
 

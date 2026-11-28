@@ -18,7 +18,7 @@
 
 import { angleDiff, pointInPolygon, projectOntoPolyline } from '../../geometry/index.js';
 import { laneById } from '../../map-query/index.js';
-import { actorsAround, lawfulCross, VEHICLE_KINDS } from './common.js';
+import { actorsAround, lawfulCross, NUMBER, VEHICLE_KINDS } from './common.js';
 
 /** @typedef {{last: {t: number, side: 'left' | 'right'} | null}} State */
 /**
@@ -47,6 +47,17 @@ function tooClose(a, egoLength, egoSpeed, params) {
   const floor = a.pose.kind === 'motorbike' ? params.gapMotorbikeMinM : ahead ? params.gapAheadM : params.gapBehindM;
   return gap < Math.max(floor, params.gapTimeS * (ahead ? egoSpeed : a.speed));
 }
+
+/** @type {import('./common.js').ParamSpecs} Parameters the rule's `detection.params` must give. */
+export const paramSpec = Object.freeze({
+  signalLeadS: NUMBER,
+  skipWindowS: NUMBER,
+  gapAheadM: NUMBER,
+  gapBehindM: NUMBER,
+  gapTimeS: NUMBER,
+  gapMotorbikeMinM: NUMBER,
+  stoppedSpeedMps: NUMBER,
+});
 
 /** @returns {State} Fresh state. */
 export function init() {

@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { countUnverified, validateRules } from '../../src/rules/index.js';
+import { DETECTORS } from '../../src/scoring/detectors/index.js';
 import { buildRules } from './build.js';
 import { stableStringify } from './lib/load.js';
 import { clone, realBundle, ROOT } from './lib/test-support.js';
@@ -80,6 +81,16 @@ describe('validateRules', () => {
     expect(validateRules(await realBundle())).toEqual([]);
   });
 
+  it('has a parameter spec for every detector, covering every parameter its shipped rules give', async () => {
+    const bundle = await realBundle();
+    for (const [type, det] of Object.entries(DETECTORS)) {
+      expect(det.paramSpec, type).toBeTypeOf('object');
+      for (const rule of bundle.rules.filter((r) => r.detection.type === type)) {
+        expect(Object.keys(rule.detection.params).every((k) => k in det.paramSpec), rule.id).toBe(true);
+      }
+    }
+  });
+
   it('keeps accidentBList equal to the lists quoted in 6.10.b and 7.10.b', async () => {
     const bundle = await realBundle();
     for (const g of /** @type {const} */ (['D6', 'D7'])) {
@@ -116,6 +127,13 @@ describe('validateRules', () => {
     ['an unknown detector', (b) => { b.rules[0].detection.type = 'teleport'; }, /unknown detector "teleport"/],
     ['a paramBasis key that is not a param', (b) => { b.rules[0].detection.paramBasis.ghost = 'design'; }, /paramBasis\.ghost: not a detection parameter/],
     ['a param without basis', (b) => { b.rules[0].detection.params.extra = 1; }, /params\.extra: has no paramBasis/],
+    ['a missing detector parameter', (b) => { const d = b.rules.find((r) => r.id === 'speeding')?.detection; if (d) { delete d.params.sustainS; delete d.paramBasis.sustainS; } }, /detection\.params\.sustainS: missing/],
+    ['a detector parameter of the wrong type', (b) => { const d = b.rules.find((r) => r.id === 'stopping')?.detection; if (d) d.params.minStopS = 'three'; }, /detection\.params\.minStopS: expected a finite number/],
+    ['a detector parameter that is not finite', (b) => { const d = b.rules.find((r) => r.id === 'speeding')?.detection; if (d) d.params.minOverKmh = Number.NaN; }, /detection\.params\.minOverKmh: expected a finite number/],
+    ['an unknown detector mode', (b) => { const d = b.rules.find((r) => r.id === 'wrong-way')?.detection; if (d) d.params.mode = 'sideways'; }, /detection\.params\.mode: expected one of oneway, two-way/],
+    ['an unknown entry in an enum list', (b) => { const d = b.rules.find((r) => r.id === 'stopping')?.detection; if (d) d.params.bufferDecreeGroups = ['D6', 'D8']; }, /detection\.params\.bufferDecreeGroups: unknown value "D8"/],
+    ['a parameter the detector does not read', (b) => { const d = b.rules.find((r) => r.id === 'wrong-way')?.detection; if (d) { d.params.maxOpposingSec = 10; d.paramBasis.maxOpposingSec = 'design'; } }, /detection\.params\.maxOpposingSec: not a parameter of against-lane-dir/],
+    ['a missing place in a severity table', (b) => { const d = b.rules.find((r) => r.id === 'stopping')?.detection; if (d) delete (/** @type {Record<string, Record<string, number>>} */ (d.params.placeSeverity)).D7.junction; }, /detection\.params\.placeSeverity\.D7\.junction: missing/],
     ['a score-only tier without note', (b) => { delete b.rules.find((r) => r.id === 'following-distance')?.tiers[0].note; }, /needs a note/],
     ['clauseFromPolicy outside crash', (b) => { b.rules[0].tiers[0] = { danger: 2, scoreOnly: false, clauseFromPolicy: true }; }, /only the collision detector/],
     ['a tier with two shapes', (b) => { b.rules[0].tiers[0].scoreOnly = true; }, /exactly one of/],

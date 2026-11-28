@@ -10,13 +10,16 @@
  */
 
 import { locate } from '../../map-query/index.js';
-import { actorsAround, heldFor, holdSince, VEHICLE_KINDS } from './common.js';
+import { actorsAround, heldFor, holdSince, NUMBER, VEHICLE_KINDS } from './common.js';
 
 /** @typedef {{since: number | null, leaderId?: string | null}} State */
 /** @typedef {{minSpeedMps: number, minTimeGapS: number, sustainS: number}} Params */
 
 /** Half width of the strip ahead searched before the lane test, in metres (wider than any lane). */
 const CORRIDOR_HALF_M = 6;
+
+/** @type {import('./common.js').ParamSpecs} Parameters the rule's `detection.params` must give. */
+export const paramSpec = Object.freeze({ minSpeedMps: NUMBER, minTimeGapS: NUMBER, sustainS: NUMBER });
 
 /** @returns {State} Fresh state. */
 export function init() {

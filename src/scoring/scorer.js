@@ -37,6 +37,7 @@
  * 7. `finish`, `timeout` and a pedestrian crash end the run; later frames are ignored.
  */
 
+import { LICENCE_START_POINTS } from '../contracts/score.js';
 import { decreeGroupOf } from '../contracts/vehicle.js';
 import { actorRangeOf, initialCore, poseSpeed, stepCore } from './context.js';
 import { DETECTORS } from './detectors/index.js';
@@ -640,7 +641,7 @@ function buildReport(state, options, accidentClauses) {
   const deducted = breaches.reduce((sum, b) => sum + b.deduction, 0);
   const score = state.pedestrianHit ? 0 : Math.max(0, Math.round((10 - deducted) * 100) / 100);
   const maxPoints = breaches.reduce((m, b) => Math.max(m, b.clause ? b.clause.licencePoints : 0), 0);
-  const licenceDeducted = Math.min(12, maxPoints);
+  const licenceDeducted = Math.min(LICENCE_START_POINTS, maxPoints);
   const fineTotalVnd = breaches.reduce(
     (acc, b) => (b.clause?.fineVnd && !b.fineAbsorbedBy ? { min: acc.min + b.clause.fineVnd.min, max: acc.max + b.clause.fineVnd.max } : acc),
     { min: 0, max: 0 },
@@ -655,7 +656,7 @@ function buildReport(state, options, accidentClauses) {
     score,
     breaches,
     notices: state.notices,
-    licence: { start: 12, deducted: licenceDeducted, remaining: 12 - licenceDeducted },
+    licence: { start: LICENCE_START_POINTS, deducted: licenceDeducted, remaining: LICENCE_START_POINTS - licenceDeducted },
     fineTotalVnd,
     finished: endedBy === 'finish',
     endedBy,

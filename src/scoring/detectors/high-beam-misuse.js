@@ -13,7 +13,7 @@
 
 import { angleDiff } from '../../geometry/index.js';
 import { crosswalksAt, locate, roadById } from '../../map-query/index.js';
-import { actorsAround, DEG, heldFor, holdSince } from './common.js';
+import { actorsAround, DEG, heldFor, holdSince, NUMBER } from './common.js';
 
 /**
  * Whether a pedestrian stands where it is crossing the road: on a crosswalk, a lane or a junction.
@@ -34,6 +34,9 @@ function crossingRoad(map, pose) {
  * @property {number} sustainS Seconds the high beam must stay on (a short flash is a lawful signal).
  * @property {number} turnMinDeg Heading change in a junction that counts as turning.
  */
+
+/** @type {import('./common.js').ParamSpecs} Parameters the rule's `detection.params` must give. */
+export const paramSpec = Object.freeze({ rangeM: NUMBER, lateralM: NUMBER, sustainS: NUMBER, turnMinDeg: NUMBER });
 
 /** @returns {State} Fresh state. */
 export function init() {

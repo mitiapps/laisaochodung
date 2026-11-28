@@ -4,10 +4,13 @@
  */
 
 import { pavementsAt } from '../../map-query/index.js';
-import { heldFor, holdSince } from './common.js';
+import { heldFor, holdSince, NUMBER } from './common.js';
 
 /** @typedef {{since: number | null}} State */
 /** @typedef {{minSpeedMps: number, sustainS: number}} Params */
+
+/** @type {import('./common.js').ParamSpecs} Parameters the rule's `detection.params` must give. */
+export const paramSpec = Object.freeze({ minSpeedMps: NUMBER, sustainS: NUMBER });
 
 /** @returns {State} Fresh state. */
 export function init() {

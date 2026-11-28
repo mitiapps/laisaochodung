@@ -2,17 +2,17 @@
  * `stop-line-on-red`: the front crosses a signal stop line bound to the ego lane on red, or on a
  * yellow the vehicle could have stopped for. Stopping ability on yellow is judged when the yellow
  * is first seen on the approach: `v² / (2·yellowDecelMps2) ≤ distance` to the line. A vehicle that
- * first sees yellow already on the line may go on. The breach stays active until the ego leaves
- * the junction behind the line (or moves far from it); while it lasts, entering the crosswalk
- * governed by the same signal, or the junction, with the light not green escalates it from stage
- * `line` to stage `entered`. The front counts as in a crosswalk or junction only once it is
+ * first sees yellow already on the line may go on. The breach stays active while the light is
+ * not green, until the ego leaves the junction behind the line (or moves far from it); while it
+ * lasts, entering the crosswalk governed by the same signal, or the junction, escalates it from
+ * stage `line` to stage `entered`. Once the light turns green the breach ends. The front counts as in a crosswalk or junction only once it is
  * `entryToleranceM` or more inside along the heading, so a short overshoot past a stop line drawn
  * right before the crosswalk stays at stage `line`.
  */
 
 import { headingVector, pointInPolygon } from '../../geometry/index.js';
 import { junctionById, locate, mapIndex, stopLinesForLane } from '../../map-query/index.js';
-import { distanceAlong } from './common.js';
+import { distanceAlong, NUMBER } from './common.js';
 
 /** Distance ahead within which a yellow onset is recorded, metres. */
 const APPROACH_M = 150;
@@ -26,6 +26,9 @@ const CLEAR_M = 80;
  *   Open violation.
  */
 /** @typedef {{yellowDecelMps2: number, entryToleranceM: number}} Params */
+
+/** @type {import('./common.js').ParamSpecs} Parameters the rule's `detection.params` must give. */
+export const paramSpec = Object.freeze({ yellowDecelMps2: NUMBER, entryToleranceM: NUMBER });
 
 /** @returns {State} Fresh state. */
 export function init() {
@@ -70,7 +73,11 @@ export function detect(state, frame, ctx, params) {
 
   if (!violation) return { detectorState: { yellowSeen, violation: null }, active: false, tierInput: {} };
 
-  if (violation.stage === 'line' && lights[violation.signalId] !== 'green') {
+  // On green the breach can no longer worsen and has ended: it stops being active, so a later
+  // contact is not blamed on it.
+  if (lights[violation.signalId] === 'green') return { detectorState: { yellowSeen, violation: null }, active: false, tierInput: {} };
+
+  if (violation.stage === 'line') {
     const signalId = violation.signalId;
     const [fx, fz] = headingVector(ctx.heading);
     /** @type {[number, number]} Point entryToleranceM behind the front. */

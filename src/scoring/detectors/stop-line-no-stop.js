@@ -4,10 +4,14 @@
  * after a reset the trace is shorter than the window and nothing is judged.
  */
 
+import { NUMBER } from './common.js';
 import { stopLineCrossed } from './stop-line-common.js';
 
 /** @typedef {Record<string, never>} State */
 /** @typedef {{stopSpeedMps: number, withinM: number}} Params */
+
+/** @type {import('./common.js').ParamSpecs} Parameters the rule's `detection.params` must give. */
+export const paramSpec = Object.freeze({ stopSpeedMps: NUMBER, withinM: NUMBER });
 
 /** @returns {State} Fresh state. */
 export function init() {

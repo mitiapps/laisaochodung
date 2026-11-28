@@ -146,9 +146,10 @@
  *   crossing the player's right of way); each must be in `excusingViolations`.
  * @property {Record<string, import('./vehicle.js').LocalText>} [noticeTexts] Notice templates keyed
  *   by the other party's first violation, or by `from-behind` and `none` when it has none, and by
- *   `aftermath` for a contact inside the aftermath window; `ego-slow` for a vehicle contact and
- *   `pedestrian-slow` for a pedestrian contact that are notices only because the ego was below
- *   `contactMinEgoSpeed`. `{vehicle}` in a template is replaced with the Vietnamese word for the
+ *   `aftermath` for a contact inside the aftermath window; `ego-slow` for a vehicle contact the ego
+ *   struck (or a fall) and `pedestrian-slow` for a pedestrian contact that are notices only
+ *   because the ego was below `contactMinEgoSpeed`; a below-gate contact the other vehicle struck
+ *   keeps its violation, `from-behind` or `none` text. `{vehicle}` in a template is replaced with the Vietnamese word for the
  *   other vehicle (capitalised at the start of the text).
  * @property {Partial<Record<'nonContributingRules' | 'rearEndContributingRules' | 'excusingViolations' |
  *   'aftermathWindowS' | 'excuseMaxSpeedGainMps' | 'rightOfWayViolations', 'legal' | 'design'>>} [paramBasis] Basis of each

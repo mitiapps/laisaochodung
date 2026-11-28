@@ -6,10 +6,14 @@
  */
 
 import { locate, stopLinesForLane } from '../../map-query/index.js';
+import { NUMBER } from './common.js';
 import { givesWayAt, stopLineCrossed } from './stop-line-common.js';
 
 /** @typedef {{frontJunctionId: string | null}} State */
 /** @typedef {{slowSpeedMps: number, withinM: number}} Params */
+
+/** @type {import('./common.js').ParamSpecs} Parameters the rule's `detection.params` must give. */
+export const paramSpec = Object.freeze({ slowSpeedMps: NUMBER, withinM: NUMBER });
 
 /** @returns {State} Fresh state. */
 export function init() {
