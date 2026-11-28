@@ -1,6 +1,9 @@
 /**
  * Three-lamp traffic-light heads at map `signals[]`: red on top, yellow in the middle, green at the
- * bottom (QCVN 41:2024 Điều 6, 6.1.1). Lamp states come from `frame.trafficLights`. Poles and
+ * bottom (QCVN 41:2024 Điều 6, 6.1.1). Each signal has its near-side head at `pos` and one more
+ * head per `repeaters[]` entry across the junction (9.5), showing the same lamps and countdown:
+ * a `post` repeater stands like the near head, a `mast-arm` one hangs from an arm reaching from
+ * its mast at `mastPos` over the lanes. Lamp states come from `frame.trafficLights`. Poles and
  * housings are merged; lamps share six materials (three colours, lit or dark).
  *
  * Sizes from QCVN 41:2024 Điều 9 and Phụ lục A:
@@ -9,7 +12,8 @@
  * - main lenses 200–300 mm; 300 mm here;
  * - countdown (Dạng 8): red digits on red, green digits on green; the display is blank on yellow,
  *   which the cited source does not count. The seconds come from the signal cycle at the frame
- *   time, through `signalState`.
+ *   time, through `signalState`. Far-side heads carry the larger Kiểu 2 display, drawn 1.5 × the
+ *   near one (design).
  *
  * Every countdown digit lives in one merged geometry whose UVs and colours change per update, so
  * all countdowns cost one draw call.
@@ -33,6 +37,7 @@ import { TriangleSoup, localToWorld } from './triangle-soup.js';
 
 /** @typedef {import('../contracts/map.js').GameMap} GameMap */
 /** @typedef {import('../contracts/map.js').Signal} Signal */
+/** @typedef {import('../contracts/map.js').Pos2} Pos2 */
 /** @typedef {import('../contracts/telemetry.js').LightState} LightState */
 /** @typedef {'side' | 'cantilever'} SignalMount */
 
@@ -42,8 +47,10 @@ export const LENS_M = 0.3;
 export const LAMP_SPACING_M = 0.38;
 /** Lowest lamp centre above the ground for each mount. */
 export const LOWEST_LAMP_Y_M = Object.freeze({ side: 2.5, cantilever: 5.5 });
-/** Cantilever arm reach from the mast to the head (design). */
+/** Cantilever arm reach from the mast to the head (design), for a near head hung from an arm. */
 export const ARM_M = 4;
+/** Countdown size of a far-side head relative to a near head (Kiểu 2; the factor is design). */
+export const REPEATER_COUNTDOWN_SCALE = 1.5;
 /** Housing size: width, height, depth. */
 const HOUSING = /** @type {const} */ ([0.44, LAMP_SPACING_M * 2 + LENS_M + 0.16, 0.28]);
 /** Countdown box size and digit size. */
@@ -103,6 +110,48 @@ export function countdown(signal, t) {
 export function digitCells(seconds) {
   const s = Math.max(0, Math.min(99, Math.round(seconds)));
   return [s >= 10 ? Math.floor(s / 10) : BLANK, s % 10];
+}
+
+/**
+ * One drawn head of a signal.
+ * @typedef {object} HeadPlacement
+ * @property {Signal} signal Signal whose lamps it shows.
+ * @property {string} name Mesh name stem: the signal id, plus `-r<k>` for repeater `k`.
+ * @property {Pos2} pos Ground point under the head.
+ * @property {SignalMount} mount Mount height class.
+ * @property {Pos2 | null} mastPos Mast base of a mast-arm repeater; null for every other head.
+ * @property {number} countdownScale Countdown size factor.
+ */
+
+/**
+ * Every head to draw: the near-side head of each signal in map order, then the repeaters of each
+ * signal in map order.
+ * @param {GameMap} map Map.
+ * @param {ReadonlySet<string>} [cantilever] Ids of signals whose near head hangs from an arm.
+ * @returns {HeadPlacement[]} Heads.
+ */
+export function headPlacements(map, cantilever) {
+  /** @type {HeadPlacement[]} */
+  const near = map.signals.map((signal) => ({
+    signal,
+    name: signal.id,
+    pos: signal.pos,
+    mount: cantilever?.has(signal.id) ? 'cantilever' : 'side',
+    mastPos: null,
+    countdownScale: 1,
+  }));
+  /** @type {HeadPlacement[]} */
+  const far = map.signals.flatMap((signal) =>
+    (signal.repeaters ?? []).map((head, k) => ({
+      signal,
+      name: `${signal.id}-r${k}`,
+      pos: head.pos,
+      mount: /** @type {SignalMount} */ (head.mount === 'mast-arm' ? 'cantilever' : 'side'),
+      mastPos: head.mount === 'mast-arm' && head.mastPos ? head.mastPos : null,
+      countdownScale: REPEATER_COUNTDOWN_SCALE,
+    })),
+  );
+  return [...near, ...far];
 }
 
 /**
@@ -166,28 +215,44 @@ export function buildTrafficLights(map, options = {}) {
   /** @type {number[]} */
   const digitPositions = [];
 
-  for (const signal of map.signals) {
-    const mount = options.cantilever?.has(signal.id) ? 'cantilever' : 'side';
+  const heads = headPlacements(map, options.cantilever);
+  for (const head of heads) {
+    const { signal, pos, mount } = head;
     const yaw = facingYaw(signal.heading);
     const headY = headCentreY(mount);
     const top = headY + HOUSING[1] / 2;
-    if (mount === 'side') {
-      body.addBox(signal.pos, yaw, [0, top / 2, -HOUSING[2] / 2 - 0.06], [0.12, top, 0.12]);
+    if (head.mastPos) {
+      // Mast at `mastPos`, and an arm from its top to just over the head, which hangs from it.
+      const mast = head.mastPos;
+      const armY = top + 0.12;
+      body.addBox(mast, 0, [0, (armY + 0.2) / 2, 0], [0.22, armY + 0.2, 0.22]);
+      const dx = pos.x - mast.x;
+      const dz = pos.z - mast.z;
+      const reach = Math.hypot(dx, dz);
+      if (reach > 0) {
+        const mid = { x: (pos.x + mast.x) / 2, z: (pos.z + mast.z) / 2 };
+        body.addBox(mid, Math.atan2(-dz, dx), [0, armY, 0], [reach + 0.22, 0.12, 0.12]);
+      }
+      body.addBox(pos, yaw, [0, (top + armY) / 2, 0], [0.08, armY - top + 0.02, 0.08]);
+    } else if (mount === 'side') {
+      body.addBox(pos, yaw, [0, top / 2, -HOUSING[2] / 2 - 0.06], [0.12, top, 0.12]);
     } else {
       // The mast stands ARM_M to the right of the traffic (local +X of a face turned by
       // `facingYaw`), and the arm reaches over the lane to the head.
-      body.addBox(signal.pos, yaw, [ARM_M, (top + 0.4) / 2, -HOUSING[2] / 2 - 0.1], [0.22, top + 0.4, 0.22]);
-      body.addBox(signal.pos, yaw, [ARM_M / 2, top + 0.2, -HOUSING[2] / 2 - 0.1], [ARM_M, 0.12, 0.12]);
+      body.addBox(pos, yaw, [ARM_M, (top + 0.4) / 2, -HOUSING[2] / 2 - 0.1], [0.22, top + 0.4, 0.22]);
+      body.addBox(pos, yaw, [ARM_M / 2, top + 0.2, -HOUSING[2] / 2 - 0.1], [ARM_M, 0.12, 0.12]);
     }
-    body.addBox(signal.pos, yaw, [0, headY, 0], [...HOUSING]);
+    body.addBox(pos, yaw, [0, headY, 0], [...HOUSING]);
     // Countdown box beside the head, on the right of the traffic.
-    const cx = HOUSING[0] / 2 + COUNTDOWN.w / 2 + 0.04;
-    body.addBox(signal.pos, yaw, [cx, headY, 0], [COUNTDOWN.w, COUNTDOWN.h, HOUSING[2]]);
-    for (const dx of [-COUNTDOWN.digitW / 2 - 0.01, COUNTDOWN.digitW / 2 + 0.01]) {
-      const x0 = cx + dx - COUNTDOWN.digitW / 2;
-      const x1 = cx + dx + COUNTDOWN.digitW / 2;
-      const y0 = headY - COUNTDOWN.digitH / 2;
-      const y1 = headY + COUNTDOWN.digitH / 2;
+    const k = head.countdownScale;
+    const box = { w: COUNTDOWN.w * k, h: COUNTDOWN.h * k, digitW: COUNTDOWN.digitW * k, digitH: COUNTDOWN.digitH * k };
+    const cx = HOUSING[0] / 2 + box.w / 2 + 0.04;
+    body.addBox(pos, yaw, [cx, headY, 0], [box.w, box.h, HOUSING[2]]);
+    for (const dx of [-box.digitW / 2 - 0.01 * k, box.digitW / 2 + 0.01 * k]) {
+      const x0 = cx + dx - box.digitW / 2;
+      const x1 = cx + dx + box.digitW / 2;
+      const y0 = headY - box.digitH / 2;
+      const y1 = headY + box.digitH / 2;
       const z = HOUSING[2] / 2 + 0.006;
       const corners = [
         [x0, y0],
@@ -197,12 +262,12 @@ export function buildTrafficLights(map, options = {}) {
         [x1, y1],
         [x0, y1],
       ];
-      for (const [x, y] of corners) digitPositions.push(...localToWorld(signal.pos, yaw, [x, y, z]));
+      for (const [x, y] of corners) digitPositions.push(...localToWorld(pos, yaw, [x, y, z]));
     }
     for (const [lamp, dy] of LAMP_ORDER) {
       const mesh = new Mesh(lampGeometry, mats[lamp].off);
-      mesh.name = `lamp-${signal.id}-${lamp}`;
-      mesh.position.set(signal.pos.x, headY + dy, signal.pos.z);
+      mesh.name = `lamp-${head.name}-${lamp}`;
+      mesh.position.set(pos.x, headY + dy, pos.z);
       mesh.rotation.y = yaw;
       mesh.translateZ(HOUSING[2] / 2 + 0.005);
       mesh.updateMatrix();
@@ -220,7 +285,7 @@ export function buildTrafficLights(map, options = {}) {
     group.add(mesh);
   }
 
-  // Countdown digits: one geometry for every signal, 2 digits × 2 triangles each.
+  // Countdown digits: one geometry for every head, 2 digits × 2 triangles each.
   const atlas = createDigitAtlas();
   const digitMaterial = new MeshBasicMaterial({ vertexColors: true, map: atlas, transparent: true, alphaTest: 0.3 });
   /** @type {BufferGeometry | null} */
@@ -278,7 +343,7 @@ export function buildTrafficLights(map, options = {}) {
     group,
     update(states, t) {
       for (const l of lamps) l.mesh.material = lampLit(states[l.signalId], l.lamp) ? mats[l.lamp].on : mats[l.lamp].off;
-      map.signals.forEach((signal, i) => {
+      heads.forEach(({ signal }, i) => {
         const state = states[signal.id];
         const c = t === undefined || !state ? null : countdown(signal, t);
         // A frame state that disagrees with the cycle (a stale frame) shows nothing.

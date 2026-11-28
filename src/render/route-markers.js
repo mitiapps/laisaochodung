@@ -1,6 +1,7 @@
 /**
  * Route guidance: a floating marker over the next checkpoint (index from `frame.route`), and a
- * finish arch over `route.finish`, highlighted once only the finish is left.
+ * finish arch over `route.finish`, highlighted once only the finish is left. A frame with no
+ * route (a free run) hides all of it.
  */
 
 import {
@@ -26,12 +27,13 @@ const ARCH_HEIGHT_M = 4.5;
 const POST_M = 0.3;
 
 /**
- * Index of the checkpoint to mark, or null when only the finish is left.
+ * Index of the checkpoint to mark, or null when only the finish is left or the run has no route.
  * @param {GameMap} map Map.
  * @param {Frame} frame Frame.
  * @returns {number | null} Checkpoint index.
  */
 export function markedCheckpoint(map, frame) {
+  if (frame.route === null) return null;
   const i = frame.route.nextCheckpoint;
   return Number.isInteger(i) && i >= 0 && i < map.route.checkpoints.length ? i : null;
 }
@@ -120,6 +122,8 @@ export function buildRouteMarkers(map) {
   return {
     group,
     update(frame, timeS) {
+      group.visible = frame.route !== null;
+      if (!group.visible) return;
       const i = markedCheckpoint(map, frame);
       marker.visible = i !== null;
       if (i !== null) {
