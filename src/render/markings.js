@@ -13,9 +13,11 @@
  * - vạch 9.3 lane arrows are white, 300 cm long (320 cm combined) with a 15 cm shaft;
  * - vạch 9.5a: the word STOP, letters 1.6 m high on low-speed urban roads, strokes 12–18 cm, its
  *   top 2.0–3.0 m before the stop line.
- * Sizes read from the annex drawings rather than its text (Hình G.49 give-way, Hình G.73 arrows)
- * are marked as such; the 2019 text equals the 2026 draft, and the annex is not on the 2024 change
- * list.
+ * The 7.2, 9.3 and 9.5a values, and the stop-line gap of G2.1, come from the Phụ lục G of
+ * QCVN 41:2019, not read from the 2024 text: the 2026 draft has the same wording and the 2024
+ * drafting dossier does not list Phụ lục G as changed, so they are taken as the 2024 values
+ * (unverified). Sizes read from the annex drawings rather than its text (Hình G.49 give-way,
+ * Hình G.73 arrows) are marked as such.
  *
  * Lane and centre lines stop at the stop line, or at the zebra edge where there is no stop line;
  * nothing is painted through a zebra (Hình G.43, G.47). `lineCuts` gives the areas to leave bare.
@@ -51,24 +53,26 @@ export const LANE_DASH = Object.freeze({ dash: 2, gap: 6 });
 /** Stop line width (vạch 7.1: 20, 30 or 40 cm). */
 export const STOP_LINE_WIDTH_M = 0.3;
 /**
- * Give-way line (vạch 7.2 Mẫu 1), read from Hình G.49: two 20 cm dashed lines with a 20 cm gap
- * between them (40 cm centre to centre), dashes 60 cm with 20 cm gaps.
+ * Give-way line (vạch 7.2 Mẫu 1), read from Hình G.49 of the QCVN 41:2019 annex (unverified,
+ * not read from the 2024 text): two 20 cm dashed lines with a 20 cm gap between them (40 cm
+ * centre to centre), dashes 60 cm with 20 cm gaps.
  */
 export const GIVE_WAY = Object.freeze({ width: 0.2, spacing: 0.4, dash: 0.6, gap: 0.2 });
 /**
- * Inverted give-way triangle of vạch 7.2 Mẫu 1, read from Hình G.49: 1.2 m base, 3.0 m long, a
- * 15 cm border. Its base lies `setback` before the line's near edge (design), its point towards
+ * Inverted give-way triangle of vạch 7.2 Mẫu 1, read from Hình G.49 of the QCVN 41:2019 annex
+ * (unverified, not read from the 2024 text): 1.2 m base, 3.0 m long, a 15 cm border. Its base lies `setback` before the line's near edge (design), its point towards
  * the driver.
  */
 export const GIVE_WAY_TRIANGLE = Object.freeze({ base: 1.2, length: 3, border: 0.15, setback: 2.5 });
 /**
- * The word STOP (vạch 9.5a): letters 1.6 m high along the lane, 15 cm strokes, its top 2.5 m
- * before the stop line's near edge. Letter width and spacing are design; the word shrinks across
+ * The word STOP (vạch 9.5a, QCVN 41:2019 annex text, unverified against the 2024 text): letters
+ * 1.6 m high along the lane, 15 cm strokes, its top 2.5 m before the stop line's near edge. Letter width and spacing are design; the word shrinks across
  * a lane too narrow for it.
  */
 export const STOP_WORD = Object.freeze({ height: 1.6, stroke: 0.15, letterWidth: 0.6, spacing: 0.2, setback: 2.5 });
 /**
- * Lane arrow (vạch 9.3): lengths and shaft width from Hình G.73; the head size is design.
+ * Lane arrow (vạch 9.3): lengths and shaft width read from Hình G.73 of the QCVN 41:2019 annex
+ * (unverified, not read from the 2024 text); the head size is design.
  */
 export const LANE_ARROW = Object.freeze({ length: 3, combinedLength: 3.2, shaft: 0.15, headLength: 1, headWidth: 0.5 });
 /** Zebra stripe width and gap (vạch 7.3 Mẫu 1). */

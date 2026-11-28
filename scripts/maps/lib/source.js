@@ -100,7 +100,9 @@ export const OSM_ATTRIBUTION = '© OpenStreetMap contributors, ODbL';
 export const ALL_RED_S = 2;
 
 /**
- * Default light cycle (s). Green 25 s is over the 15 s minimum of QCVN 41:2024 Phụ lục A.2; yellow
+ * Default light cycle (s). Green 25 s is over the 15 s minimum green of Phụ lục A.2 as worded in
+ * QCVN 41:2019, which the 2024 drafting comparison table and the 2026 draft keep (not read from the
+ * 2024 text, unverified); yellow
  * 3 s; red 32 s = green + yellow + 2 × `ALL_RED_S`. The cross axis runs half a period (30 s) later,
  * so each change carries `ALL_RED_S` of all-red (`paramBasis: design`).
  */

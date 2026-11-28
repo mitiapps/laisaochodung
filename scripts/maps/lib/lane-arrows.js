@@ -16,7 +16,11 @@ import { pointAtDistance, polylineLength, projectOntoPolyline } from '../../../s
  * in the 2026 draft only).
  */
 export const LANE_ARROW_BEFORE_STOP_M = 15;
-/** Arrow length (m), read from Hình G.73; 2019 text = 2026 draft, annex not on the 2024 change list. */
+/**
+ * Arrow length (m), read from Hình G.73 of the QCVN 41:2019 annex. Unverified for 2024: the 2026
+ * draft has the same drawing and the 2024 drafting dossier does not list Phụ lục G as changed, but
+ * the 2024 text itself was not read.
+ */
 export const LANE_ARROW_LENGTH_M = 3;
 /** Lanes shorter than this get no arrow (m, design). */
 export const LANE_ARROW_MIN_LANE_M = 25;

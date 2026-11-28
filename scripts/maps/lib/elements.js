@@ -49,8 +49,9 @@ export const SIGNAL_NODE_RANGE_M = 30;
 /** A crosswalk this close to a junction edge moves the approach stop line behind it (m). */
 export const STOP_LINE_CROSSWALK_RANGE_M = 15;
 /**
- * Gap between a stop line and the crosswalk after it (m). QCVN 41:2024 G2.1 asks for 1.5–3.0 m
- * ("nên"); marking sizes: 2019 text = 2026 draft, annex not on the 2024 change list.
+ * Gap between a stop line and the crosswalk after it (m). G2.1 of the QCVN 41:2019 Phụ lục G asks
+ * for 1.5–3.0 m ("nên"). Unverified for 2024: the 2026 draft has the same text and the 2024
+ * drafting dossier does not list Phụ lục G as changed, but the 2024 text itself was not read.
  */
 export const STOP_LINE_CROSSWALK_GAP_M = 2;
 /**

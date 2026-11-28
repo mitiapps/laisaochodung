@@ -70,9 +70,16 @@ are byte-identical.
 ### Junctions
 
 Built to QCVN 41:2024 (`scripts/maps/lib/elements.js`, `lane-arrows.js`; render in
-`src/render/traffic-lights.js`, `pedestrian-lights.js` and `markings.js`). Marking sizes are build
-and render constants tagged "2019 text = 2026 draft"; thresholds the standard does not give are
-`design`.
+`src/render/traffic-lights.js`, `pedestrian-lights.js` and `markings.js`). Thresholds the standard
+does not give are `design`.
+
+Sources of the standard's numbers: signal-head mounting comes from the QCVN 41:2024 text (TT
+51/2024/TT-BGTVT). The marking values (the G2.1 stop-line gap, the 7.2 give-way line and
+triangle, the 9.3 arrows, the 9.5a STOP word) and the 15 s minimum green of Phụ lục A.2 were read
+from QCVN 41:2019 (the give-way and arrow sizes off its drawings, Hình G.49 and G.73), not from the
+2024 text. The 2026 draft has the same wording, and the 2024 drafting dossier lists only Phụ lục
+A, E and O as changed (A's changes leave the 15 s minimum alone), so they are taken as the 2024
+values but remain unverified against the 2024 text.
 
 - **Cycle.** `DEFAULT_CYCLE` is green 25 s, yellow 3 s, red 32 s (period 60 s). Approaches on one
   axis share a phase; the crossing axis runs half a period (30 s) later, so each change has 2 s of
@@ -101,8 +108,8 @@ and render constants tagged "2019 text = 2026 draft"; thresholds the standard do
   still on the carriageway 3 m further out is dropped and logged by the build. Scenery keeps clear
   of every post, as of sign and signal posts. Walk lights the green figure, flashing blinks it at 1 Hz,
   stop lights the red one. The heads are visual only and cost two draw calls in all.
-- **Stop line.** 30 cm wide, 2.0 m before the junction's crosswalk on that approach (G2.1:
-  1.5–3.0 m), which takes the approach's signal; 1 m before the road end where there is none. On
+- **Stop line.** 30 cm wide, 2.0 m before the junction's crosswalk on that approach (G2.1 of the
+  2019 annex: 1.5–3.0 m), which takes the approach's signal; 1 m before the road end where there is none. On
   every signalised arm of 20 m or more the line is therefore 6.5 m from the road end.
 - **Solid approach.** The last `min(30 m, 40 % of the road)` before any stop line: lane lines turn
   white solid (2.2) and a two-way centre line yellow solid (1.2). Written `laneLine` and
