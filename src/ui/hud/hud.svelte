@@ -9,8 +9,19 @@
   import Pedal from './controls/pedal.svelte';
   import RoundButton from './controls/round-button.svelte';
   import SteeringSlider from './controls/steering-slider.svelte';
-  import { formatGear, formatScore, formatSpeed } from '../lib/format.js';
-  import { CAMERA_SHORT_NAMES, VOICE_TOGGLE_LABELS, actionLabel, buttonView, controlLayout, newestToast, noticeItems, pedalControl, rpmFraction } from '../lib/hud-view.js';
+  import { formatGear, formatScore, formatSpeed, formatTally } from '../lib/format.js';
+  import {
+    CAMERA_SHORT_NAMES,
+    VOICE_TOGGLE_LABELS,
+    actionLabel,
+    buttonView,
+    controlLayout,
+    newestToast,
+    noticeItems,
+    pedalControl,
+    rpmFraction,
+    showsReverseChip,
+  } from '../lib/hud-view.js';
   import { watchBadgeVisibility } from '../lib/key-label.js';
 
   /**
@@ -19,7 +30,8 @@
    * stalk or switch cluster, the left lever, the steering, the horn, the pedals or the right grip,
    * the gear lever and the right-hand console. One layout serves every screen: the steering sits at
    * the bottom centre with the stalk on its left, unless the screen is too narrow for the groups on
-   * one side, in which case the row shifts towards the other side until both fit.
+   * one side, in which case the row shifts towards the other side until both fit. A free run shows
+   * its breach tally in the score box instead of a score; with no `nav` there is no nav arrow.
    * @type {{
    *   state: import('../../contracts/hud.js').HudState,
    *   vehicle: import('../../contracts/vehicle.js').VehicleInfo,
@@ -35,6 +47,13 @@
    */
   let { state: hud, vehicle, toasts, controls, cameraMode = 'chase', voiceMuted = null, ontogglevoice = () => {}, onpause, ondismiss, runKey = 0 } = $props();
 
+  const free = $derived(hud.mode === 'free');
+  /**
+   * Distinct breach episodes of the run, from `HudState.breachCount`, which the session fills; that
+   * field joins the HUD contract with the free mode, so a state without it reads as 0 until then.
+   */
+  const breachCount = $derived(/** @type {{breachCount?: number}} */ (hud).breachCount ?? 0);
+
   const isCar = $derived(vehicle.legalClass === 'car');
   const paused = $derived(hud.runStatus === 'paused');
   const layout = $derived(controlLayout(vehicle.legalClass, hud.controlPreset));
@@ -46,7 +65,8 @@
    * handlebar). The speed panel has a fixed width, so a faster readout never grows it: the car's
    * sits left of the stalk, the motorbike's right of the grip column. The clamp bounds are the
    * widest extent of each side from the anchor: car, 64 + 120 + 8 + 148 px on the left and 64 + 344
-   * px on the right; motorbike, 92 + 264 px on the left and 92 + 72 + 8 + 148 px on the right.
+   * px on the right; motorbike, 92 + 264 px on the left and 92 + 72 + 8 + 56 + 8 + 148 px on the
+   * right (the grip column, then the push-back button).
    * Every group's bottom edge is 40 px above the padded bottom, so the map attribution under it
    * stays readable.
    */
@@ -59,10 +79,10 @@
           speed: 'right-[calc(100%-var(--hud-cx)+192px)]',
         }
       : {
-          cx: 'clamp(356px, 50%, calc(100% - 320px))',
+          cx: 'clamp(356px, 50%, calc(100% - 384px))',
           left: 'right-[calc(100%-var(--hud-cx)+92px)]',
           right: 'left-[calc(var(--hud-cx)+92px)]',
-          speed: 'left-[calc(var(--hud-cx)+172px)]',
+          speed: 'left-[calc(var(--hud-cx)+236px)]',
         },
   );
   const notices = $derived(noticeItems(hud.notices));
@@ -179,7 +199,8 @@
           </div>
 
           <!-- Right of the steering: the car's horn, pedals, gear lever and console (hazard over the
-               handbrake), or the motorbike's throttle grip, under the front brake lever on Thực tế. -->
+               handbrake), or the motorbike's throttle grip, under the front brake lever on Thực tế,
+               then its push-back button. -->
           <div class="absolute bottom-10 flex items-end gap-2 {place.right}" data-zone="right">
             {#each layout.horn as action (action)}
               <div class="mb-7" data-zone="horn">
@@ -217,12 +238,19 @@
       <!-- Readouts: no actions. -->
       <div class="absolute left-0 top-0 flex items-start gap-2">
         <div class="rounded-lg border border-white/60 bg-white/90 px-3 py-1.5 shadow-md backdrop-blur">
-          <p class="text-xs text-stone-600">Điểm</p>
-          <p class="text-2xl font-bold" data-testid="hud-score">{formatScore(hud.score)}</p>
+          {#if free}
+            <p class="text-xs text-stone-600">Lái tự do</p>
+            <p class="text-2xl font-bold" data-testid="hud-tally">{formatTally(breachCount)}</p>
+          {:else}
+            <p class="text-xs text-stone-600">Điểm</p>
+            <p class="text-2xl font-bold" data-testid="hud-score">{formatScore(hud.score)}</p>
+          {/if}
         </div>
-        <div class="rounded-lg border border-white/60 bg-white/90 px-2 py-1 shadow-md backdrop-blur">
-          <NavArrow nav={hud.nav} headingRad={hud.headingRad} />
-        </div>
+        {#if hud.nav}
+          <div class="rounded-lg border border-white/60 bg-white/90 px-2 py-1 shadow-md backdrop-blur">
+            <NavArrow nav={hud.nav} headingRad={hud.headingRad} />
+          </div>
+        {/if}
       </div>
 
       <!-- The speed panel: the limit sign and a readout three digits wide on top, then the car's
@@ -246,6 +274,8 @@
               <span class="text-xs text-stone-600">Số</span>
               <span class="text-2xl font-bold leading-none" data-testid="hud-gear">{formatGear(hud.gear)}</span>
             </p>
+          {:else if showsReverseChip(vehicle.legalClass, hud.gear)}
+            <p class="whitespace-nowrap rounded bg-police-500 px-1 py-0.5 text-[10px] font-bold text-stone-900" data-testid="hud-reverse">LÙI</p>
           {/if}
           <p
             class="ml-auto whitespace-nowrap rounded px-0.5 py-0.5 text-[10px] tracking-tight {hud.skid ? 'bg-kepi-500 font-medium text-white' : 'text-stone-500'}"

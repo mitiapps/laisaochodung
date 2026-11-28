@@ -20,6 +20,14 @@
   let vehicleId = $state(/** @type {string | null} */ (null));
   let mapId = $state(/** @type {string | null} */ (null));
   let preset = $state(readControlPreset());
+  /** Run mode; not stored, so every visit starts on Chấm điểm. */
+  let mode = $state(/** @type {import('../../contracts/hud.js').RunMode} */ ('scored'));
+
+  /** Run modes with what each one does. */
+  const MODES = /** @type {const} */ ([
+    { id: 'scored', name: 'Chấm điểm', hint: 'lái từ xuất phát tới đích, có giới hạn thời gian, chấm trên thang 10' },
+    { id: 'free', name: 'Lái tự do', hint: 'không lộ trình, không giới hạn thời gian, không tính điểm; lỗi vẫn được báo' },
+  ]);
 
   /** Preset choices with what each one does. */
   const PRESETS = /** @type {const} */ ([
@@ -56,7 +64,7 @@
 
   const chosenVehicle = $derived(vehicleId ?? vehicles[0]?.id ?? null);
   const chosenMap = $derived(mapId ?? (maps.status === 'ready' ? (maps.entries[0]?.id ?? null) : null));
-  const startHref = $derived(chosenVehicle && chosenMap ? playHref(chosenMap, chosenVehicle) : null);
+  const startHref = $derived(chosenVehicle && chosenMap ? playHref(chosenMap, chosenVehicle, mode) : null);
 </script>
 
 <PageShell>
@@ -185,7 +193,34 @@
     </section>
   </div>
 
-  <div class="mt-8">
+  <section class="mt-8 max-w-2xl">
+    <h2 class="mb-3 text-xl font-semibold">Chế độ</h2>
+    <div class="grid gap-2 md:grid-cols-2" role="radiogroup" aria-label="Chế độ">
+      {#each MODES as option (option.id)}
+        <label
+          class="flex cursor-pointer items-center gap-3 rounded-lg border p-3 {mode === option.id
+            ? 'border-police-500 bg-police-50'
+            : 'border-stone-300 bg-white hover:border-police-300'}"
+        >
+          <input
+            class="accent-police-600"
+            type="radio"
+            name="run-mode"
+            value={option.id}
+            checked={mode === option.id}
+            onchange={() => (mode = option.id)}
+            data-testid="mode-{option.id}"
+          />
+          <span>
+            <span class="font-medium">{option.name}</span>
+            <span class="block text-sm text-stone-600">{option.hint}</span>
+          </span>
+        </label>
+      {/each}
+    </div>
+  </section>
+
+  <div class="mt-6">
     {#if startHref}
       <a
         class="inline-block rounded-lg bg-police-500 text-stone-900 hover:bg-police-400 px-6 py-3 text-lg font-semibold shadow-sm"

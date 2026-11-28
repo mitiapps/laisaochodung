@@ -100,7 +100,8 @@ export function actionLabel(action) {
  *   (motorbike).
  * @property {readonly ControlAction[]} gears Gear lever, Số + over Số − (car).
  * @property {readonly ControlAction[]} console Right-hand console, top to bottom: hazard over the
- *   handbrake (car).
+ *   handbrake (car), or the push-back button between the right grip and the speed panel
+ *   (motorbike).
  * @property {readonly ControlAction[]} top Game buttons at the top right.
  */
 
@@ -123,7 +124,8 @@ const CAR_LAYOUT = Object.freeze({
 
 /**
  * Motorbike zones: the left switch cluster holds the lights, the hazard, the indicators and the
- * horn. On Thực tế the left hand lever is the rear brake and the right end of the handlebar holds
+ * horn; the console right of the grip holds the push-back button, which the right hand reaches
+ * because the throttle must be released to push. On Thực tế the left hand lever is the rear brake and the right end of the handlebar holds
  * the front brake lever over the throttle grip. On Đơn giản the one brake applies both brakes, so
  * it is the left hand lever, as on a combined-brake scooter, and the right end holds the throttle
  * grip alone.
@@ -137,7 +139,7 @@ const MOTORBIKE_ZONES = Object.freeze({
   horn: NONE,
   pedals: NONE,
   gears: NONE,
-  console: NONE,
+  console: Object.freeze(/** @type {ControlAction[]} */ (['pushBack'])),
   top: TOP,
 });
 const MOTORBIKE_REAL = Object.freeze({
@@ -204,6 +206,7 @@ const BUTTON_TEXT = Object.freeze({
   flash: 'Nháy',
   gearDown: 'Số −',
   gearUp: 'Số +',
+  pushBack: 'Lùi',
 });
 
 /**
@@ -222,6 +225,7 @@ export function buttonView(action, state) {
     hazard: { testId: 'hud-hazard', on: lamps.hazard, blink: true },
     signalRight: { testId: 'hud-indicator-right', on: lamps.right, blink: true },
     horn: { testId: 'hud-horn', on: state.horn },
+    pushBack: { testId: 'hud-push-back', on: state.gear === 'R' },
   };
   const show = shows[action];
   return {
@@ -286,6 +290,17 @@ export function pedalControl(action, controls, isCar, preset) {
     throw new RangeError(`"${String(action)}" is not a pedal or lever action`);
   }
   return { ...c, on: c.fraction > 0 };
+}
+
+/**
+ * Whether the speed panel shows the `LÙI` chip: a motorbike the rider is pushing backwards, which
+ * the sim reports as gear R. A car shows its R in the gear readout instead.
+ * @param {import('../../contracts/vehicle.js').LegalClass} legalClass Vehicle class.
+ * @param {import('../../contracts/telemetry.js').Gear} gear Selected gear.
+ * @returns {boolean} Show the chip.
+ */
+export function showsReverseChip(legalClass, gear) {
+  return legalClass !== 'car' && gear === 'R';
 }
 
 /** Vietnamese name of each camera mode, for the HUD button and the home page. */

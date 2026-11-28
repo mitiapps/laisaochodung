@@ -57,8 +57,8 @@
 {#if route.name === 'home'}
   <HomePage vehicles={VEHICLES} {maps} {camera} />
 {:else if route.name === 'play'}
-  {#key `${route.mapId}|${route.vehicleId}`}
-    <PlayPage {game} {canvas} {camera} {voice} mapId={route.mapId} vehicleId={route.vehicleId} vehicles={VEHICLES} {mapEntry} />
+  {#key `${route.mapId}|${route.vehicleId}|${route.mode}`}
+    <PlayPage {game} {canvas} {camera} {voice} mapId={route.mapId} vehicleId={route.vehicleId} mode={route.mode} vehicles={VEHICLES} {mapEntry} />
   {/key}
 {:else if route.name === 'disclaimer'}
   <DisclaimerPage />
