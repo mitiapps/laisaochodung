@@ -7,7 +7,8 @@
  * 1. Sanitise the input; on the first step emit `run-start`; apply a pending reset (fall,
  *    `reset()` or, with the route off, the map edge) by placing the ego at the last passed
  *    checkpoint, or the start, and emit `reset`. With the route off the ego goes instead to the
- *    nearest lane centreline point to where it was, facing along the lane (`free-run.js`).
+ *    nearest lane centreline point to where it was that is clear of obstacles and scripted actors,
+ *    facing along the lane (`free-run.js`).
  * 2. `stepWorld` with the pre-step ego pose and indicators, the reset flag, the light states at
  *    `t` and last step's actor contacts: scripted actors, then traffic when it runs. Scripted
  *    poses go to their kinematic bodies; traffic agents near the ego to the mirror pool
@@ -237,13 +238,16 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
   const contacts = new Map();
   /** @type {string[]} */
   let touched = [];
+  /** Scripted actor poses of the last step, which a free-run reset keeps clear of. */
+  /** @type {import('../contracts/index.js').ActorPose[]} */
+  let scriptedPoses = [];
 
   /**
    * @returns {{pos: {x: number, z: number}, heading: number}} With the route off, the nearest lane
    *   point to the ego; otherwise the last passed checkpoint or the start.
    */
   const resetPose = () => {
-    if (routeOff) return nearestLanePose(map, vehicle.pose().pos);
+    if (routeOff) return nearestLanePose(map, vehicle.pose().pos, { lengthM: vehicleInfo.lengthM, widthM: vehicleInfo.widthM, actors: scriptedPoses });
     return routeState.next > 0 ? map.route.checkpoints[routeState.next - 1] : start;
   };
 
@@ -287,6 +291,7 @@ export function createSim(rapier, map, vehicleInfo, options = {}) {
       });
       worldState = ws.worldState;
       actorBodies.update(ws.scriptedPoses);
+      scriptedPoses = ws.scriptedPoses;
       mirror?.update(ws.trafficPoses, pre);
       if (now !== null) trafficMs = now() - t0;
 

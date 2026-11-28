@@ -773,6 +773,25 @@ describe('createSim route option', () => {
     expect(f.ego.pos.z).toBeCloseTo(1.75, 1);
   });
 
+  it('resets clear of the road-works barrier on tutorial-01 when the nearest lane point is inside it', () => {
+    /** @type {GameMap} */
+    const map = JSON.parse(readFileSync(new URL('../../public/maps/tutorial-01-co-ban.json', import.meta.url), 'utf8'));
+    const barrier = map.obstacles.find((o) => o.id === 'ob-barrier');
+    if (!barrier) throw new Error('tutorial-01 has no ob-barrier');
+    // Start inside the barrier's wall ring, on its lane's centreline.
+    const ring = barrier.footprint;
+    const x = ring.reduce((a, p) => a + p[0], 0) / ring.length;
+    const z = ring.reduce((a, p) => a + p[1], 0) / ring.length;
+    const sim = createSim(RAPIER, { ...map, route: { ...map.route, start: { pos: { x, z }, heading: 0 } } }, SCOOTER, { route: 'off' });
+    sim.step(sanitizeInput({}));
+    sim.reset();
+    const f = sim.step(sanitizeInput({}));
+    sim.dispose();
+    expect(f.events).toContainEqual({ type: 'reset' });
+    expect(polygonsIntersect(footprint(f.ego.pos, f.ego.heading, SCOOTER.lengthM, SCOOTER.widthM), ring)).toBe(false);
+    expect(f.ego.pos.z).toBeCloseTo(z, 0);
+  });
+
   it('resets an ego that rides more than 60 m outside the lanes back onto the nearest lane', () => {
     // Start 50 m west of the lanes (they begin at x 0) heading west, away from them.
     const map = mapWith({ route: { ...MAP.route, start: { pos: { x: -50, z: 1.75 }, heading: Math.PI } } });

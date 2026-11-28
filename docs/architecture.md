@@ -56,7 +56,9 @@ rules JSON (rules + clauses + collisionPolicy) ─► scorer
   episodes, escalations counted once) as `N lỗi` instead of the score, toasts and the result list
   leave out the score deduction, and the result screen reads "Kết thúc lái tự do" with no score
   or licence line. A scooter fall, or an ego more than 60 m outside the lane polygons' bounding
-  box, resets to the nearest lane centreline point instead of a checkpoint. Dev builds take replay
+  box, resets to the nearest lane centreline point instead of a checkpoint, slid along the lane
+  (or onto the next nearest lane, else the route start) until the ego clears every obstacle and
+  scripted actor. Dev builds take replay
   checkpoints in every free run, so an endless run never keeps every frame.
 - **Junction data.** A signal's `pos` is its near-side post; far-side heads are
   `Signal.repeaters` (`SignalHead`: a post or a mast arm) of the same signal, so frames, stop lines
