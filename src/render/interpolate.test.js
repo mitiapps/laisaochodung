@@ -57,4 +57,14 @@ describe('interpolation', () => {
     const old = a.actors[1];
     expect(interpolateActor(a, b, pose, 0.5).x).toBeCloseTo((old.pos.x + pose.pos.x) / 2, 9);
   });
+
+  it('writes the actor pose into a given object instead of allocating one', () => {
+    const [a, b] = [all[40], all[41]];
+    const pose = b.actors[1];
+    const out = { x: 9, y: 9, z: 9, heading: 9 };
+    expect(interpolateActor(a, b, pose, 0.5, out)).toBe(out);
+    expect(out).toEqual(interpolateActor(a, b, pose, 0.5));
+    expect(interpolateActor(null, b, pose, 0.5, out)).toBe(out);
+    expect(out).toEqual({ x: pose.pos.x, y: 0, z: pose.pos.z, heading: pose.heading });
+  });
 });

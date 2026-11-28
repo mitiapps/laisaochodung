@@ -215,6 +215,8 @@ class InstancedSet {
  * @typedef {object} AgentState
  * @property {Look} look Look.
  * @property {number} lookKey `variant` and model the look was resolved for.
+ * @property {[number, number, number]} paintA Linear RGB of `look.paintA`, kept with the look.
+ * @property {[number, number, number]} paintB Linear RGB of `look.paintB`, kept with the look.
  * @property {number} distance Distance travelled, metres (wheel spin).
  * @property {number} fadeFrom Frame time the fade-in started; -Infinity for no fade.
  * @property {number} sign ±1 from the id: side a wreck tilts or falls to.
@@ -464,6 +466,24 @@ export function createActorViews(map, assets) {
   const s3 = new Vector3();
   const Y = new Vector3(0, 1, 0);
   const white = /** @type {[number, number, number]} */ ([1, 1, 1]);
+  const keep = lookRgb(null);
+  const sides = [1, -1];
+  const drawPose = { x: 0, y: 0, z: 0, heading: 0 };
+  /** @type {{brake: number[][], left: number[][], right: number[][]}} */
+  const carLampsAt = {
+    brake: [
+      [0, 0, 0],
+      [0, 0, 0],
+    ],
+    left: [
+      [0, 0, 0],
+      [0, 0, 0],
+    ],
+    right: [
+      [0, 0, 0],
+      [0, 0, 0],
+    ],
+  };
 
   /**
    * State of a pose, created on its first frame.
@@ -475,9 +495,12 @@ export function createActorViews(map, assets) {
     const key = pose.variant * 7919 + hashId(pose.model);
     let st = agents.get(pose.id);
     if (!st) {
+      const look = resolveLook(pose);
       st = {
-        look: resolveLook(pose),
+        look,
         lookKey: key,
+        paintA: lookRgb(look.paintA),
+        paintB: lookRgb(look.paintB),
         distance: 0,
         fadeFrom: fresh ? -Infinity : t,
         sign: hashId(pose.id) % 2 === 0 ? 1 : -1,
@@ -488,6 +511,8 @@ export function createActorViews(map, assets) {
     } else if (st.lookKey !== key) {
       st.look = resolveLook(pose);
       st.lookKey = key;
+      st.paintA = lookRgb(st.look.paintA);
+      st.paintB = lookRgb(st.look.paintB);
     }
     return st;
   };
@@ -543,33 +568,14 @@ export function createActorViews(map, assets) {
   };
 
   /**
-   * Car lamp positions in metres for a footprint and body height.
+   * Car lamp positions in metres for a footprint and body height, written into one reused table
+   * that `lamps` reads at once.
    * @param {number} L Length.
    * @param {number} W Width.
    * @param {number} H Body height.
    * @returns {{brake: number[][], left: number[][], right: number[][]}} Positions.
    */
-  const carLamps = (L, W, H) => {
-    const y = Math.min(1.0, H * 0.48);
-    const xb = W / 2 - 0.22;
-    const xi = W / 2 - 0.08;
-    const zr = -L / 2 - 0.03;
-    const zf = L / 2 + 0.03;
-    return {
-      brake: [
-        [xb, y, zr],
-        [-xb, y, zr],
-      ],
-      left: [
-        [xi, y + 0.13, zr],
-        [xi, Math.min(0.75, H * 0.38), zf],
-      ],
-      right: [
-        [-xi, y + 0.13, zr],
-        [-xi, Math.min(0.75, H * 0.38), zf],
-      ],
-    };
-  };
+  const carLamps = (L, W, H) => carLampPositions(L, W, H, carLampsAt);
 
   /**
    * Draws a Kenney car (or its box-car stand-in).
@@ -593,7 +599,7 @@ export function createActorViews(map, assets) {
       .copy(metres)
       .multiply(m.makeScale(sx, sy, sz))
       .multiply(m.makeTranslation(-centre.x, -k.box.min.y, -centre.z));
-    const paint = lookRgb(st.look.paintA);
+    const paint = st.paintA;
     const shade = crashed ? WRECK_SHADE : 1;
     k.body.push(body, paint, shade, white);
     const wheels = /** @type {InstancedSet} */ (sets.get(k.wheelSet) ?? unitWheels());
@@ -621,8 +627,8 @@ export function createActorViews(map, assets) {
     const bike = /** @type {import('./vehicles/motorbike.js').MotorbikeModel} */ (bikes.get(type));
     const k = pose.lengthM / MOTORBIKE_LENGTH_M;
     const fallen = pose.state === 'fallen';
-    const paintA = lookRgb(st.look.paintA);
-    const paintB = lookRgb(st.look.paintB);
+    const paintA = st.paintA;
+    const paintB = st.paintB;
     const scaled = bodyM.copy(baseMatrix(draw, fallen ? (Math.PI / 2) * st.sign : 0, 0, fallen ? 0.2 * k : 0, fade)).multiply(m.makeScale(k, k, k));
     const shade = fallen ? FALLEN_SHADE : 1;
     if (fallen) {
@@ -657,12 +663,11 @@ export function createActorViews(map, assets) {
       .copy(baseMatrix(draw, crashed ? 0.04 * st.sign : 0, 0, 0, fade))
       .multiply(m.makeScale(pose.widthM / BUS_SIZE.widthM, 1, pose.lengthM / BUS_SIZE.lengthM));
     const shade = crashed ? WRECK_SHADE : 1;
-    const keep = lookRgb(null);
     busSet().push(fit, keep, shade, keep);
     const wheels = unitWheels();
     for (const w of bus.wheels) {
       const spin = crashed ? 0 : st.distance / w.radius;
-      for (const side of [1, -1]) {
+      for (const side of sides) {
         const x = side * (BUS_SIZE.widthM / 2 - w.width / 2 - 0.04);
         part.copy(fit).multiply(m.makeTranslation(x, w.radius, w.z)).multiply(m.makeRotationX(spin)).multiply(m.makeScale(w.width, w.radius, w.radius));
         wheels.push(part, keep, shade, keep);
@@ -687,7 +692,6 @@ export function createActorViews(map, assets) {
       const minY = d.box ? d.box.min.y : 0;
       q.setFromAxisAngle(Y, angle * 1.7);
       part.compose(v.set(at.x + Math.cos(angle) * r, -minY * DEBRIS_SCALE, at.z + Math.sin(angle) * r), q, s3.set(DEBRIS_SCALE, DEBRIS_SCALE, DEBRIS_SCALE));
-      const keep = lookRgb(null);
       target.push(part, keep, 1, keep);
     }
   };
@@ -707,7 +711,7 @@ export function createActorViews(map, assets) {
           if ((pose.state === 'crashed' || pose.state === 'fallen') && !st.wreck) st.wreck = { x: pose.pos.x, z: pose.pos.z };
           if (pose.state === 'moving') st.wreck = null;
         }
-        const draw = interpolateActor(prev, frame, pose, alpha);
+        const draw = interpolateActor(prev, frame, pose, alpha, drawPose);
         if (pose.kind === 'pedestrian') {
           pedestrians.get(pose.id)?.update(draw, pose.speed > 0 ? st.walk : 0, t);
           continue;
@@ -748,6 +752,44 @@ export function createActorViews(map, assets) {
       lampQuad.dispose();
     },
   };
+}
+
+/**
+ * Car lamp positions in metres for a footprint and body height, written into `out`.
+ * @param {number} L Length.
+ * @param {number} W Width.
+ * @param {number} H Body height.
+ * @param {{brake: number[][], left: number[][], right: number[][]}} out Table of two `[x, y, z]`
+ *   entries per group, overwritten.
+ * @returns {{brake: number[][], left: number[][], right: number[][]}} `out`.
+ */
+export function carLampPositions(L, W, H, out) {
+  const y = Math.min(1.0, H * 0.48);
+  const yFront = Math.min(0.75, H * 0.38);
+  const xb = W / 2 - 0.22;
+  const xi = W / 2 - 0.08;
+  const zr = -L / 2 - 0.03;
+  const zf = L / 2 + 0.03;
+  setXyz(out.brake[0], xb, y, zr);
+  setXyz(out.brake[1], -xb, y, zr);
+  setXyz(out.left[0], xi, y + 0.13, zr);
+  setXyz(out.left[1], xi, yFront, zf);
+  setXyz(out.right[0], -xi, y + 0.13, zr);
+  setXyz(out.right[1], -xi, yFront, zf);
+  return out;
+}
+
+/**
+ * Writes a point.
+ * @param {number[]} p Point, overwritten.
+ * @param {number} x X.
+ * @param {number} y Y.
+ * @param {number} z Z.
+ */
+function setXyz(p, x, y, z) {
+  p[0] = x;
+  p[1] = y;
+  p[2] = z;
 }
 
 /**

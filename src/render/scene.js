@@ -156,7 +156,14 @@ export function createEnvironment(scene, asphalt, { farM = FAR_M } = {}) {
           const x = focus.x + (seeds[i * 3] - 0.5) * RAIN_BOX_M;
           const z = focus.z + (seeds[i * 3 + 1] - 0.5) * RAIN_BOX_M;
           const y = 20 - ((seeds[i * 3 + 2] * 20 + nowS * fall) % 20);
-          rainPositions.set([x, y, z, x - 0.05, y + 0.6, z], i * 6);
+          // Written by index: an array literal here would allocate once per drop per frame.
+          const o = i * 6;
+          rainPositions[o] = x;
+          rainPositions[o + 1] = y;
+          rainPositions[o + 2] = z;
+          rainPositions[o + 3] = x - 0.05;
+          rainPositions[o + 4] = y + 0.6;
+          rainPositions[o + 5] = z;
         }
         rainAttr.needsUpdate = true;
       }

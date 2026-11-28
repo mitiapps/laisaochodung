@@ -15,6 +15,8 @@ export const SKID_MARK_THRESHOLD = 0.3;
 /** Skid mark segments kept; older ones are overwritten. */
 export const MAX_SKID_SEGMENTS = 3000;
 const SKID_Y = 0.02;
+/** Floats per segment: two triangles of three vertices. */
+const FLOATS_PER_SEGMENT = 6 * 3;
 
 /**
  * Pure: the skid-mark segments one tick adds. A wheel leaves a segment from its last marked
@@ -63,7 +65,7 @@ export function shakeAmplitude(relSpeed) {
  * @returns {{mesh: Mesh, add: (from: Vec2, to: Vec2) => void, clear: () => void, dispose: () => void}} Marks.
  */
 export function createSkidMarks(widthM) {
-  const positions = new Float32Array(MAX_SKID_SEGMENTS * 6 * 3);
+  const positions = new Float32Array(MAX_SKID_SEGMENTS * FLOATS_PER_SEGMENT);
   const geometry = new BufferGeometry();
   const attr = new BufferAttribute(positions, 3);
   attr.setUsage(DynamicDrawUsage);
@@ -83,6 +85,32 @@ export function createSkidMarks(widthM) {
   mesh.frustumCulled = false;
   let next = 0;
   let count = 0;
+  // Only the slots written since the last upload go to the GPU. three.js uploads the ranges and
+  // clears them at render; ranges are kept merged here so a long stretch of frames that do not
+  // draw the marks cannot grow the list, and past a few ranges (the ring wrapped) the next upload
+  // is a full one, which an empty range list means.
+  const MAX_PENDING_RANGES = 4;
+  let fullUpload = false;
+  attr.onUpload(() => {
+    fullUpload = false;
+  });
+  /**
+   * Marks `FLOATS_PER_SEGMENT` floats from `start` for the next upload.
+   * @param {number} start First float written.
+   */
+  const markWritten = (start) => {
+    if (fullUpload) return;
+    const ranges = attr.updateRanges;
+    const last = ranges[ranges.length - 1];
+    if (last && last.start + last.count === start) {
+      last.count += FLOATS_PER_SEGMENT;
+    } else if (ranges.length < MAX_PENDING_RANGES) {
+      attr.addUpdateRange(start, FLOATS_PER_SEGMENT);
+    } else {
+      attr.clearUpdateRanges();
+      fullUpload = true;
+    }
+  };
   return {
     mesh,
     add(from, to) {
@@ -100,7 +128,9 @@ export function createSkidMarks(widthM) {
       // Upward normal needs (e1 × e2).y > 0, i.e. counter-clockwise seen from +Y.
       const cross = (b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2]);
       const tris = cross > 0 ? [a, b, c, a, c, d] : [a, c, b, a, d, c];
-      positions.set(tris.flat(), next * 18);
+      const start = next * FLOATS_PER_SEGMENT;
+      positions.set(tris.flat(), start);
+      markWritten(start);
       next = (next + 1) % MAX_SKID_SEGMENTS;
       count = Math.min(MAX_SKID_SEGMENTS, count + 1);
       geometry.setDrawRange(0, count * 6);

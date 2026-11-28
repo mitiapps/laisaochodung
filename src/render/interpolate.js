@@ -73,16 +73,16 @@ export function interpolateEgo(prev, frame, alpha) {
  * @param {Frame} frame Current frame.
  * @param {ActorPose} pose Actor pose in `frame`.
  * @param {number} alpha 0 draws `prev`, 1 draws `frame`.
- * @returns {DrawPose} Pose on the ground.
+ * @param {DrawPose} [out] Pose to write into, so a per-frame caller allocates nothing; a new one
+ *   when omitted.
+ * @returns {DrawPose} Pose on the ground (`out` when given).
  */
-export function interpolateActor(prev, frame, pose, alpha) {
+export function interpolateActor(prev, frame, pose, alpha, out = { x: 0, y: 0, z: 0, heading: 0 }) {
   const old = prev && canInterpolate(prev, frame) ? prev.actors.find((a) => a.id === pose.id) : undefined;
-  if (!old) return { x: pose.pos.x, y: 0, z: pose.pos.z, heading: pose.heading };
-  const t = clampAlpha(alpha);
-  return {
-    x: lerp(old.pos.x, pose.pos.x, t),
-    y: 0,
-    z: lerp(old.pos.z, pose.pos.z, t),
-    heading: lerpAngle(old.heading, pose.heading, t),
-  };
+  const t = old ? clampAlpha(alpha) : 1;
+  out.x = old ? lerp(old.pos.x, pose.pos.x, t) : pose.pos.x;
+  out.y = 0;
+  out.z = old ? lerp(old.pos.z, pose.pos.z, t) : pose.pos.z;
+  out.heading = old ? lerpAngle(old.heading, pose.heading, t) : pose.heading;
+  return out;
 }

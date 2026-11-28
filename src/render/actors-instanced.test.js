@@ -7,7 +7,7 @@ import map from '../../tests/fixtures/map-minimal.json' with { type: 'json' };
 import frames from '../../tests/fixtures/frames-straight.json' with { type: 'json' };
 import trafficParams from '../generated/traffic-params.json' with { type: 'json' };
 import { ACTOR_LIGHTS, NO_VIOLATIONS } from '../contracts/index.js';
-import { FADE_S, createActorViews } from './actors.js';
+import { FADE_S, carLampPositions, createActorViews } from './actors.js';
 import { blinkOn } from './math.js';
 import { bakeFallenRider, bakePose, bakeRider, CHARACTER_HEIGHT_M } from './rider-bake.js';
 import { BUS_SIZE, buildBus } from './vehicles/bus.js';
@@ -460,5 +460,34 @@ describe('procedural models and riders', () => {
     expect([...types].sort()).toEqual([...MOTORBIKE_TYPES].sort());
     expect(resolveLook({ id: 'npc-1', kind: 'car', model: 'bus', variant: 0 }).family).toBe('bus');
     expect(resolveLook({ id: 'npc-1', kind: 'car', model: 'npc-sedan', variant: 0 })).toMatchObject({ body: 'taxi', paintA: null });
+  });
+});
+
+describe('car lamp positions', () => {
+  it('rewrites one reused table for each footprint', () => {
+    const out = {
+      brake: [
+        [0, 0, 0],
+        [0, 0, 0],
+      ],
+      left: [
+        [0, 0, 0],
+        [0, 0, 0],
+      ],
+      right: [
+        [0, 0, 0],
+        [0, 0, 0],
+      ],
+    };
+    const inner = out.left[1];
+    expect(carLampPositions(4.2, 1.8, 1.4, out)).toBe(out);
+    expect(out.left[1]).toBe(inner);
+    for (const p of [...out.brake, out.left[0], out.right[0]]) expect(p[2]).toBeCloseTo(-2.13, 9);
+    expect(out.left[1][2]).toBeCloseTo(2.13, 9);
+    expect(out.brake[0][0]).toBeCloseTo(-out.brake[1][0], 9);
+    expect(out.left[0][0]).toBeCloseTo(-out.right[0][0], 9);
+    carLampPositions(5, 2, 1.4, out);
+    expect(out.left[1][2]).toBeCloseTo(2.53, 9);
+    expect(out.left[0][0]).toBeGreaterThan(0);
   });
 });
