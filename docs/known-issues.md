@@ -73,7 +73,10 @@ says what happens and where.
   of scope.
 - Acts the game cannot observe: alcohol, helmet and seat belt, phone use, licence and papers,
   vehicle condition, loads and passengers.
-- Overtaking, reversing, priority vehicles and police signals have no rule.
+- Overtaking, reversing, priority vehicles and police signals have no rule. A reversing rule (Law
+  36/2024 Điều 16 bans reversing on one-way roads, in no-stopping areas, on crosswalks and at
+  junctions) is deferred: it waits for a fetched citation and an ND 168 clause, and would be a car
+  rule, since a scooter backing out with the feet is the escape the push-back exists for.
 - OSM signs on `osm-pasteur` are curated in `data/maps/osm-pasteur/`, not surveyed: they may
   differ from the street.
 
@@ -187,7 +190,11 @@ says what happens and where.
 - **Scripted violations do not act.** A declared violation is a flag of the actor's pose, read by
   the fault table on a contact with it. The actor does not run a light or change lane, and the flag
   is not latched: it shows for as long as the actor is active.
-- **All signal heads stand on side poles.** No map data says which heads hang on a cantilever.
+- **NPCs change lane in the solid approach.** Nothing in `src/world/traffic/` reads a lane line's
+  type, so agents still change lane on the solid stretch before a stop line that the player may
+  not cross.
+- **Mast arms are a build rule, not surveyed.** A far-side repeater hangs on a mast arm wherever
+  the approach has two or more lanes; no map data says which real heads hang on a cantilever.
 - **Civic fences are drawn only.** They have no collider, so the player can drive through them.
 - **Signal countdowns** count red and green only, as the countdown lamps in Ho Chi Minh City do.
 - **Traffic applies a P.127 zone to the whole lane.** The scorer reads a speed-limit zone only
@@ -201,6 +208,13 @@ says what happens and where.
 
 - The scooter rig locks rotations on world axes, so it is valid on flat maps only
   ([physics.md](physics.md)).
+- **No stop line before an unsignalled crosswalk.** QCVN 41:2024 G2.3 asks for one ("cần"), but
+  the map contract has no paint-only stop-line control that the scorer and traffic would ignore,
+  so a zebra away from a signalised junction has no line before it. It is the next junction item.
+- **OSM junction crossings are not at their surveyed position.** The game junction ends at the
+  cross road's half width plus 1 m, with no corner radii, so an OSM crossing within 15 m of a
+  junction end is drawn at the junction edge, up to about 13 m nearer the junction than in OSM.
+  Crossings farther out stay where surveyed and have no stop line ([maps.md](maps.md#junctions)).
 - **Driving into a scripted actor rolls the player back slowly.** A car that drives at about
   60 km/h into a parked scripted car leaves the contact backwards at about 0.3 m/s, from Rapier's
   rigid contact against an immovable body (the chassis pitch and suspension unwind). Contacts

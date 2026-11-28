@@ -47,11 +47,8 @@ are byte-identical.
     `source: default`.
   - `lit`: the whole map when the source sets `lit: true`.
 - A stop line gets one control: `signal` at a signalised junction, else `stop-sign` when an R.122
-  faces the approach, else `give-way` when a W.208 does, else no line. It sits 1 m before the
-  junction, or 1 m before a crosswalk within 15 m of the junction on that approach, and that
-  crosswalk takes the approach's signal.
-- Signals: one head per approach. Approaches on one axis share a phase; the crossing axis is
-  offset by green + yellow. The default cycle (green 27 s, yellow 3 s, red 30 s) is a game value.
+  faces the approach, else `give-way` when a W.208 does, else no line. Junction markings, signal
+  heads and the light cycle are in [Junctions](#junctions).
 - P.123a bans the left turn and P.124a the U-turn at the junction the sign faces (the P.123a text
   says it does not ban U-turns). P.101 and P.102 become entries banned to all classes, across the
   carriageway at the sign, in the direction of the traffic the sign faces.
@@ -69,6 +66,49 @@ are byte-identical.
 - Where a junction is trimmed back further than the pavements reach (a large `trimM`), the gap
   between two arms' pavement ends and the junction's chamfer gets a corner pavement
   (`pv-<junction>-c<n>`), so the kerb wraps the corner.
+
+### Junctions
+
+Built to QCVN 41:2024 (`scripts/maps/lib/elements.js`, `lane-arrows.js`; render in
+`src/render/traffic-lights.js` and `markings.js`). Marking sizes are build and render constants
+tagged "2019 text = 2026 draft"; thresholds the standard does not give are `design`.
+
+- **Cycle.** `DEFAULT_CYCLE` is green 25 s, yellow 3 s, red 32 s (period 60 s). Approaches on one
+  axis share a phase; the crossing axis runs half a period (30 s) later, so each change has 2 s of
+  all-red. A written cycle must keep red ≥ green + yellow + 4 s, or the build fails.
+- **Heads.** The near-side head stands on the right post at the stop line, lowest lamp 2.5 m.
+  Every signalised approach also gets a far-side repeater (`Signal.repeaters`), 1.5 m past the
+  junction on the right of its straight-on line: a post (lowest lamp 2.5 m) for one lane, a mast
+  arm (lowest lamp 5.5 m, head over the middle of the lanes, arm at most 7 m) for two or more. A
+  base that lands on a lane or junction slides up to 6 m along the heading, else the repeater is
+  dropped and logged. Every head carries a countdown (red digits on red, green on green, blank on
+  yellow), 1.5 × on the far heads.
+- **Crosswalks.** Every arm of 20 m or more at a signalised junction gets a 4 m zebra 0.5 m from
+  the road end, unless a source crosswalk lies within 15 m of that end (shorter arms are logged).
+  OSM crossings are taken on every corridor way, stubs included. An OSM crossing within 15 m of a
+  junction end is that junction's crosswalk and is drawn at the junction edge, 0.5 m from the road
+  end, where a derived zebra would go: the game junction has no corner radii, so the surveyed
+  offset would leave a dead stretch before the stop line. An OSM crossing farther out stays where
+  surveyed, as a mid-block crossing; an authored crosswalk always stays where it is written.
+  `Crosswalk.walkSignalId` names a signal of the other axis, whose green times the pedestrian
+  heads (flashing for its last 5 s).
+- **Stop line.** 30 cm wide, 2.0 m before the junction's crosswalk on that approach (G2.1:
+  1.5–3.0 m), which takes the approach's signal; 1 m before the road end where there is none. On
+  every signalised arm of 20 m or more the line is therefore 6.5 m from the road end.
+- **Solid approach.** The last `min(30 m, 40 % of the road)` before any stop line: lane lines turn
+  white solid (2.2) and a two-way centre line yellow solid (1.2). Written `laneLine` and
+  `centerLine` stretches win. Lane and centre lines end at the stop line, or at the crosswalk edge
+  where there is none; nothing is painted through a zebra.
+- **Lane arrows (9.3).** On every approach with a stop line and two or more lanes: one arrow per
+  lane, its tip 15 m before the line, with the turns of the connectors leaving that lane; lanes
+  under 25 m get none.
+- **STOP word (9.5a) and give-way (7.2).** Per lane at every `stop-sign` line, letters 1.6 m high
+  2.5 m before it; at a `give-way` line, two 20 cm dashed lines and an inverted triangle per lane.
+- **Not built:** arrow lenses, right turn on red, a motorbike box, new sign codes, and stop or
+  give-way lines at uncontrolled junctions (priority to the right applies).
+- **Pasteur × Nguyễn Du** (`j-n411919306`) on `osm-pasteur` is signalised by override, a game
+  decision not checked on the street (see `overrides.yaml`). Pasteur × Hàn Thuyên stays
+  unsignalised; its tagged crossings become zebras.
 
 Game values (lane width, crosswalk width 4 m, pavement width, light cycle, class lane defaults,
 cluster and stub lengths) are constants at the top of the `lib/` modules.
@@ -172,9 +212,9 @@ and the `speeding` flag uses the same limit.
 
 From the extract the converter takes highway class, `oneway`, `lanes`, `lanes:forward`,
 `lanes:backward`, `sidewalk=no`, `highway=traffic_signals` nodes (each signals the nearest
-junction within 30 m) and marked `highway=crossing` nodes on route ways (`crossing` of `marked`,
+junction within 30 m) and marked `highway=crossing` nodes on every corridor way (`crossing` of `marked`,
 `zebra`, `uncontrolled` or `traffic_signals`, or `crossing:markings` other than `no`). A crossing
-inside a junction cut moves to the junction edge. Missing lane tags fall back to class defaults.
+inside a junction cut, or within 15 m of a junction end, moves to the junction edge. Missing lane tags fall back to class defaults.
 Two-way roads with two or more lanes each way get a solid centre line, others a dashed one. Side
 roads of class `service` (driveways, parking aisles) are not stubbed. Every OSM map carries the
 attribution `© OpenStreetMap contributors, ODbL`; the data licence is in
@@ -195,7 +235,7 @@ traffic (10 agents per lane-km, `maxAgents` 12 and 14); `osm-pasteur` runs 30 pe
 2% buses. On `tutorial-02-nga-tu` the closed road (P.101) has no source and no agents.
 
 On `osm-pasteur` about half of the traffic stands at any moment, and that is the signals, not a
-jam: every signal runs 27 s green, 3 s yellow and 30 s red, and the blocks between signals are
+jam: every signal runs 25 s green, 3 s yellow and 32 s red, and the blocks between signals are
 61 to 109 m long, so a red holds a queue that fills much of its block. The signal on the 11 m link
 `w803279638-1` keeps its queue on `w803279638-2`, before the unsignalled junction between the two,
 so that junction stays clear; that queue is traffic standing on a lane with no signal of its own.
@@ -245,6 +285,7 @@ default road therefore meets that constraint without a fallback:
   khoản 2: before a turn, move to the lane nearest the turn).
 
 None of the extract's 17 traffic_signals nodes lies within 30 m of Pasteur × Nguyễn Du (nearest
-146 m) or Pasteur × Hàn Thuyên, so those junctions have no stop lines in the game. Way 678315474 is tagged `sidewalk=no`, so it has no
+146 m) or Pasteur × Hàn Thuyên. Nguyễn Du is signalised by override (see [Junctions](#junctions));
+Hàn Thuyên has no stop lines in the game. Way 678315474 is tagged `sidewalk=no`, so it has no
 pavement. The extract has no traffic signs, so the only placed sign is the R.420 at the start
 (see `overrides.yaml`); no speed-limit zone exists and the TT 38 defaults apply, to the player and to traffic.

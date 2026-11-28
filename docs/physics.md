@@ -161,6 +161,28 @@ Mass, gear ratios and final drive, torque, limiter, the reverse lockout speed, t
 force curve and the speed at which the steering lock halves (`steering.refSpeedMps`) live in
 `vehicles/car-sedan.js` and `vehicles/scooter.js`.
 
+## Scooter push-back
+
+A scooter has no reverse gear; `ControlInput.pushBack` (R, or the **Lùi** button, see
+[controls.md](controls.md#scooter-push-back)) is the rider pushing it back with the feet
+(`pushBackForce` and `feetDownBrake` in `rigs/two-wheel.js`, `pushBack` in `vehicles/scooter.js`,
+all `design`; a car has `pushBack: null` and ignores the input).
+
+- **Engage:** held, throttle at most `PUSH_BACK_MAX_THROTTLE` (0.02), both brakes at 0 and a
+  **signed** forward speed of at most `engageMaxForwardMps` (0.5 m/s). A gate on the speed
+  magnitude would cut the push off below its own cap.
+- **Push:** `forceN` 150 N on the rear wheel, about 0.8 m/s² on 180 kg, fading linearly to 0 at
+  `maxSpeedMps` 0.8 m/s backwards (about 3 km/h). No wheel gets the coast brake while it pushes,
+  and the frame gear reads `R`.
+- **Cancel:** the throttle or either brake ends the push at once, so a held brake never rolls the
+  bike back.
+- **Feet down:** once the push ends while the bike still rolls back no faster than
+  `holdMaxBackMps` (1.2 m/s) with the throttle released, both wheels get `holdBrake` (6) until it
+  stands still.
+- **Measured on the flat bench:** from rest, 1.68 m back in 3 s, peak 0.76 m/s; released at the
+  cap, it stops in 0.18 s and 0.07 m with no skid (the coast brake alone rolled it on for 7.5 s
+  and about 2.9 m). Backing on full lock frees a bike stopped head-on against a wall.
+
 ## Assists
 
 The Đơn giản preset ([controls.md](controls.md)) turns on three assists; none performs a scored

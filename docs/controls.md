@@ -16,6 +16,7 @@ applies from the next run. An empty or unknown stored value gives Đơn giản, 
 | Car gearbox | Automatic: the gear keys move the selector R ← N ← D, the ratios shift by themselves | Manual: the gear keys step through R, N and 1–5 |
 | Scooter brakes | The brake key applies both brakes (front plus rear, scaled by grip); Space still applies the rear alone, a key with no on-screen button, since the Phanh lever already applies both | Separate front (brake key) and rear (Space) brakes |
 | Indicator | Cancels itself after a signalled junction turn, once no junction lies ahead within the `turn-signal` rule's distance | Stays on until the same key is pressed again |
+| Scooter push-back | R or **Lùi** pushes a stopped scooter back with the feet | the same |
 
 `resolveControlPreset` (`src/game/control-presets.js`) turns a preset into the sim's
 `options.assists` and the input options. The auto-cancel reads its turn angle and distance from
@@ -60,7 +61,7 @@ them stays readable.
 | Pedals | Phanh chân, Ga, next to the horn | — |
 | Right end of the handlebar | — | Phanh trước over the Ga twist grip on Thực tế, Ga alone on Đơn giản |
 | Gear lever | Số + over Số −, with the gear on the knob between them; a plus/minus lever, not a P-R-N-D gate, so one lever serves both presets | — |
-| Right-hand console | hazard over Phanh tay | — |
+| Right-hand console | hazard over Phanh tay | **Lùi**, the push-back button, between the grip and the speed panel |
 | Speed panel | left of the stalk, with the gear and the rpm bar | right of the grip, no gear |
 | Top right | Góc nhìn, Tạm dừng | the same |
 
@@ -68,8 +69,9 @@ them stays readable.
   box of a notched 844 px phone). Every control is at
   least 56 px and overlaps nothing, and the speed panel has a fixed width, so a three-digit speed
   never grows it.
-- The narrowest HUD box that fits every control is 748 px for the car and 676 px for the scooter
-  on either preset: a 772 or 700 px wide screen with no safe-area insets. The anchor and its bounds are `place`
+- The narrowest HUD box that fits every control is 748 px for the car and 740 px for the scooter
+  on either preset (the browser test measures the row): a 772 or 764 px wide screen with no
+  safe-area insets. The anchor and its bounds are `place`
   in `src/ui/hud/hud.svelte`.
 - The scooter is an automatic ("Xe tay ga"), so its rear brake is the left hand lever, not a foot
   pedal, and it has no gear to show. On Đơn giản its one brake is the left hand lever, as on a
@@ -94,6 +96,17 @@ paused.
 Each button carries a badge with its key. The badges hide after a touch input and come back with
 the next key or mouse input.
 
+## Scooter push-back
+
+A scooter has no reverse gear: the rider pushes it back with the feet. Holding R or the **Lùi**
+button pushes it back, at most about 3 km/h, while the throttle and both brakes are released and
+the scooter is stopped or creeping forward; the throttle or a brake cancels it at once. While the
+push acts the frame gear reads R, the button lights and the speed panel shows **LÙI**. Releasing
+the key puts the feet down and the scooter stops within a fraction of a second. Steer on full lock
+while backing to get clear of a wall. The numbers are in [physics.md](physics.md#scooter-push-back).
+Backing over a lane line is no lane change; backing onto a pavement or an occupied crosswalk is
+still a breach.
+
 ## Keys
 
 The keys sit where the controls sit on screen, by relative position: the wheel and pedals under
@@ -117,11 +130,13 @@ and Page Down beside the arrows for the gears.
 | Xuống số (ô tô) | K, Page Down | press | gear lever |
 | Phanh tay (ô tô) | L | hold | right of the gear lever |
 | Phanh sau (xe máy) | Space | hold | left hand lever on Thực tế |
+| Lùi xe bằng chân (xe máy) | R | hold | **Lùi** button right of the grip |
 | Đổi góc nhìn | V | press | — |
 | Tạm dừng / tiếp tục | Esc, P | press | — |
 
 The handbrake and the rear brake are one control in the input: L or Space applies the handbrake
-on a car and the rear brake on a scooter, so a habit key still works. The scooter's gearbox has no
+on a car and the rear brake on a scooter, so a habit key still works. R does nothing on a car,
+which reverses through the R gear of its selector. The scooter's gearbox has no
 selector to drive, so the gear keys do nothing on it. No key needs Ctrl, Alt, Meta, Shift, Tab,
 Enter or a function key.
 

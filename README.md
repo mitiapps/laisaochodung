@@ -7,11 +7,13 @@ the cited text; a crash someone else caused is a notice, not a deduction.
 
 Controls follow a cabin, left to right: W/S or the arrows to drive and brake, A/D to steer, Q/E
 for the indicators, Z/X for the lights, F for the horn, H for the hazard lights, I/K (or Page
-Up/Down) for the car's gears, L for its handbrake, Space for the scooter's rear brake, V to switch
+Up/Down) for the car's gears, L for its handbrake, Space for the scooter's rear brake, R to push a
+stopped scooter back with the feet, V to switch
 between the chase and the first-person camera, Esc to pause. Every key is also an on-screen
 button. Two presets: Đơn giản (the default: automatic gears, one brake key for the scooter,
 indicators that cancel after a turn) and Thực tế (manual gears, separate brakes); the preset never
-changes the score. See [docs/controls.md](docs/controls.md).
+changes the score. See [docs/controls.md](docs/controls.md). Besides the scored mode (Chấm điểm),
+Lái tự do drives the same maps with no route, time limit or score; breaches still show.
 
 Plain JavaScript with JSDoc, Svelte 5, Vite, Tailwind CSS 4, Three.js and Rapier. A static site,
 with no backend, on Cloudflare Pages and GitHub Pages.

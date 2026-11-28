@@ -46,6 +46,23 @@ rules JSON (rules + clauses + collisionPolicy) ─► scorer
   hands each run's renderer the mode before its first frame; `setCameraMode` redraws the last
   frame so a switch shows while paused. It never reaches a frame, the scorer, the HUD state or the
   replay.
+- **Run modes.** `StartOptions.mode` (`RunMode`, `src/contracts/hud.js`) is `scored` (Chấm
+  điểm, the default) or `free` (Lái tự do), fixed for a run and carried in the play hash
+  (`mode=free`; any other value means scored). A free run is a run option, not a map change:
+  `MapRoute` stays required, the session starts the sim with `SimOptions.route: 'off'`, so
+  `Frame.route` and `HudState.nav` are null and no checkpoint, finish or timeout happens, and it
+  creates the scorer with `endOnPedestrianHit: false`, so only quitting ends the run. The scorer
+  runs unchanged and breaches still show; the HUD shows `HudState.breachCount` (distinct breach
+  episodes, escalations counted once) as `N lỗi` instead of the score, toasts and the result list
+  leave out the score deduction, and the result screen reads "Kết thúc lái tự do" with no score
+  or licence line. A scooter fall, or an ego more than 60 m outside the lane polygons' bounding
+  box, resets to the nearest lane centreline point instead of a checkpoint. Dev builds take replay
+  checkpoints in every free run, so an endless run never keeps every frame.
+- **Junction data.** A signal's `pos` is its near-side post; far-side heads are
+  `Signal.repeaters` (`SignalHead`: a post or a mast arm) of the same signal, so frames, stop lines
+  and crosswalks stay keyed by one signal id. `GameMap.laneArrows` carries the painted turn arrows
+  and `Crosswalk.walkSignalId` the cross-axis signal that times a crosswalk's pedestrian heads.
+  How the map build fills them is in [maps.md](maps.md#junctions).
 - **Chunk budgets.** The production build fails when a chunk passes its budget (`chunkBudget` in
   `vite.config.js`): 500 kB of minified code for every chunk, 900 kB for `render` (three.js and
   the scene code) and 4600 kB for `rapier` (the compat build, wasm inlined). Both large chunks

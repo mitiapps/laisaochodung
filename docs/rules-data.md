@@ -189,6 +189,12 @@ and `gapTimeS` times the follower's speed (the player's for a vehicle ahead, the
 for one behind). The fixed floor is `gapMotorbikeMinM` (2 m, `design`) for a motorbike, so a
 merge into dense motorbike traffic stays possible, and `gapAheadM` or `gapBehindM` for a car.
 
+A lane line crossed while the player's signed speed is at or below `minSignedSpeedMps` (0,
+`design`) is no lane change at all: no tier fires, so backing out on full lock, with the scooter's
+push-back or a car's R gear, is not punished for the line. Driving forward across the line
+afterwards is judged as usual. Backing onto a pavement or an occupied crosswalk is still a breach:
+those rules gate on the speed magnitude.
+
 Danger: the crash rule has two tiers. A light contact (an NPC car or a static object or kerb
 below `accidentRelSpeed`) is danger 3; a pedestrian, an accident, a static or kerb hit at or above
 `accidentRelSpeed`, and a fall are danger 5. A light contact followed by a heavy one in the same
