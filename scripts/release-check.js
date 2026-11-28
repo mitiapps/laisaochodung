@@ -1,6 +1,7 @@
 /**
- * Release gate, run by `npm run deploy` (its `predeploy`) or by hand after `npm run build`. It is
- * not part of the CI build or test job: a failing gate blocks a deploy, never the build.
+ * Release gate, run by `npm run build` after the data build and before the Vite bundle, and by hand
+ * with `npm run release:check`. A failing gate fails the build, and with it CI, the e2e preview
+ * server and any deploy.
  *
  * It fails while any of these holds:
  * - the built rules bundle has an unverified clause, speed default or sign meaning, or a sign
