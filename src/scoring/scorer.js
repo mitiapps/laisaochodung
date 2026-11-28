@@ -1,5 +1,5 @@
 /**
- * The pure scorer: `createScorer(bundle, map, vehicle)` gives `{initial, step, report}`, and
+ * The pure scorer: `createScorer(bundle, map, vehicle, options)` gives `{initial, step, report}`, and
  * `scoreRun` folds `step` over recorded frames, so live play and replay give identical reports.
  *
  * Per step:
@@ -33,8 +33,10 @@
  * 6. Only the charged contacts reach the collision detector. They take as cause the worst
  *    contributing episode active within `crashCauseWindowS` (not across a reset, nor across a fall
  *    before this step), or the rear-end cause of the fault table, and resolve their clause through
- *    the collision policy. A pedestrian hit ends the run with score 0.
- * 7. `finish`, `timeout` and a pedestrian crash end the run; later frames are ignored.
+ *    the collision policy. A pedestrian hit scores 0 and ends the run, unless the scorer was created
+ *    with `endOnPedestrianHit: false` (a free run): then the run goes on and the crash episode
+ *    closes like any other.
+ * 7. `finish`, `timeout` and a pedestrian crash that ends the run end it; later frames are ignored.
  */
 
 import { LICENCE_START_POINTS } from '../contracts/score.js';
@@ -191,9 +193,11 @@ function orderedRules(bundle, vehicle) {
  * @param {RulesBundle} bundle Validated rules bundle.
  * @param {GameMap} map Map.
  * @param {VehicleInfo} vehicleInfo Vehicle.
+ * @param {import('../contracts/index.js').ScorerOptions} [options] Run options.
  * @returns {Scorer} Scorer.
  */
-export function createScorer(bundle, map, vehicleInfo) {
+export function createScorer(bundle, map, vehicleInfo, options = {}) {
+  const endOnPedestrianHit = options.endOnPedestrianHit ?? true;
   const group = decreeGroupOf(vehicleInfo.legalClass);
   /** @type {ScorerEnv} */
   const env = {
@@ -419,7 +423,7 @@ export function createScorer(bundle, map, vehicleInfo) {
           breach = resolveCrash(env, a.rule, a.tierIndex, outcome, decision.cause, frame, meta, sides);
           if (outcome.kind === 'pedestrian') {
             pedestrianHit = true;
-            ended = 'crash';
+            if (endOnPedestrianHit) ended = 'crash';
           }
         } else {
           breach = resolveBreach(env, a.rule, a.tierIndex, frame, meta, a.basisVerified);
@@ -671,11 +675,12 @@ function buildReport(state, options, accidentClauses) {
  * @param {GameMap} map Map.
  * @param {VehicleInfo} vehicleInfo Vehicle.
  * @param {Frame[]} frames Frames in tick order.
- * @param {import('../contracts/index.js').ScoreRunOptions} options Quit flag and an optional start state.
+ * @param {import('../contracts/index.js').ScoreRunOptions} options Quit flag, an optional start
+ *   state and whether a pedestrian hit ends the run.
  * @returns {ScoreReport} Report.
  */
 export function scoreRun(bundle, map, vehicleInfo, frames, options) {
-  const scorer = createScorer(bundle, map, vehicleInfo);
+  const scorer = createScorer(bundle, map, vehicleInfo, { endOnPedestrianHit: options.endOnPedestrianHit ?? true });
   let state = options.initialState ?? scorer.initial;
   for (const frame of frames) state = scorer.step(state, frame).state;
   return scorer.report(state, options);

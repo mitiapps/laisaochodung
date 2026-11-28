@@ -2,7 +2,7 @@
 // fire, no-fire, boundaries, and the clean cases that lawful driving must pass.
 
 import { describe, expect, it } from 'vitest';
-import { ACTOR_LIGHTS, NO_VIOLATIONS } from '../../contracts/index.js';
+import { ACTOR_LIGHTS, DT, NO_VIOLATIONS } from '../../contracts/index.js';
 import { clone, junctionMap, mapVariant, minimalMap, realBundle, scoreScript, summary } from '../../../scripts/rules/lib/test-support.js';
 
 /** @typedef {import('../../contracts/index.js').GameMap} GameMap */
@@ -471,6 +471,116 @@ describe('junction-turn', () => {
     expect(await run({ map, vehicleId: 'scooter', path, speed, durationS: 43, controls: [{ t: 0, indicators: 'left' }] })).toEqual([
       'banned-turn:1:D7.2.k',
     ]);
+  });
+});
+
+describe('reversing', () => {
+  // Backing at the push-back cap on full lock. Positive heading turns toward −z (the ego's left);
+  // a segment `[durationS, speed, radiusM]` turns at speed / radius (radius 0: straight).
+  const PUSH_MPS = -0.8;
+  const LOCK_RADIUS_M = { 'car-sedan': 5, scooter: 1.8 };
+  /**
+   * Ego poses of a scripted drive, one per tick, each tagged with its segment index.
+   * @param {{x: number, z: number, heading: number}} start Start pose.
+   * @param {[number, number, number][]} segments `[durationS, speed, radiusM]`.
+   * @returns {(import('../../testing/frame-builder.js').EgoTrackPoint & {segment: number})[]} Track.
+   */
+  function drive(start, segments) {
+    let { x, z, heading } = start;
+    /** @type {(import('../../testing/frame-builder.js').EgoTrackPoint & {segment: number})[]} */
+    const out = [];
+    segments.forEach(([durationS, speed, radiusM], segment) => {
+      for (let i = 0; i < Math.round(durationS / DT); i += 1) {
+        out.push({ pos: { x, z }, heading, speed, segment });
+        x += Math.cos(heading) * speed * DT;
+        z -= Math.sin(heading) * speed * DT;
+        if (radiusM) heading += (speed / radiusM) * DT;
+      }
+    });
+    return out;
+  }
+  /**
+   * The same poses with the speed of one segment made forward: the crossing the gate must ignore,
+   * judged as if driven, proves the scenario crosses at all.
+   * @param {ReturnType<typeof drive>} track Track.
+   * @param {number} segment Segment index.
+   * @returns {ReturnType<typeof drive>} Track.
+   */
+  const forwardIn = (track, segment) => track.map((p) => (p.segment === segment ? { ...p, speed: Math.abs(p.speed) } : p));
+  /**
+   * Scores a track with the route off.
+   * @param {GameMap} map Map.
+   * @param {'car-sedan' | 'scooter'} vehicleId Vehicle.
+   * @param {ReturnType<typeof drive>} egoTrack Track.
+   * @returns {Promise<string[]>} Summary.
+   */
+  const runTrack = (map, vehicleId, egoTrack) => run({ map, vehicleId, egoTrack, route: 'off' });
+  /** @type {('car-sedan' | 'scooter')[]} */
+  const VEHICLES = ['car-sedan', 'scooter'];
+
+  it('lets the ego back 3 m in its lane on a one-way road', async () => {
+    for (const vehicleId of VEHICLES) {
+      // rs is one-way northbound (heading π/2); backing moves the ego south, toward +z.
+      const track = drive({ x: 100, z: 20, heading: Math.PI / 2 }, [[0.5, 0, 0], [3 / -PUSH_MPS, PUSH_MPS, 0]]);
+      expect(await runTrack(quiet(), vehicleId, track)).toEqual([]);
+    }
+  });
+
+  // rw with two eastbound lanes split by the line z = 0; the ego starts in rw-e, 0.8 m from it.
+  const twoLanes = (/** @type {'dashed' | 'solid'} */ type) =>
+    quiet((m) => {
+      const rw = m.roads[0];
+      rw.lanes[1].dir = 'forward';
+      rw.lanes[1].centerline = [[0, -1.75], [96.5, -1.75]];
+      if (type === 'solid') {
+        rw.laneLines[0].type = 'solid';
+        rw.laneLines[0].crossable = 'none';
+      }
+    });
+  const lanes = {
+    'car-sedan': { dashed: 'lane-change:0:D6.2.a', solid: 'lane-change:0:D6.2.a' },
+    scooter: { dashed: 'lane-change:0:D7.1.e', solid: 'lane-change:0:D7.1.e' },
+  };
+
+  it('ignores a lane line crossed while backing on full lock, dashed or solid, with no indicator', async () => {
+    for (const vehicleId of VEHICLES) {
+      for (const type of /** @type {const} */ (['dashed', 'solid'])) {
+        const back = drive({ x: 50, z: 0.8, heading: 0 }, [[0.5, 0, 0], [3 / -PUSH_MPS, PUSH_MPS, LOCK_RADIUS_M[vehicleId]]]);
+        expect(back.at(-1)?.pos.z).toBeLessThan(0);
+        expect(await runTrack(twoLanes(type), vehicleId, back)).toEqual([]);
+        expect(await runTrack(twoLanes(type), vehicleId, forwardIn(back, 1))).toEqual([lanes[vehicleId][type]]);
+      }
+    }
+  });
+
+  it('still judges a forward crossing after the backing', async () => {
+    for (const vehicleId of VEHICLES) {
+      const radius = LOCK_RADIUS_M[vehicleId];
+      // Back across the line, then drive the same arc forward back across it, unsignalled.
+      const track = drive({ x: 50, z: 0.8, heading: 0 }, [[0.5, 0, 0], [3 / -PUSH_MPS, PUSH_MPS, radius], [3 / -PUSH_MPS, -PUSH_MPS, radius]]);
+      expect(await runTrack(twoLanes('dashed'), vehicleId, track)).toEqual([lanes[vehicleId].dashed]);
+    }
+  });
+
+  it('gives no turn breach for a heading swing while backing out of a junction', async () => {
+    // A scooter waits for sig-n's green, rides from rn-s 3 m into j1, then backs 3 m on full lock
+    // out of its west side, ending some 95° off its entry heading.
+    const track = drive({ x: 98.25, z: -12, heading: -Math.PI / 2 }, [
+      [31, 0, 0],
+      [11.5 / 3, 3, 0],
+      [0.5, 0, 0],
+      [3 / -PUSH_MPS, PUSH_MPS, -LOCK_RADIUS_M.scooter],
+    ]);
+    const unrestricted = quiet((m) => {
+      m.restrictions = [];
+    });
+    const allBanned = quiet((m) => {
+      m.restrictions[0].banned = ['left', 'right', 'uturn'];
+    });
+    expect(await runTrack(unrestricted, 'scooter', track)).toEqual([]);
+    expect(await runTrack(allBanned, 'scooter', track)).toEqual([]);
+    expect(await runTrack(unrestricted, 'scooter', forwardIn(track, 3))).toEqual(['turn-signal:0:D7.3.a']);
+    expect(await runTrack(allBanned, 'scooter', forwardIn(track, 3))).toEqual(['banned-turn:0:D7.3.a']);
   });
 });
 

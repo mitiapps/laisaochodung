@@ -1,14 +1,15 @@
 # A turn or U-turn that a restriction (P.123a, P.124a) bans from the approach lane. For a
 # motorbike a banned left or right turn and a turn without the indicator are the same clause
-# (7.3.a), so this rule wins over turn-signal there.
+# (7.3.a), so this rule wins over turn-signal there. minSignedSpeedMps 0 is a design value: an exit
+# made while backing (push-back or R gear) is no turn.
 id: banned-turn
 title: { vi: "Rẽ hoặc quay đầu nơi có biển cấm" }
 description: { vi: "Rẽ trái, rẽ phải hoặc quay đầu tại nút giao có biển cấm hướng đó từ làn đang đi." }
 vehicleClasses: [car, motorbike]
 detection:
   type: junction-turn
-  params: { mode: restriction, turnMinDeg: 45, uturnMinDeg: 135 }
-  paramBasis: { mode: legal, turnMinDeg: design, uturnMinDeg: design }
+  params: { mode: restriction, turnMinDeg: 45, uturnMinDeg: 135, minSignedSpeedMps: 0 }
+  paramBasis: { mode: legal, turnMinDeg: design, uturnMinDeg: design, minSignedSpeedMps: design }
 obligation:
   - sourceId: law36-2024
     article: Điều 11
