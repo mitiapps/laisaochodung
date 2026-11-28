@@ -6,9 +6,15 @@
  * A run: `start` loads the map, the rules bundle and Rapier, creates the sim, the scorer and the
  * view, takes the first step and publishes `ready`, then `running`. Each fixed step samples the
  * input, steps the sim and folds the scorer over the same frame the renderer draws. HUD states go
- * out at 15 Hz, and at once when a breach opens or escalates. The run ends on a `finish` or
+ * out at 15 Hz, and at once when a breach opens or escalates. A scored run ends on a `finish` or
  * `timeout` event, on `runEnded: 'crash'` from the scorer, or on `quit()`; the report then comes
  * from `scorer.report(state, {quit})`. A `fall` needs nothing here: the sim resets itself.
+ *
+ * Mode: each run applies a run mode (`scored` unless the start options say `free`; an unknown value
+ * is `scored`). A free run creates the sim with `route: 'off'` and the scorer with
+ * `endOnPedestrianHit: false`, and ends only on `quit()`: no finish, timeout or crash ends it. Its
+ * report is the scorer's usual quit report; the HUD state's `mode` tells the UI to show it as a
+ * free-drive summary. `restart()` repeats the mode.
  *
  * Controls: each run applies a control preset (`simple` unless the start options say `real`): the
  * sim assists and the input's brake mapping come from `resolveControlPreset`. The preset is fixed
@@ -21,8 +27,8 @@
  *
  * In dev builds every map is checked with `assertMap` and every frame with `assertFrame`, and frames
  * are kept for a replay check: at the end `scoreRun` over the kept frames, folded from the kept
- * scorer state, must equal the live report. Without traffic the whole run is kept. With traffic,
- * tumbling checkpoints every `REPLAY_CHECKPOINT_S` bound the memory: each checkpoint keeps a
+ * scorer state, must equal the live report. A scored run without traffic is kept whole. With
+ * traffic, and in every free run (which has no time limit), tumbling checkpoints every `REPLAY_CHECKPOINT_S` bound the memory: each checkpoint keeps a
  * reference to the live scorer state (plain immutable JSON) and drops the frames before the
  * previous checkpoint, so at most two intervals of frames and two states are held.
  */
@@ -53,6 +59,7 @@ import { createWreckLog } from './wreck-log.js';
 /** @typedef {import('./input.js').Input} Input */
 /** @typedef {import('./input.js').InputOptions} InputOptions */
 /** @typedef {import('../contracts/controls.js').ControlPreset} ControlPreset */
+/** @typedef {import('../contracts/hud.js').RunMode} RunMode */
 
 /** HUD publishing rate between breaches. */
 export const HUD_HZ = 15;
@@ -62,7 +69,7 @@ export const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const FRAME_TIME_SAMPLES = 600;
 /** Dev builds keep this many sim step times for `debugInfo().simStepMs`. */
 const SIM_STEP_SAMPLES = 600;
-/** Interval of the replay checkpoints on maps with traffic, in seconds of run time. */
+/** Interval of the replay checkpoints (runs with traffic, free runs), in seconds of run time. */
 export const REPLAY_CHECKPOINT_S = 10;
 /** The same interval in fixed steps. */
 const CHECKPOINT_TICKS = Math.round(REPLAY_CHECKPOINT_S / DT);
@@ -232,11 +239,12 @@ function meanAndP95(samples) {
  * @property {'map' | 'off'} traffic Traffic actually running (`off` on a map without traffic).
  * @property {number} runSeed Run seed.
  * @property {ControlPreset} controlPreset Control preset applied.
+ * @property {RunMode} mode Run mode applied.
  * @property {TrafficParams | null} trafficParams Traffic parameters while traffic runs.
  * @property {Frame[]} frames Kept frames (dev): every frame after the state `replayBase`.
  * @property {unknown} replayBase Scorer state the kept frames fold from (dev).
  * @property {{state: unknown, keepFrom: number} | null} checkpoint Newest checkpoint (dev, with
- *   traffic): the scorer state then and the index in `frames` of the first frame after it.
+ *   traffic or in a free run): the scorer state then and the index in `frames` of the first frame after it.
  * @property {boolean} endPending The last step ended the run.
  * @property {boolean} publishNow A breach is waiting to be published.
  * @property {number} lastHudMs Time of the last HUD publish.
@@ -295,7 +303,7 @@ export function createSession(deps) {
     r.lastHudMs = deps.now();
     r.publishNow = false;
     emit(
-      hudStateOf({ frame: r.curr, context: r.context, score, breaches: r.breaches, notices: r.notices, controlPreset: r.controlPreset, runStatus, report }),
+      hudStateOf({ frame: r.curr, context: r.context, score, breaches: r.breaches, notices: r.notices, controlPreset: r.controlPreset, mode: r.mode, runStatus, report }),
     );
   };
 
@@ -377,8 +385,9 @@ export function createSession(deps) {
       r.notices.push(...res.notices);
       r.publishNow = true;
     }
-    if (dev && r.traffic === 'map' && (frame.tick + 1) % CHECKPOINT_TICKS === 0) checkpoint(r);
-    const ended = res.runEnded === 'crash' || frame.events.some((e) => e.type === 'finish' || e.type === 'timeout');
+    if (dev && (r.traffic === 'map' || r.mode === 'free') && (frame.tick + 1) % CHECKPOINT_TICKS === 0) checkpoint(r);
+    // A free run ends only on quit().
+    const ended = r.mode === 'scored' && (res.runEnded === 'crash' || frame.events.some((e) => e.type === 'finish' || e.type === 'timeout'));
     if (ended) r.endPending = true;
     return !ended;
   };
@@ -397,7 +406,8 @@ export function createSession(deps) {
     const report = scorer.report(r.scorerState, { quit });
     if (dev && deps.scoreRun && r.map && r.bundle) {
       const windowed = r.replayBase !== scorer.initial;
-      const replay = deps.scoreRun(r.bundle, r.map, r.vehicle, r.frames, windowed ? { quit, initialState: r.replayBase } : { quit });
+      const free = r.mode === 'free' ? { endOnPedestrianHit: false } : {};
+      const replay = deps.scoreRun(r.bundle, r.map, r.vehicle, r.frames, windowed ? { quit, initialState: r.replayBase, ...free } : { quit, ...free });
       replayCheck = { frames: r.frames.length, equal: JSON.stringify(replay) === JSON.stringify(report), windowed };
       if (!replayCheck.equal) logError('Replay check failed: scoreRun over the kept frames differs from the live report', { replay, report });
     }
@@ -473,7 +483,7 @@ export function createSession(deps) {
   const api = {
     /**
      * Starts a run in the start options' control preset (`simple` by default; an unknown value
-     * is `simple` too). The session-level `traffic` and `seed` options win over the dev hash query.
+     * is `simple` too) and run mode (`scored` by default; an unknown value is `scored` too). The session-level `traffic` and `seed` options win over the dev hash query.
      * @param {string} mapId Map id.
      * @param {string} vehicleId Vehicle id.
      * @param {SessionStartOptions} [options] Start options.
@@ -494,6 +504,8 @@ export function createSession(deps) {
       const runSeed = options.seed ?? query.seed ?? randomSeed();
       const agentScale = options.agentScale ?? query.agentScale ?? 1;
       const tuning = tuningOf(vehicle.id);
+      /** @type {RunMode} */
+      const mode = options.mode === 'free' ? 'free' : 'scored';
       lastStart = { mapId, vehicleId, options };
       /** @type {Run} */
       const r = {
@@ -516,6 +528,7 @@ export function createSession(deps) {
         traffic: 'off',
         runSeed,
         controlPreset: 'simple',
+        mode,
         trafficParams: null,
         frames: [],
         replayBase: null,
@@ -556,8 +569,14 @@ export function createSession(deps) {
         const controls = resolveControlPreset(options.controlPreset, bundle, tuning);
         r.controlPreset = controls.preset;
         const traffic = params ? { traffic: /** @type {const} */ ('map'), runSeed, params } : { traffic: /** @type {const} */ ('off'), runSeed };
-        r.sim = deps.createSim(rapier, map, vehicle, { ...traffic, assists: controls.simAssists, ...(dev ? { now: deps.now } : {}) });
-        r.scorer = deps.createScorer(bundle, map, vehicle);
+        const free = mode === 'free';
+        r.sim = deps.createSim(rapier, map, vehicle, {
+          ...traffic,
+          assists: controls.simAssists,
+          ...(free ? { route: /** @type {const} */ ('off') } : {}),
+          ...(dev ? { now: deps.now } : {}),
+        });
+        r.scorer = free ? deps.createScorer(bundle, map, vehicle, { endOnPedestrianHit: false }) : deps.createScorer(bundle, map, vehicle);
         r.scorerState = r.scorer.initial;
         r.replayBase = r.scorer.initial;
         r.view = deps.createView(map, vehicle);

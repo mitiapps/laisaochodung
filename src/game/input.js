@@ -17,6 +17,9 @@
  *   rear brake on a motorbike, so each vehicle shows its own key and a habit key still works.
  * - A motorbike has no gear selector to drive: the gear keys send no `gearCmd` for it. The rule
  *   goes by legal class because every catalog motorbike is automatic (see `ControlAction`).
+ * - `pushBack` (R, or the on-screen Lùi button) is the mirror: it reaches the sim on a motorbike
+ *   only and stays false on a car, which reverses through its R gear. The sim decides when the push
+ *   acts (throttle and brakes released, not rolling forward).
  * - Throttle ramps 0 → 1 in `THROTTLE_RAMP_S`; steering ramps to full lock in `STEER_RAMP_S` and
  *   returns to centre in `STEER_RETURN_S`. Brakes are not ramped.
  */
@@ -215,6 +218,7 @@ export function createInput({ legalClass, surfaceGrip, target, visibility, onPau
       input.brakeRear = motorbike ? Math.max(lever ? 1 : 0, brake ? combinedRear : 0) : 0;
       input.handbrake = !motorbike && lever;
       input.horn = held('horn');
+      input.pushBack = motorbike && held('pushBack');
       input.gearCmd = edges.gearCmd;
       input.signalCmd = edges.signalCmd;
       input.lightsCmd = edges.cycle ? 'cycle' : held('flash') ? 'flash' : null;

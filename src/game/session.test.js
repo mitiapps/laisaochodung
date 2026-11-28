@@ -961,3 +961,105 @@ describe('session control presets', () => {
     expect(h.errors).toEqual([]);
   });
 });
+
+describe('session free mode', () => {
+  /**
+   * Scorer factory that records the arguments it was called with.
+   * @param {unknown[][]} calls Recorded argument lists.
+   * @returns {import('../contracts/index.js').CreateScorer} Scorer factory.
+   */
+  const spyScorer = (calls) => (...args) => {
+    calls.push(args);
+    return createScorer(args[0], args[1], args[2]);
+  };
+
+  it('creates the sim with the route off and the scorer without the pedestrian-hit end, and a scored run as before', async () => {
+    /** @type {Array<import('../contracts/index.js').SimOptions | undefined>} */
+    const simOptions = [];
+    /** @type {unknown[][]} */
+    const scorerCalls = [];
+    const kinematic = buildFrames({ map: MAP, vehicle: CAR, laneId: 'rw-e', startS: 5, durationS: 1, speed: 10 });
+    const h = harness({
+      createSim: (_r, _m, _v, o) => {
+        simOptions.push(o);
+        return replaySim(kinematic);
+      },
+      createScorer: spyScorer(scorerCalls),
+    });
+    await h.game.start('map-minimal', 'car-sedan', { mode: 'free' });
+    expect(simOptions[0]?.route).toBe('off');
+    expect(scorerCalls[0]).toHaveLength(4);
+    expect(scorerCalls[0][3]).toEqual({ endOnPedestrianHit: false });
+    expect(h.states.at(-1)?.mode).toBe('free');
+    h.game.restart();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(simOptions[1]?.route).toBe('off');
+    expect(h.states.at(-1)?.mode).toBe('free');
+
+    for (const options of [{}, { mode: /** @type {never} */ ('arcade') }]) {
+      await h.game.start('map-minimal', 'car-sedan', options);
+      expect(simOptions.at(-1)).not.toHaveProperty('route');
+      expect(scorerCalls.at(-1)).toHaveLength(3);
+      expect(h.states.at(-1)?.mode).toBe('scored');
+    }
+    h.game.quit();
+  });
+
+  it('does not end on a timeout or a crash, and quit gives the report with the free mode', async () => {
+    /** @type {import('../contracts/index.js').CreateScorer} */
+    const crashScorer = (b, m, v) => {
+      const real = createScorer(b, m, v);
+      return { ...real, step: (state, frame) => ({ ...real.step(state, frame), runEnded: 'crash' }) };
+    };
+    const h = harness({ createScorer: crashScorer });
+    await h.game.start('map-minimal', 'car-sedan', { mode: 'free' });
+    // The stub sim appends a timeout on its 60th frame and repeats the last frame after it.
+    for (let i = 0; i < 180; i += 1) h.frames.tick(1000 / 60);
+    expect(h.renders.length).toBeGreaterThan(120);
+    expect(h.states.at(-1)?.runStatus).toBe('running');
+    expect(h.states.some((s) => s.runStatus === 'finished')).toBe(false);
+    h.game.quit();
+    expect(h.states.at(-1)?.runStatus).toBe('finished');
+
+    // A route-off sim emits no timeout, so quitting gives the scorer's quit report.
+    const kinematic = buildFrames({ map: MAP, vehicle: CAR, laneId: 'rw-e', startS: 5, durationS: 1, speed: 10 });
+    const q = harness({
+      createSim: () => {
+        let i = 0;
+        return { step: () => kinematic[Math.min(i++, kinematic.length - 1)], reset() {}, dispose() {} };
+      },
+    });
+    await q.game.start('map-minimal', 'car-sedan', { mode: 'free' });
+    for (let i = 0; i < 120; i += 1) q.frames.tick(1000 / 60);
+    q.game.quit();
+    const end = q.states.at(-1);
+    expect(end?.runStatus).toBe('finished');
+    expect(end?.mode).toBe('free');
+    expect(end?.report?.endedBy).toBe('quit');
+    expect(end?.report?.finished).toBe(false);
+    expect(h.errors).toEqual([]);
+    expect(q.errors).toEqual([]);
+  });
+
+  it('takes replay checkpoints in a free run with traffic off, and replays without the pedestrian-hit end', { timeout: 120_000 }, async () => {
+    /** @type {Array<import('../contracts/index.js').ScoreRunOptions | undefined>} */
+    const replayOptions = [];
+    /** @type {import('../contracts/index.js').ScoreRun} */
+    const spyScoreRun = (b, m, v, f, o) => {
+      replayOptions.push(o);
+      return scoreRun(b, m, v, f, o);
+    };
+    const h = harness({ createSim, dev: true, assertFrame, assertMap, scoreRun: spyScoreRun });
+    await h.game.start('map-minimal', 'car-sedan', { mode: 'free' });
+    h.frames.tick(0);
+    for (let i = 0; i < 2 * CHECKPOINT_TICKS + 60; i += 1) h.frames.tick(1000 / 60);
+    const live = h.game.debugInfo();
+    expect(live.traffic).toBe('off');
+    expect(live.status).toBe('running');
+    expect(live.keptFrames).toBeLessThan(2 * CHECKPOINT_TICKS);
+    h.game.quit();
+    expect(h.game.debugInfo().replayCheck).toMatchObject({ equal: true, windowed: true });
+    expect(replayOptions[0]).toMatchObject({ quit: true, endOnPedestrianHit: false });
+    expect(h.errors).toEqual([]);
+  });
+});

@@ -38,29 +38,38 @@ describe('hudStateOf', () => {
     const base = /** @type {Frame} */ (frames[10]);
     const input = { ...base.ego.input, throttle: 0.7, brakeFront: 0.2, brakeRear: 0.1, steer: -0.4, handbrake: true };
     const frame = { ...base, ego: { ...base.ego, input } };
-    const state = hudStateOf({ frame, context, score: 9.5, breaches: [], controlPreset: 'simple', runStatus: 'running' });
+    const state = hudStateOf({ frame, context, score: 9.5, breaches: [], controlPreset: 'simple', mode: 'scored', runStatus: 'running' });
     expect(state.controls).toEqual({ throttle: 0.7, brakeFront: 0.2, brakeRear: 0.1, steer: -0.4, handbrake: true });
     expect(state.speedKmh).toBeCloseTo(54);
     expect(state.speedLimitVerified).toBe(false);
     expect(state.nav).toEqual({ distanceM: frame.route.distanceM, bearingRad: frame.route.bearingRad });
     expect(state.report).toBeUndefined();
     expect(state.controlPreset).toBe('simple');
-    expect(hudStateOf({ frame, context, score: 9.5, breaches: [], controlPreset: 'real', runStatus: 'running' }).controlPreset).toBe('real');
+    expect(state.mode).toBe('scored');
+    expect(hudStateOf({ frame, context, score: 9.5, breaches: [], controlPreset: 'real', mode: 'scored', runStatus: 'running' }).controlPreset).toBe('real');
+  });
+
+  it('gives a null nav and the free mode for a frame with no route', () => {
+    const frame = { .../** @type {Frame} */ (frames[10]), route: null };
+    const state = hudStateOf({ frame, context, score: 10, breaches: [], controlPreset: 'simple', mode: 'free', runStatus: 'running' });
+    expect(state.nav).toBeNull();
+    expect(state.mode).toBe('free');
+    expect(state.headingRad).toBe(frame.ego.heading);
   });
 
   it('resends only the most recent breaches', () => {
     const frame = /** @type {Frame} */ (frames[0]);
     const breaches = Array.from({ length: HUD_TOAST_WINDOW + 3 }, (_, i) => /** @type {import('../contracts/score.js').Breach} */ (/** @type {unknown} */ ({ episodeId: `e${i}` })));
-    const state = hudStateOf({ frame, context, score: 10, breaches, controlPreset: 'simple', runStatus: 'running' });
+    const state = hudStateOf({ frame, context, score: 10, breaches, controlPreset: 'simple', mode: 'scored', runStatus: 'running' });
     expect(state.toasts.map((b) => b.episodeId)).toEqual(breaches.slice(-HUD_TOAST_WINDOW).map((b) => b.episodeId));
   });
 
   it('shows two notices raised within one second, newest last, and a later breach does not clear them', () => {
     const notices = [notice(2), notice(2.6)];
-    const first = hudStateOf({ frame: frameAt(3), context, score: 10, breaches: [], notices, controlPreset: 'simple', runStatus: 'running' });
+    const first = hudStateOf({ frame: frameAt(3), context, score: 10, breaches: [], notices, controlPreset: 'simple', mode: 'scored', runStatus: 'running' });
     expect(first.notices.map((n) => n.t)).toEqual([2, 2.6]);
     const breaches = Array.from({ length: HUD_TOAST_WINDOW + 2 }, (_, i) => /** @type {import('../contracts/score.js').Breach} */ (/** @type {unknown} */ ({ episodeId: `e${i}` })));
-    const later = hudStateOf({ frame: frameAt(2 + HUD_NOTICE_S - 0.1), context, score: 9, breaches, notices, controlPreset: 'simple', runStatus: 'running' });
+    const later = hudStateOf({ frame: frameAt(2 + HUD_NOTICE_S - 0.1), context, score: 9, breaches, notices, controlPreset: 'simple', mode: 'scored', runStatus: 'running' });
     expect(later.notices.map((n) => n.t)).toEqual([2, 2.6]);
     expect(later.toasts).toHaveLength(HUD_TOAST_WINDOW);
   });
@@ -74,10 +83,10 @@ describe('hudStateOf', () => {
     // One notice at t = 1, four more in the last two seconds before its time is up.
     const end = 1 + HUD_NOTICE_S;
     const notices = [notice(1), notice(end - 2), notice(end - 1.8), notice(end - 1.6), notice(end - 1.4)];
-    const state = hudStateOf({ frame: frameAt(end), context, score: 10, breaches: [], notices, controlPreset: 'simple', runStatus: 'running' });
+    const state = hudStateOf({ frame: frameAt(end), context, score: 10, breaches: [], notices, controlPreset: 'simple', mode: 'scored', runStatus: 'running' });
     expect(state.notices.map((n) => n.t)).toEqual([end - 1.8, end - 1.6, end - 1.4]);
     expect(state.notices).toHaveLength(HUD_NOTICE_MAX);
-    expect(hudStateOf({ frame: frameAt(20), context, score: 10, breaches: [], notices, controlPreset: 'simple', runStatus: 'running' }).notices).toEqual([]);
-    expect(hudStateOf({ frame: frameAt(3), context, score: 10, breaches: [], controlPreset: 'simple', runStatus: 'running' }).notices).toEqual([]);
+    expect(hudStateOf({ frame: frameAt(20), context, score: 10, breaches: [], notices, controlPreset: 'simple', mode: 'scored', runStatus: 'running' }).notices).toEqual([]);
+    expect(hudStateOf({ frame: frameAt(3), context, score: 10, breaches: [], controlPreset: 'simple', mode: 'scored', runStatus: 'running' }).notices).toEqual([]);
   });
 });
