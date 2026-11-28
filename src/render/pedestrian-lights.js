@@ -1,23 +1,21 @@
 /**
  * Pedestrian signal heads at both ends of every crosswalk with a `walkSignalId` (QCVN 41:2024
  * 6.5.1, Kiểu 2 layout: red standing figure on top, green walking figure below). The head at
- * each end faces across the crosswalk, towards the pedestrians waiting at the other end. Each
- * post stands on the landing beyond its end, just outside the zebra on the side away from the
- * junction, stepped outwards until it clears every lane and junction surface.
+ * each end faces across the crosswalk, towards the pedestrians waiting at the other end.
  *
  * Lamp states come from `pedestrianSignalState` on the crosswalk's `walkSignalId` signal at the
  * frame time: walk lights the green figure, flashing blinks it, stop lights the red figure. The
- * heads are visual only.
+ * heads are visual only. Post placement is `src/world/pedestrian-posts.js`, shared with the map
+ * build, which keeps scenery off the posts.
  *
  * Posts and housings are one merged mesh; every figure lives in one merged geometry whose vertex
  * colours change per update, so all heads cost two draw calls.
  */
 
 import { BufferGeometry, CanvasTexture, Float32BufferAttribute, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, SRGBColorSpace } from 'three';
-import { headingOf, headingVector, leftVector, pointInPolygon, polygonCentroid } from '../geometry/index.js';
-import { pedestrianSignalState } from '../world/index.js';
+import { headingOf } from '../geometry/index.js';
+import { pedestrianPostPlacements, pedestrianSignalState } from '../world/index.js';
 import { HAS_DOM } from './assets.js';
-import { nearestLaneHeading } from './layout.js';
 import { facingYaw } from './math.js';
 import { TriangleSoup, localToWorld } from './triangle-soup.js';
 
@@ -33,13 +31,6 @@ export const PEDESTRIAN_BLINK_HZ = 1;
 export const PEDESTRIAN_LAMP_Y_M = 2.2;
 /** Lamp cell size: each figure is drawn in a square of this side. */
 export const PEDESTRIAN_LAMP_M = 0.26;
-/** First distance of a post beyond the crosswalk end, across the road (design). */
-export const POST_OUT_M = 0.6;
-/** Distance of a post outside the zebra's side edge, along the road (design). */
-export const POST_SIDE_M = 0.3;
-/** Outward step and most extra distance tried when a post lands on a lane or junction. */
-const POST_STEP_M = 0.25;
-const POST_MAX_EXTRA_M = 3;
 /** Housing size: width, height, depth. */
 const HOUSING = /** @type {const} */ ([0.34, PEDESTRIAN_LAMP_M * 2 + 0.2, 0.2]);
 /** Figure atlas cells: 0 standing, 1 walking. */
@@ -64,83 +55,26 @@ const FIGURE_RGB = Object.freeze({
  */
 
 /**
- * Whether a ground point lies on a lane or junction surface.
- * @param {GameMap} map Map.
- * @param {Vec2} p Point.
- * @returns {boolean} On the carriageway.
- */
-function onCarriageway(map, p) {
-  for (const road of map.roads) for (const lane of road.lanes) if (pointInPolygon(p, lane.polygon)) return true;
-  return map.junctions.some((j) => pointInPolygon(p, j.polygon));
-}
-
-/**
- * Every pedestrian head to draw: two per crosswalk with a `walkSignalId` whose signal exists, in
- * map order, the end on the crosswalk's right (seen along the traffic) first. Crosswalks without a
- * `walkSignalId`, or whose traffic heading is unknown, get none.
+ * Every pedestrian head to draw: one on each post of `pedestrianPostPlacements`, in its order. A
+ * post the placement dropped for standing on the carriageway gets no head; the map build logs it.
  * @param {GameMap} map Map.
  * @returns {PedestrianHeadPlacement[]} Heads.
  */
 export function pedestrianHeadPlacements(map) {
   const signals = new Map(map.signals.map((s) => [s.id, s]));
-  /** @type {PedestrianHeadPlacement[]} */
-  const out = [];
-  for (const cw of map.crosswalks) {
-    const walkSignal = cw.walkSignalId ? signals.get(cw.walkSignalId) : undefined;
-    if (!walkSignal) continue;
-    const ring = /** @type {Vec2[]} */ (cw.polygon);
-    const heading = nearestLaneHeading(map, polygonCentroid(ring));
-    if (heading === null) continue;
-    // u along the traffic, v across it (the walking direction), as the zebra stripes are laid.
-    const f = headingVector(heading);
-    const l = leftVector(heading);
-    const us = ring.map((p) => p[0] * f[0] + p[1] * f[1]);
-    const vs = ring.map((p) => p[0] * l[0] + p[1] * l[1]);
-    const [uMin, uMax, vMin, vMax] = [Math.min(...us), Math.max(...us), Math.min(...vs), Math.max(...vs)];
-    const uMid = (uMin + uMax) / 2;
-    // The post stands on the side of the zebra away from the nearest junction, clear of the
-    // turning traffic; with no junction, on the side the traffic comes from.
-    const centre = polygonCentroid(ring);
-    let side = -1;
-    let best = Infinity;
-    for (const j of map.junctions) {
-      const c = polygonCentroid(/** @type {Vec2[]} */ (j.polygon));
-      const d = Math.hypot(c[0] - centre[0], c[1] - centre[1]);
-      if (d < best) {
-        best = d;
-        side = (centre[0] - c[0]) * f[0] + (centre[1] - c[1]) * f[1] >= 0 ? 1 : -1;
-      }
-    }
-    const uPost = side > 0 ? uMax + POST_SIDE_M : uMin - POST_SIDE_M;
-    /**
-     * @param {number} u Along.
-     * @param {number} v Across.
-     * @returns {Vec2} World point.
-     */
-    const toWorld = (u, v) => [u * f[0] + v * l[0], u * f[1] + v * l[1]];
-    for (const [end, other, out_] of /** @type {const} */ ([
-      [vMin, vMax, -1],
-      [vMax, vMin, 1],
-    ])) {
-      let extra = 0;
-      let p = toWorld(uPost, end + out_ * POST_OUT_M);
-      while (onCarriageway(map, p) && extra < POST_MAX_EXTRA_M) {
-        extra += POST_STEP_M;
-        p = toWorld(uPost, end + out_ * (POST_OUT_M + extra));
-      }
-      const faces = toWorld(uMid, other);
-      out.push({
-        crosswalkId: cw.id,
-        walkSignal,
-        pos: { x: p[0], z: p[1] },
-        // A face turned by `facingYaw(h)` looks against travel heading `h`, so `h` runs from the
-        // facing point to the post.
-        yaw: facingYaw(headingOf(p[0] - faces[0], p[1] - faces[1])),
-        faces: { x: faces[0], z: faces[1] },
-      });
-    }
-  }
-  return out;
+  return pedestrianPostPlacements(map).posts.map((post) => {
+    const walkSignal = signals.get(post.walkSignalId);
+    if (!walkSignal) throw new Error(`Pedestrian post at ${post.crosswalkId} names missing signal ${post.walkSignalId}`);
+    return {
+      crosswalkId: post.crosswalkId,
+      walkSignal,
+      pos: post.pos,
+      // A face turned by `facingYaw(h)` looks against travel heading `h`, so `h` runs from the
+      // facing point to the post.
+      yaw: facingYaw(headingOf(post.pos.x - post.faces.x, post.pos.z - post.faces.z)),
+      faces: post.faces,
+    };
+  });
 }
 
 /**

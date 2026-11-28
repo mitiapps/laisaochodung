@@ -280,7 +280,7 @@ export function addScenery(map, spec, source) {
     notes.push(`buildings: ${generated.rows.length} shophouse rows generated, ${forecourts.length} with a forecourt`);
   }
 
-  const set = new PropSet(sides, mapBlockers(map));
+  const set = new PropSet(sides, mapBlockers(map, notes));
   placePropList(set, specs, source.file);
   if (source.osm && toXZ) notes.push(...importOsmProps(source.osm.raw, toXZ, topo, set));
   fillForecourts(set, map.id, forecourts);

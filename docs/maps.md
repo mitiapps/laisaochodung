@@ -95,9 +95,11 @@ and render constants tagged "2019 text = 2026 draft"; thresholds the standard do
   heads (flashing for its last 5 s).
 - **Pedestrian heads (6.5.1).** Each crosswalk with a `walkSignalId` gets a head at both ends
   (`src/render/pedestrian-lights.js`), red standing figure over green walking figure (Kiểu 2),
-  green lamp 2.2 m up, facing across the crosswalk to the far end. Its post stands 0.6 m beyond
-  the end and 0.3 m outside the zebra on the side away from the junction, stepped outwards until
-  it is off every lane and junction. Walk lights the green figure, flashing blinks it at 1 Hz,
+  green lamp 2.2 m up, facing across the crosswalk to the far end. Its post
+  (`src/world/pedestrian-posts.js`) stands 0.6 m beyond the end and 0.3 m outside the zebra on the
+  side away from the junction, stepped outwards until it is off every lane and junction; a post
+  still on the carriageway 3 m further out is dropped and logged by the build. Scenery keeps clear
+  of every post, as of sign and signal posts. Walk lights the green figure, flashing blinks it at 1 Hz,
   stop lights the red one. The heads are visual only and cost two draw calls in all.
 - **Stop line.** 30 cm wide, 2.0 m before the junction's crosswalk on that approach (G2.1:
   1.5–3.0 m), which takes the approach's signal; 1 m before the road end where there is none. On

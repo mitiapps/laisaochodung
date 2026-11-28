@@ -5,6 +5,7 @@
 
 export { PEDESTRIAN_FLASH_S, pedestrianSignalState, signalState, trafficLightStates } from './signals.js';
 export { clockAt } from './clock.js';
+export { POST_MAX_EXTRA_M, POST_OUT_M, POST_SIDE_M, POST_STEP_M, pedestrianPostPlacements } from './pedestrian-posts.js';
 export {
   ACTOR_DECEL_MPS2,
   HOLD_MARGIN_M,

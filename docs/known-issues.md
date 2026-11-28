@@ -220,6 +220,9 @@ says what happens and where.
   cross road's half width plus 1 m, with no corner radii, so an OSM crossing within 15 m of a
   junction end is drawn at the junction edge, up to about 13 m nearer the junction than in OSM.
   Crossings farther out stay where surveyed and have no stop line ([maps.md](maps.md#junctions)).
+- **Four pedestrian signal posts on `osm-pasteur` stand on bare ground.** The posts at crosswalks
+  `cw-n14118646229` and `cw-n7502330663` are off the carriageway but on no pavement polygon, since
+  the source has no sidewalk there.
 - **Driving into a scripted actor rolls the player back slowly.** A car that drives at about
   60 km/h into a parked scripted car leaves the contact backwards at about 0.3 m/s, from Rapier's
   rigid contact against an immovable body (the chassis pitch and suspension unwind). Contacts

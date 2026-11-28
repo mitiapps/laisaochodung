@@ -19,6 +19,7 @@
 import { footprint, polygonsIntersect, projectOntoPolyline, polylineLength } from '../../../src/geometry/index.js';
 import { PROP_KINDS } from '../../../src/contracts/map.js';
 import { createStream, hash32, hashString, range, uniform } from '../../../src/world/random.js';
+import { pedestrianPostPlacements } from '../../../src/world/pedestrian-posts.js';
 import { carriageway, locateOnWay } from './graph.js';
 import { LANE_WIDTH_M, growPolygon } from './lanes.js';
 import { pointOnRoad } from './elements.js';
@@ -204,12 +205,15 @@ export class Blockers {
 }
 
 /**
- * Lanes, junctions, crosswalk landings and posts of a map: what no prop and no building may
- * touch (buildings use only the lanes and junctions).
+ * Lanes, junctions, crosswalk landings and posts of a map (sign, signal, repeater and pedestrian
+ * signal posts): what no prop and no building may touch (buildings use only the lanes and
+ * junctions).
  * @param {GameMap} map Compiled map.
+ * @param {string[]} [notes] Receives a note per pedestrian post dropped for standing on the
+ *   carriageway.
  * @returns {Blockers} Blockers.
  */
-export function mapBlockers(map) {
+export function mapBlockers(map, notes = []) {
   const out = new Blockers();
   for (const road of map.roads) for (const lane of road.lanes) out.add(lane.polygon, `lane ${lane.id}`);
   for (const j of map.junctions) out.add(j.polygon, `junction ${j.id}`);
@@ -220,6 +224,9 @@ export function mapBlockers(map) {
       out.add(footprint(h.mastPos ?? h.pos, s.heading, POST_CLEAR_M, POST_CLEAR_M), `repeater post of ${s.id}`);
     }
   }
+  const pedestrian = pedestrianPostPlacements(map);
+  for (const p of pedestrian.posts) out.add(footprint(p.pos, 0, POST_CLEAR_M, POST_CLEAR_M), `pedestrian post at ${p.crosswalkId}`);
+  notes.push(...pedestrian.dropped);
   for (const o of map.obstacles) out.add(o.footprint, `obstacle ${o.id}`);
   return out;
 }
