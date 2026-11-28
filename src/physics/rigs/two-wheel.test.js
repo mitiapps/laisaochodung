@@ -7,7 +7,7 @@ import { brakeToStop, createBench, driveCircle } from '../bench.js';
 import { GROUP, interactionGroups } from '../collision-groups.js';
 import { carSedan } from '../vehicles/car-sedan.js';
 import { scooter } from '../vehicles/scooter.js';
-import { feetDownBrake, pushBackForce, twoWheelCommands } from './two-wheel.js';
+import { feetDownArmed, feetDownBrake, pushBackForce, twoWheelCommands } from './two-wheel.js';
 
 beforeAll(async () => {
   await RAPIER.init();
@@ -47,19 +47,31 @@ describe('pushBackForce', () => {
 
   it('holds a slowly backing bike with the feet once the push stops, and only then', () => {
     const { holdBrake, holdMaxBackMps } = scooter.pushBack;
-    expect(feetDownBrake(spec, neutralInput(), -0.5)).toBe(holdBrake);
-    expect(feetDownBrake(spec, neutralInput(), -holdMaxBackMps)).toBe(holdBrake);
-    expect(feetDownBrake(spec, neutralInput(), -holdMaxBackMps - 0.01)).toBe(0);
-    expect(feetDownBrake(spec, neutralInput(), 0)).toBe(0);
-    expect(feetDownBrake(spec, neutralInput(), 0.5)).toBe(0);
-    expect(feetDownBrake(spec, held, -0.5)).toBe(0);
-    expect(feetDownBrake(spec, { ...neutralInput(), throttle: 0.3 }, -0.5)).toBe(0);
-    expect(feetDownBrake(carSedan.pushBack, neutralInput(), -0.5)).toBe(0);
+    expect(feetDownBrake(spec, neutralInput(), -0.5, true)).toBe(holdBrake);
+    expect(feetDownBrake(spec, neutralInput(), -holdMaxBackMps, true)).toBe(holdBrake);
+    expect(feetDownBrake(spec, neutralInput(), -holdMaxBackMps - 0.01, true)).toBe(0);
+    expect(feetDownBrake(spec, neutralInput(), 0, true)).toBe(0);
+    expect(feetDownBrake(spec, neutralInput(), 0.5, true)).toBe(0);
+    expect(feetDownBrake(spec, held, -0.5, true)).toBe(0);
+    expect(feetDownBrake(spec, { ...neutralInput(), throttle: 0.3 }, -0.5, true)).toBe(0);
+    expect(feetDownBrake(carSedan.pushBack, neutralInput(), -0.5, true)).toBe(0);
+    // No push before the backward roll: no hold.
+    expect(feetDownBrake(spec, neutralInput(), -0.5, false)).toBe(0);
     const c = twoWheelCommands(scooter, neutralInput(), 18, 0, 0, holdBrake);
     expect(c.map((w) => w.brake)).toEqual([holdBrake, holdBrake]);
     expect(c.map((w) => w.engine)).toEqual([0, 0]);
     const lever = twoWheelCommands(scooter, { ...neutralInput(), brakeFront: 1 }, 0, 0, 0, holdBrake);
     expect(lever[0].brake).toBe(scooter.brakes.frontCap);
+  });
+
+  it('arms the feet while the push acts and disarms them once the bike stops or on throttle', () => {
+    const idle = neutralInput();
+    expect(feetDownArmed(false, true, held, 0)).toBe(true);
+    expect(feetDownArmed(true, false, idle, -0.5)).toBe(true);
+    expect(feetDownArmed(false, false, idle, -0.5)).toBe(false);
+    expect(feetDownArmed(true, false, idle, 0)).toBe(false);
+    expect(feetDownArmed(true, false, idle, 0.1)).toBe(false);
+    expect(feetDownArmed(true, false, { ...idle, throttle: 0.3 }, -0.5)).toBe(false);
   });
 
   it('drives the rear wheel backwards and lifts the coast brake from both wheels while pushing', () => {
@@ -113,6 +125,15 @@ describe('scooter push-back on the bench', () => {
     // The hold never drives the bike forward or skids a wheel.
     expect(Math.max(...after.map((s) => s.speed))).toBeLessThan(0.02);
     expect(after.some((s) => s.wheels.some((w) => w.skid > 0))).toBe(false);
+    bench.dispose();
+  });
+
+  it('leaves a scooter rolling back with no push before it to the coast brake alone', () => {
+    // Bounced back by a contact, say: no push acted, so the feet stay up.
+    const bench = createBench(RAPIER, scooter);
+    bench.launch(-0.8);
+    const r = hold(bench, 0.5, {});
+    expect(r[r.length - 1].speed).toBeLessThan(-0.4);
     bench.dispose();
   });
 

@@ -11,7 +11,7 @@ import { autoShiftRatio, driveForce, initialGear, shiftGear } from './gearbox.js
 import { stepFall } from './fall.js';
 import { isotropicFrictionSlip, wheelSkids } from './skid.js';
 import { fourWheelCommands } from './rigs/four-wheel.js';
-import { configureTwoWheelBody, feetDownBrake, pushBackForce, twoWheelCommands } from './rigs/two-wheel.js';
+import { configureTwoWheelBody, feetDownArmed, feetDownBrake, pushBackForce, twoWheelCommands } from './rigs/two-wheel.js';
 
 /** @typedef {typeof import('@dimforge/rapier3d-compat').default} Rapier */
 /** @typedef {import('@dimforge/rapier3d-compat').World} World */
@@ -162,6 +162,8 @@ export function createVehicle(R, world, tuning, surfaceGrip, pos, heading, optio
   let fell = false;
   // The rider pushes the bike backwards this step; the readout then shows gear R.
   let pushing = false;
+  // A push acted and the bike has not stopped since: the feet may hold it (`feetDownArmed`).
+  let feetArmed = false;
   /** @type {number[]} */
   let prevRotation = tuning.wheels.map(() => 0);
   /** @type {number[]} */
@@ -199,6 +201,7 @@ export function createVehicle(R, world, tuning, surfaceGrip, pos, heading, optio
       engaged = 1;
       fallHeldS = -1;
       pushing = false;
+      feetArmed = false;
       spin = spin.map(() => 0);
       skids = skids.map(() => false);
       tuning.wheels.forEach((_, i) => {
@@ -234,8 +237,9 @@ export function createVehicle(R, world, tuning, surfaceGrip, pos, heading, optio
       rpm = drive.rpm;
       const push = pushBackForce(tuning.pushBack, input, speed);
       pushing = push.acting;
+      feetArmed = feetDownArmed(feetArmed, push.acting, input, speed);
       const wheelCommands = twoWheel
-        ? twoWheelCommands(tuning, input, drive.forceN, steerAngle, push.forceN, feetDownBrake(tuning.pushBack, input, speed))
+        ? twoWheelCommands(tuning, input, drive.forceN, steerAngle, push.forceN, feetDownBrake(tuning.pushBack, input, speed, feetArmed))
         : fourWheelCommands(tuning, input, drive.forceN, steerAngle);
       wheelCommands.forEach((c, i) => {
         controller.setWheelEngineForce(i, c.engine);

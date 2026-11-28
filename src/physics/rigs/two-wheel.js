@@ -8,7 +8,9 @@
  * A stopped bike has no reverse gear: the rider pushes it backwards with the feet while
  * `pushBack` is held (`pushBackForce`). The push drives the rear wheel backwards and lifts the
  * coast brake from both wheels; the throttle or either brake cancels it at once. When the push
- * stops while the bike still rolls back slowly, the feet go down and hold it (`feetDownBrake`).
+ * stops while the bike still rolls back slowly, the feet go down and hold it (`feetDownBrake`)
+ * until it stands still. A bike rolling back with no push before it, such as one bounced back by
+ * a contact, gets only the coast brake.
  */
 
 /** @typedef {import('../tuning.js').VehicleTuning} VehicleTuning */
@@ -42,15 +44,32 @@ export function pushBackForce(spec, input, speedMps) {
 }
 
 /**
+ * Whether the feet stay ready to hold the bike after a push: set while the push acts, kept while
+ * the bike rolls back with the throttle released, cleared once it stands still or rolls forward,
+ * or on throttle.
+ * @param {boolean} armed Previous value; false at spawn and after a placement.
+ * @param {boolean} pushActing The push acts this step.
+ * @param {ControlInput} input Sanitised input.
+ * @param {number} speedMps Signed forward speed.
+ * @returns {boolean} Armed this step.
+ */
+export function feetDownArmed(armed, pushActing, input, speedMps) {
+  if (pushActing) return true;
+  return armed && speedMps < 0 && input.throttle <= PUSH_BACK_MAX_THROTTLE;
+}
+
+/**
  * The rider's feet holding a slowly backing bike once the push stops: a released `pushBack` key
  * stops the bike at once instead of letting the coast brake roll it on for metres.
  * @param {PushBackSpec | null} spec Push-back tuning; null (a car) never holds.
  * @param {ControlInput} input Sanitised input.
  * @param {number} speedMps Signed forward speed.
+ * @param {boolean} armed `feetDownArmed` this step: a push acted and the bike has not stopped
+ *   since.
  * @returns {number} Brake for each wheel, 0 when the feet do not hold.
  */
-export function feetDownBrake(spec, input, speedMps) {
-  if (spec === null || pushBackForce(spec, input, speedMps).acting) return 0;
+export function feetDownBrake(spec, input, speedMps, armed) {
+  if (spec === null || !armed || pushBackForce(spec, input, speedMps).acting) return 0;
   if (input.throttle > PUSH_BACK_MAX_THROTTLE) return 0;
   return speedMps < 0 && speedMps >= -spec.holdMaxBackMps ? spec.holdBrake : 0;
 }

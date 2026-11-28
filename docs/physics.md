@@ -178,7 +178,8 @@ all `design`; a car has `pushBack: null` and ignores the input).
   bike back.
 - **Feet down:** once the push ends while the bike still rolls back no faster than
   `holdMaxBackMps` (1.2 m/s) with the throttle released, both wheels get `holdBrake` (6) until it
-  stands still.
+  stands still (`feetDownArmed`). A backward roll with no push before it, such as a bounce off a
+  contact, gets only the coast brake, as before push-back existed.
 - **Measured on the flat bench:** from rest, 1.68 m back in 3 s, peak 0.76 m/s; released at the
   cap, it stops in 0.18 s and 0.07 m with no skid (the coast brake alone rolled it on for 7.5 s
   and about 2.9 m). Backing on full lock frees a bike stopped head-on against a wall.

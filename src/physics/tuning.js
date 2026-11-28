@@ -92,7 +92,8 @@
  * most `engageMaxForwardMps`. The force fades linearly from `forceN` at standstill (or rolling
  * forward) to 0 at `maxSpeedMps` backwards, as the CVT drive force fades to its top speed. Once
  * the push stops while the bike still rolls back no faster than `holdMaxBackMps`, with the throttle
- * released, the rider's feet go down: both wheels get `holdBrake` until the bike stands still.
+ * released, the rider's feet go down: both wheels get `holdBrake` until the bike stands still. A
+ * backward roll with no push before it gets no hold.
  * @typedef {object} PushBackSpec
  * @property {number} forceN Backward force at standstill in newtons.
  * @property {number} maxSpeedMps Backward speed at which the force reaches zero.
