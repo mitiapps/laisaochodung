@@ -23,7 +23,8 @@ function groupDigits(value) {
  */
 export function formatDecimal(value, digits = 2) {
   if (!Number.isFinite(value)) return '0';
-  const fixed = value.toFixed(digits).replace(/\.?0+$/u, '');
+  const raw = value.toFixed(digits);
+  const fixed = raw.includes('.') ? raw.replace(/\.?0+$/u, '') : raw;
   const [int, frac] = fixed.split('.');
   const sign = int.startsWith('-') ? '−' : '';
   const grouped = groupDigits(Number(int.replace('-', '')));
@@ -108,7 +109,8 @@ export function formatClock(seconds) {
  */
 export function formatDistance(metres) {
   const m = Number.isFinite(metres) && metres > 0 ? metres : 0;
-  if (m < 1000) return `${Math.round(m)} m`;
+  const rounded = Math.round(m);
+  if (rounded < 1000) return `${rounded} m`;
   return `${formatDecimal(m / 1000, 1)} km`;
 }
 

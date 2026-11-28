@@ -75,6 +75,19 @@ describe('numbers and labels', () => {
     expect(formatDeduction(0.25)).toBe('−0,25 điểm');
   });
 
+  it('keeps the trailing zeros of a whole number formatted with no decimals', () => {
+    expect(formatDecimal(100, 0)).toBe('100');
+    expect(formatDecimal(2500, 0)).toBe('2.500');
+    expect(formatDecimal(-30, 0)).toBe('−30');
+    expect(formatDecimal(7.6, 0)).toBe('8');
+  });
+
+  it('switches to kilometres when a distance rounds to one kilometre', () => {
+    expect(formatDistance(999.4)).toBe('999 m');
+    expect(formatDistance(999.6)).toBe('1 km');
+    expect(formatDistance(1000)).toBe('1 km');
+  });
+
   it('formats speed, distance, points, suspension and dates', () => {
     expect(formatSpeed(41.6)).toBe('42');
     expect(formatSpeed(-12)).toBe('12');

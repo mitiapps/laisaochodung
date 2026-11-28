@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { SITE, checkSiteConfig, isContactHref, isEmail, isHttpsUrl } from './site.js';
+import { SITE, checkSiteConfig, isContactHref, isEmail, isHttpsUrl, publicAssetUrl } from './site.js';
 
 describe('site config', () => {
   it('ships a valid config with contacts in preference order and a donate QR', () => {
     expect(checkSiteConfig(SITE)).toEqual([]);
     expect(SITE.contacts.map((c) => c.id)).toEqual(['github', 'email', 'facebook', 'telegram']);
     expect(SITE.donateQr?.src).toBe('/donate/zalopay-vietqr.jpg');
+  });
+
+  it('resolves public asset paths under the site base path', () => {
+    expect(publicAssetUrl('/donate/zalopay-vietqr.jpg', '/')).toBe('/donate/zalopay-vietqr.jpg');
+    expect(publicAssetUrl('/donate/zalopay-vietqr.jpg', '/laisaochodung/')).toBe('/laisaochodung/donate/zalopay-vietqr.jpg');
+    expect(publicAssetUrl('/donate/zalopay-vietqr.jpg', '/laisaochodung')).toBe('/laisaochodung/donate/zalopay-vietqr.jpg');
   });
 
   it('accepts plain addresses and rejects malformed ones', () => {

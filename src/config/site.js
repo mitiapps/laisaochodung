@@ -1,6 +1,7 @@
 /**
- * Site settings the maintainer fills in. `scripts/release-check.js`, which `npm run deploy` runs
- * first, blocks a deploy (not the build) while there is no contact channel or no donate QR.
+ * Site settings the maintainer fills in. `npm run build` runs `scripts/release-check.js`
+ * (`npm run release:check`) before the Vite bundle, and it fails the build while there is no
+ * contact channel or no donate QR.
  */
 
 /**
@@ -76,6 +77,18 @@ export function isContactHref(value) {
   if (typeof value !== 'string') return false;
   if (value.startsWith('mailto:')) return isEmail(value.slice('mailto:'.length));
   return isHttpsUrl(value);
+}
+
+/**
+ * Resolves a root-relative path under `public/` against the site's base path, so the asset loads
+ * when the site is served from a sub-path such as `/<repo>/`.
+ * @param {string} rootPath Root-relative path, e.g. `/donate/qr.jpg`.
+ * @param {string} base Base path of the build (`import.meta.env.BASE_URL`), e.g. `/` or `/repo/`.
+ * @returns {string} URL under the base, e.g. `/repo/donate/qr.jpg`.
+ */
+export function publicAssetUrl(rootPath, base) {
+  const prefix = base.endsWith('/') ? base : `${base}/`;
+  return `${prefix}${rootPath.replace(/^\/+/u, '')}`;
 }
 
 /**
