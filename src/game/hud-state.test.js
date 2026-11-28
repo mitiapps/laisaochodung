@@ -70,6 +70,8 @@ describe('hudStateOf', () => {
     const breaches = ids.map((episodeId) => /** @type {import('../contracts/score.js').Breach} */ (/** @type {unknown} */ ({ episodeId })));
     expect(hudStateOf({ frame, context, score: 10, breaches, controlPreset: 'simple', mode: 'free', runStatus: 'running' }).breachCount).toBe(3);
     expect(hudStateOf({ frame, context, score: 10, breaches: [], controlPreset: 'simple', mode: 'free', runStatus: 'running' }).breachCount).toBe(0);
+    // A count kept by the caller as breaches arrive is used as given.
+    expect(hudStateOf({ frame, context, score: 10, breaches, breachCount: 3, controlPreset: 'simple', mode: 'free', runStatus: 'running' }).breachCount).toBe(3);
   });
 
   it('shows two notices raised within one second, newest last, and a later breach does not clear them', () => {

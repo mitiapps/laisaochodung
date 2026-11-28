@@ -235,6 +235,8 @@ function meanAndP95(samples) {
  * @property {Frame | null} prev Previous frame.
  * @property {Frame | null} curr Latest frame.
  * @property {Breach[]} breaches Breaches so far.
+ * @property {Set<string>} breachEpisodes Episode ids of `breaches`, kept as they arrive so the HUD
+ *   count costs nothing per publish in an endless free run.
  * @property {Notice[]} notices Notices so far, oldest first.
  * @property {'map' | 'off'} traffic Traffic actually running (`off` on a map without traffic).
  * @property {number} runSeed Run seed.
@@ -303,7 +305,7 @@ export function createSession(deps) {
     r.lastHudMs = deps.now();
     r.publishNow = false;
     emit(
-      hudStateOf({ frame: r.curr, context: r.context, score, breaches: r.breaches, notices: r.notices, controlPreset: r.controlPreset, mode: r.mode, runStatus, report }),
+      hudStateOf({ frame: r.curr, context: r.context, score, breaches: r.breaches, breachCount: r.breachEpisodes.size, notices: r.notices, controlPreset: r.controlPreset, mode: r.mode, runStatus, report }),
     );
   };
 
@@ -379,6 +381,7 @@ export function createSession(deps) {
     r.curr = frame;
     if (res.breaches.length > 0) {
       r.breaches.push(...res.breaches);
+      for (const b of res.breaches) r.breachEpisodes.add(b.episodeId);
       r.publishNow = true;
     }
     if (res.notices.length > 0) {
@@ -524,6 +527,7 @@ export function createSession(deps) {
         prev: null,
         curr: null,
         breaches: [],
+        breachEpisodes: new Set(),
         notices: [],
         traffic: 'off',
         runSeed,

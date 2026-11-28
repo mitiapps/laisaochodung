@@ -262,6 +262,8 @@ describe('session', () => {
     expect(withToast?.toasts[0].ruleId).toBe('speeding');
     expect(withToast?.speedLimitKmh).toBe(50);
     expect(withToast?.speedLimitVerified).toBe(true);
+    // The running episode count matches the toasts' distinct episodes.
+    expect(withToast?.breachCount).toBe(new Set(withToast?.toasts.map((b) => b.episodeId)).size);
     h.game.quit();
   });
 });
