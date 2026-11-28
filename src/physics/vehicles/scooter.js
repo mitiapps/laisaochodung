@@ -31,7 +31,9 @@ export const scooter = {
   fall: { minSpeedKmh: 30, holdS: 0.3 },
   // paramBasis: design. About 0.8 m/s² on 180 kg, fading to 0 at 0.8 m/s (about 3 km/h, a slow
   // duck-walk). Gated on the signed speed, so the push never cuts off below its own cap.
-  // Measured on the flat bench from rest: 1.68 m back in 3 s, peak 0.76 m/s; released, the
-  // coast brake stops it in 7.5 s.
-  pushBack: { forceN: 150, maxSpeedMps: 0.8, engageMaxForwardMps: 0.5 },
+  // Measured on the flat bench from rest: 1.68 m back in 3 s, peak 0.76 m/s. Released, the feet
+  // go down: `holdBrake` on both wheels stops it from the cap in 0.18 s and 0.07 m with no
+  // skid, where the coast brake alone rolled it on for 7.5 s and about 2.9 m. `holdMaxBackMps`
+  // leaves room over the cap for a push that overshoots it.
+  pushBack: { forceN: 150, maxSpeedMps: 0.8, engageMaxForwardMps: 0.5, holdBrake: 6, holdMaxBackMps: 1.2 },
 };

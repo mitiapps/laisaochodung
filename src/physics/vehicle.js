@@ -11,7 +11,7 @@ import { autoShiftRatio, driveForce, initialGear, shiftGear } from './gearbox.js
 import { stepFall } from './fall.js';
 import { isotropicFrictionSlip, wheelSkids } from './skid.js';
 import { fourWheelCommands } from './rigs/four-wheel.js';
-import { configureTwoWheelBody, pushBackForce, twoWheelCommands } from './rigs/two-wheel.js';
+import { configureTwoWheelBody, feetDownBrake, pushBackForce, twoWheelCommands } from './rigs/two-wheel.js';
 
 /** @typedef {typeof import('@dimforge/rapier3d-compat').default} Rapier */
 /** @typedef {import('@dimforge/rapier3d-compat').World} World */
@@ -235,7 +235,7 @@ export function createVehicle(R, world, tuning, surfaceGrip, pos, heading, optio
       const push = pushBackForce(tuning.pushBack, input, speed);
       pushing = push.acting;
       const wheelCommands = twoWheel
-        ? twoWheelCommands(tuning, input, drive.forceN, steerAngle, push.forceN)
+        ? twoWheelCommands(tuning, input, drive.forceN, steerAngle, push.forceN, feetDownBrake(tuning.pushBack, input, speed))
         : fourWheelCommands(tuning, input, drive.forceN, steerAngle);
       wheelCommands.forEach((c, i) => {
         controller.setWheelEngineForce(i, c.engine);

@@ -7,7 +7,7 @@ import { brakeToStop, createBench, driveCircle } from '../bench.js';
 import { GROUP, interactionGroups } from '../collision-groups.js';
 import { carSedan } from '../vehicles/car-sedan.js';
 import { scooter } from '../vehicles/scooter.js';
-import { pushBackForce, twoWheelCommands } from './two-wheel.js';
+import { feetDownBrake, pushBackForce, twoWheelCommands } from './two-wheel.js';
 
 beforeAll(async () => {
   await RAPIER.init();
@@ -45,6 +45,23 @@ describe('pushBackForce', () => {
     expect(pushBackForce(carSedan.pushBack, held, 0)).toEqual({ acting: false, forceN: 0 });
   });
 
+  it('holds a slowly backing bike with the feet once the push stops, and only then', () => {
+    const { holdBrake, holdMaxBackMps } = scooter.pushBack;
+    expect(feetDownBrake(spec, neutralInput(), -0.5)).toBe(holdBrake);
+    expect(feetDownBrake(spec, neutralInput(), -holdMaxBackMps)).toBe(holdBrake);
+    expect(feetDownBrake(spec, neutralInput(), -holdMaxBackMps - 0.01)).toBe(0);
+    expect(feetDownBrake(spec, neutralInput(), 0)).toBe(0);
+    expect(feetDownBrake(spec, neutralInput(), 0.5)).toBe(0);
+    expect(feetDownBrake(spec, held, -0.5)).toBe(0);
+    expect(feetDownBrake(spec, { ...neutralInput(), throttle: 0.3 }, -0.5)).toBe(0);
+    expect(feetDownBrake(carSedan.pushBack, neutralInput(), -0.5)).toBe(0);
+    const c = twoWheelCommands(scooter, neutralInput(), 18, 0, 0, holdBrake);
+    expect(c.map((w) => w.brake)).toEqual([holdBrake, holdBrake]);
+    expect(c.map((w) => w.engine)).toEqual([0, 0]);
+    const lever = twoWheelCommands(scooter, { ...neutralInput(), brakeFront: 1 }, 0, 0, 0, holdBrake);
+    expect(lever[0].brake).toBe(scooter.brakes.frontCap);
+  });
+
   it('drives the rear wheel backwards and lifts the coast brake from both wheels while pushing', () => {
     const c = twoWheelCommands(scooter, held, 18, 0, -150);
     expect(c[0]).toMatchObject({ engine: 0, brake: 0 });
@@ -76,10 +93,26 @@ describe('scooter push-back on the bench', () => {
     expect(x0 - r[r.length - 1].pos.x).toBeGreaterThanOrEqual(1);
     expect(Math.min(...r.map((s) => s.speed))).toBeGreaterThanOrEqual(-0.8);
     expect(r.every((s) => s.gear === 'R')).toBe(true);
-    // Released, the gear reads D again and the coast brake stops the bike (about 0.1 m/s²).
+    // Released, the gear reads D again and the feet stop the bike.
     const after = hold(bench, 10, {});
     expect(after[0].gear).toBe('D');
     expect(Math.abs(after[after.length - 1].speed)).toBeLessThan(0.01);
+    bench.dispose();
+  });
+
+  it('stops within 0.3 s and 0.15 m once the push key is released at the cap', () => {
+    const bench = createBench(RAPIER, scooter);
+    const r = hold(bench, 3, { pushBack: true });
+    const xRelease = r[r.length - 1].pos.x;
+    expect(r[r.length - 1].speed).toBeLessThan(-0.7);
+    const after = hold(bench, 2, {});
+    const stopIdx = after.findIndex((s) => Math.abs(s.speed) < 0.02);
+    expect(stopIdx).toBeGreaterThanOrEqual(0);
+    expect(stopIdx * DT).toBeLessThanOrEqual(0.3);
+    expect(xRelease - after[after.length - 1].pos.x).toBeLessThan(0.15);
+    // The hold never drives the bike forward or skids a wheel.
+    expect(Math.max(...after.map((s) => s.speed))).toBeLessThan(0.02);
+    expect(after.some((s) => s.wheels.some((w) => w.skid > 0))).toBe(false);
     bench.dispose();
   });
 

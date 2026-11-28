@@ -7,7 +7,8 @@
  *
  * A stopped bike has no reverse gear: the rider pushes it backwards with the feet while
  * `pushBack` is held (`pushBackForce`). The push drives the rear wheel backwards and lifts the
- * coast brake from both wheels; the throttle or either brake cancels it at once.
+ * coast brake from both wheels; the throttle or either brake cancels it at once. When the push
+ * stops while the bike still rolls back slowly, the feet go down and hold it (`feetDownBrake`).
  */
 
 /** @typedef {import('../tuning.js').VehicleTuning} VehicleTuning */
@@ -41,6 +42,20 @@ export function pushBackForce(spec, input, speedMps) {
 }
 
 /**
+ * The rider's feet holding a slowly backing bike once the push stops: a released `pushBack` key
+ * stops the bike at once instead of letting the coast brake roll it on for metres.
+ * @param {PushBackSpec | null} spec Push-back tuning; null (a car) never holds.
+ * @param {ControlInput} input Sanitised input.
+ * @param {number} speedMps Signed forward speed.
+ * @returns {number} Brake for each wheel, 0 when the feet do not hold.
+ */
+export function feetDownBrake(spec, input, speedMps) {
+  if (spec === null || pushBackForce(spec, input, speedMps).acting) return 0;
+  if (input.throttle > PUSH_BACK_MAX_THROTTLE) return 0;
+  return speedMps < 0 && speedMps >= -spec.holdMaxBackMps ? spec.holdBrake : 0;
+}
+
+/**
  * Locks roll and pitch on the chassis.
  * @param {{setEnabledRotations: (x: boolean, y: boolean, z: boolean, wakeUp: boolean) => void}} body Chassis.
  * @returns {void}
@@ -57,14 +72,16 @@ export function configureTwoWheelBody(body) {
  * @param {number} steerAngle Front wheel angle in radians, + left.
  * @param {number} [pushForceN] Push-back force from `pushBackForce`, negative while the rider
  *   pushes: it replaces the drive force and no wheel gets the coast brake. Default 0.
+ * @param {number} [holdBrake] Brake from `feetDownBrake`; each wheel brakes at least this hard.
+ *   Default 0.
  * @returns {WheelCommand[]} One command per wheel.
  */
-export function twoWheelCommands(tuning, input, driveForceN, steerAngle, pushForceN = 0) {
+export function twoWheelCommands(tuning, input, driveForceN, steerAngle, pushForceN = 0, holdBrake = 0) {
   const { brakes } = tuning;
   const pushing = pushForceN < 0;
   const drive = pushing ? pushForceN : driveForceN;
   return tuning.wheels.map((w) => {
-    let brake = w.front ? input.brakeFront * brakes.frontCap : input.brakeRear * brakes.rearCap;
+    let brake = Math.max(holdBrake, w.front ? input.brakeFront * brakes.frontCap : input.brakeRear * brakes.rearCap);
     const engine = w.driven && brake === 0 ? drive : 0;
     if (brake === 0 && engine === 0 && !pushing) brake = brakes.coastCap;
     return { engine, brake, steer: w.front ? steerAngle : 0, sideStiffness: tuning.sideFrictionStiffness };

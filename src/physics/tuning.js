@@ -90,11 +90,15 @@
  * Push-back of a stopped motorbike by the rider's feet. It acts while `pushBack` is held with the
  * throttle at most `PUSH_BACK_MAX_THROTTLE`, both brakes released and a signed forward speed at
  * most `engageMaxForwardMps`. The force fades linearly from `forceN` at standstill (or rolling
- * forward) to 0 at `maxSpeedMps` backwards, as the CVT drive force fades to its top speed.
+ * forward) to 0 at `maxSpeedMps` backwards, as the CVT drive force fades to its top speed. Once
+ * the push stops while the bike still rolls back no faster than `holdMaxBackMps`, with the throttle
+ * released, the rider's feet go down: both wheels get `holdBrake` until the bike stands still.
  * @typedef {object} PushBackSpec
  * @property {number} forceN Backward force at standstill in newtons.
  * @property {number} maxSpeedMps Backward speed at which the force reaches zero.
  * @property {number} engageMaxForwardMps Highest signed forward speed at which the push acts.
+ * @property {number} holdBrake Brake on each wheel while the feet hold a slowly backing bike.
+ * @property {number} holdMaxBackMps Fastest backward roll the feet still hold.
  */
 
 export {};
