@@ -52,8 +52,15 @@ const TURN_MIN_RAD = Math.PI / 4;
 /** @typedef {import('./lib/props.js').OsmPropElement} OsmPropElement */
 
 /**
- * Canonical JSON value: numbers rounded (millimetres, or 1e-7° under `origin`), no −0, object
- * keys sorted, undefined fields dropped.
+ * Rounding scales of keys whose numbers are not lengths: degrees under `origin`, and traffic mix
+ * shares, which are fractions that must still sum to 1 after rounding.
+ * @type {Record<string, number>}
+ */
+const KEY_SCALES = { origin: 1e7, share: 1e9 };
+
+/**
+ * Canonical JSON value: numbers rounded (millimetres, or the `KEY_SCALES` scale under those
+ * keys), no −0, object keys sorted, undefined fields dropped.
  * @param {unknown} v Value.
  * @param {number} [scale] Rounding scale.
  * @returns {unknown} Canonical copy.
@@ -70,7 +77,7 @@ export function canonical(v, scale = 1000) {
     const out = {};
     for (const k of Object.keys(v).sort()) {
       const x = /** @type {Record<string, unknown>} */ (v)[k];
-      if (x !== undefined) out[k] = canonical(x, k === 'origin' ? 1e7 : scale);
+      if (x !== undefined) out[k] = canonical(x, KEY_SCALES[k] ?? scale);
     }
     return out;
   }

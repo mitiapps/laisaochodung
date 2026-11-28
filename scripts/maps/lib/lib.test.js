@@ -249,6 +249,21 @@ describe('zones and elements', () => {
     expect(map.zones.some((x) => /** @type {string} */ (x.source) === 'osm')).toBe(false);
   });
 
+  it('ends a P.127 zone at the next P.127 facing the same traffic', () => {
+    const map = compileTutorial({
+      signs: [
+        { id: 's-r420', code: 'R.420', at: { way: 'w1', s: 2 } },
+        { id: 'l40', code: 'P.127', value: 40, at: { way: 'w1', s: 20 } },
+        { id: 'l60', code: 'P.127', value: 60, at: { way: 'w1', s: 150 } },
+      ],
+    });
+    const z40 = /** @type {import('../../../src/contracts/map.js').Zone} */ (map.zones.find((x) => x.id === 'z-l40'));
+    const z60 = /** @type {import('../../../src/contracts/map.js').Zone} */ (map.zones.find((x) => x.id === 'z-l60'));
+    expect(Math.max(...z40.polygon.map((p) => p[0]))).toBeCloseTo(150);
+    expect(Math.min(...z60.polygon.map((p) => p[0]))).toBeCloseTo(150);
+    expect(Math.max(...z60.polygon.map((p) => p[0]))).toBeCloseTo(195.5);
+  });
+
   it('resolves one control per approach: lights over STOP over give-way', () => {
     const signs = [
       { id: 's-r420', code: 'R.420', at: { way: 'w1', s: 2 } },

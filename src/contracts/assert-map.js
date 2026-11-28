@@ -355,8 +355,10 @@ export function checkMap(map, options = {}) {
   };
 
   m.roads.forEach((road, i) => {
-    (road?.laneLines ?? []).forEach((line, j) => {
-      const own = new Set((road.lanes ?? []).map((l) => l?.id));
+    // The first pass already reported a non-array `lanes` or `laneLines`; skip them here.
+    if (!Array.isArray(road?.laneLines)) return;
+    const own = new Set((Array.isArray(road.lanes) ? road.lanes : []).map((l) => l?.id));
+    road.laneLines.forEach((line, j) => {
       for (const side of ['left', 'right']) {
         if (typeof line?.[side] === 'string' && !own.has(line[side])) {
           c.fail(`roads[${i}].laneLines[${j}].${side}`, `lane "${line[side]}" is not on this road`);

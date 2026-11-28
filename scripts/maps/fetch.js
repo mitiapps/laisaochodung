@@ -112,8 +112,20 @@ function sleep(ms) {
 }
 
 /**
- * POSTs the query with exponential backoff on overload responses, moving to the next public
- * instance on each retry.
+ * Why an HTTP 200 Overpass answer is not a whole extract: a runtime error (timeout or memory limit
+ * while printing) still answers 200, with the elements printed so far and a `remark` naming the
+ * error.
+ * @param {unknown} raw Parsed response.
+ * @returns {string | null} The error remark, or null for a complete answer.
+ */
+export function overpassRuntimeError(raw) {
+  const remark = /** @type {{remark?: unknown}} */ (raw)?.remark;
+  return typeof remark === 'string' && /error/iu.test(remark) ? remark : null;
+}
+
+/**
+ * POSTs the query with exponential backoff on overload responses and truncated answers, moving to
+ * the next public instance on each retry.
  * @param {string} query Overpass QL.
  * @returns {Promise<unknown>} Parsed JSON.
  */
@@ -136,9 +148,15 @@ async function postQuery(query) {
     }
     if (res) {
       const body = await res.text();
-      if (res.ok && body.trimStart().startsWith('{')) return JSON.parse(body);
-      failure = `${endpoint}: HTTP ${res.status}: ${body.slice(0, 120).replace(/\s+/g, ' ')}`;
-      if (!RETRY_STATUSES.has(res.status) && res.ok === false) throw new Error(`Overpass refused the query (${failure})`);
+      if (res.ok && body.trimStart().startsWith('{')) {
+        const raw = JSON.parse(body);
+        const remark = overpassRuntimeError(raw);
+        if (remark === null) return raw;
+        failure = `${endpoint}: truncated answer: ${remark.slice(0, 120).replace(/\s+/g, ' ')}`;
+      } else {
+        failure = `${endpoint}: HTTP ${res.status}: ${body.slice(0, 120).replace(/\s+/g, ' ')}`;
+        if (!RETRY_STATUSES.has(res.status) && res.ok === false) throw new Error(`Overpass refused the query (${failure})`);
+      }
     }
     if (attempt === MAX_ATTEMPTS) throw new Error(`Overpass failed after ${attempt} attempts (${failure})`);
     console.error(`attempt ${attempt} failed (${failure}); retrying in ${wait / 1000} s`);

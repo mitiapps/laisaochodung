@@ -245,7 +245,8 @@ export function compileMap(spec) {
   const zones = [];
   for (const { spec: s, code, placement } of placedSigns) {
     if (code === 'P.127') {
-      const extent = walkExtent(topo, placement, endSignStop(placedSigns, ['DP.134'], placement));
+      // A speed limit ends at DP.134 or where the next P.127 facing the same traffic replaces it.
+      const extent = walkExtent(topo, placement, endSignStop(placedSigns, ['DP.134', 'P.127'], placement));
       zones.push(
         ...zonesForExtent(extent, { id: `z-${s.id}`, type: 'speed-limit', signIds: [s.id], source: spec.placedSource, valueKmh: s.value }),
       );

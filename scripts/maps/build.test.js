@@ -1,3 +1,5 @@
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -5,7 +7,7 @@ import { checkMap } from '../../src/contracts/assert-map.js';
 import { pointInPolygon, projectOntoPolyline } from '../../src/geometry/index.js';
 import { MAX_OSM_ROUTE_M, buildAll, buildOne, canonical, loadSignCodes, serializeIndex } from './build.js';
 import { routeLength } from './lib/elements.js';
-import { coverageReport, overpassQuery } from './fetch.js';
+import { coverageReport, overpassQuery, overpassRuntimeError } from './fetch.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const MAPS = path.join(ROOT, 'data/maps');
@@ -38,6 +40,29 @@ describe('canonical output', () => {
       '{"a":0,"b":1.235,"origin":{"lat":10.1234568}}',
     );
     expect(() => canonical({ x: Number.NaN })).toThrow(/non-finite/);
+  });
+
+  it('keeps traffic mix shares precise enough to still sum to 1', () => {
+    const mix = /** @type {{share: number}[]} */ (canonical([{ share: 0.0625 }, { share: 0.9375 }]));
+    expect(mix.map((m) => m.share)).toEqual([0.0625, 0.9375]);
+  });
+
+  it('builds a map whose mix shares have more than three decimals', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'maps-mix-'));
+    try {
+      await cp(path.join(MAPS, 'tutorial-01-co-ban'), path.join(dir, 'tutorial-01-co-ban'), { recursive: true });
+      await mkdir(path.join(dir, 'tutorial-03-ban-dem'));
+      const source = await readFile(path.join(MAPS, 'tutorial-03-ban-dem/source.yaml'), 'utf8');
+      const edited = source
+        .replace('{ model: motorbike, share: 0.75 }', '{ model: motorbike, share: 0.6875 }')
+        .replace('{ model: car, share: 0.12 }', '{ model: car, share: 0.1825 }');
+      expect(edited).not.toBe(source);
+      await writeFile(path.join(dir, 'tutorial-03-ban-dem/source.yaml'), edited);
+      const { map } = await buildOne(dir, 'tutorial-03-ban-dem', signCodes);
+      expect(map.traffic?.mix.find((m) => m.model === 'motorbike')?.share).toBe(0.6875);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });
 
@@ -160,6 +185,12 @@ describe('shipped maps', () => {
 });
 
 describe('fetch helpers', () => {
+  it('treats an Overpass answer with a runtime error remark as truncated', () => {
+    const remark = 'runtime error: Query timed out in "print" at line 21 after 61 seconds.';
+    expect(overpassRuntimeError({ elements: [{ type: 'node', id: 1 }], remark })).toBe(remark);
+    expect(overpassRuntimeError({ elements: [{ type: 'node', id: 1 }] })).toBeNull();
+  });
+
   it('queries the bbox in south,west,north,east order', () => {
     const q = overpassQuery({ south: 1, west: 2, north: 3, east: 4 });
     expect(q).toContain('(1,2,3,4)');
