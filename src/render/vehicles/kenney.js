@@ -58,7 +58,7 @@ export function paintFromUv(geometry, cells) {
  * @param {import('three').Matrix4} toRoot Mesh-to-root matrix.
  * @returns {BufferGeometry} Geometry.
  */
-function rootGeometry(mesh, toRoot) {
+export function rootGeometry(mesh, toRoot) {
   const src = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
   const out = new BufferGeometry();
   for (const name of ['position', 'normal', 'uv']) {

@@ -7,6 +7,7 @@ import { SIGN_ART, signArtPath } from './sign-art.js';
 import trafficParams from '../generated/traffic-params.json' with { type: 'json' };
 import { ACTOR_MODELS, DEBRIS, KENNEY_BODIES, PASSENGER, RIDERS, VEHICLE_MODELS, WALKERS, resolveLook } from './vehicles/index.js';
 import { MOTORBIKE_TYPES } from './vehicles/motorbike.js';
+import { TRIPO_MODELS } from './vehicles/tripo.js';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const PUBLIC = join(ROOT, 'public');
@@ -80,6 +81,7 @@ describe('credits', () => {
     for (const cfg of [...Object.values(VEHICLE_MODELS), ...Object.values(ACTOR_MODELS)]) {
       if (cfg.glb) expect(credits.some((c) => c.file === cfg.glb)).toBe(true);
     }
+    for (const spec of Object.values(TRIPO_MODELS)) expect(credits.some((c) => c.file === spec.glb)).toBe(true);
   });
 
   it('keeps the model payload under 5 MB', () => {

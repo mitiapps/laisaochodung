@@ -412,5 +412,75 @@
     "licence": "Apache-2.0",
     "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
     "ownWork": true
+  },
+  {
+    "file": "models/tripo/scooter.glb",
+    "title": "Step-through scooter (AI-generated 3D model)",
+    "author": "Generated with Tripo AI (tripo3d.ai)",
+    "sourceUrl": "https://www.tripo3d.ai",
+    "licence": "CC BY 4.0 (Tripo free plan)",
+    "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "creditLine": "3D model generated with Tripo AI (tripo3d.ai)",
+    "ownWork": false
+  },
+  {
+    "file": "models/tripo/underbone.glb",
+    "title": "Underbone moped (AI-generated 3D model)",
+    "author": "Generated with Tripo AI (tripo3d.ai)",
+    "sourceUrl": "https://www.tripo3d.ai",
+    "licence": "CC BY 4.0 (Tripo free plan)",
+    "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "creditLine": "3D model generated with Tripo AI (tripo3d.ai)",
+    "ownWork": false
+  },
+  {
+    "file": "models/tripo/bus.glb",
+    "title": "City bus (AI-generated 3D model)",
+    "author": "Generated with Tripo AI (tripo3d.ai)",
+    "sourceUrl": "https://www.tripo3d.ai",
+    "licence": "CC BY 4.0 (Tripo free plan)",
+    "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "creditLine": "3D model generated with Tripo AI (tripo3d.ai)",
+    "ownWork": false
+  },
+  {
+    "file": "audio/tutorial-02/start.mp3",
+    "title": "Tutorial 02 voice line: start",
+    "author": "ElevenLabs voice Mai Anh – Vietnamese News Anchor",
+    "sourceUrl": "https://elevenlabs.io",
+    "licence": "ElevenLabs free tier: attribution to ElevenLabs required, non-commercial use only",
+    "licenceUrl": "https://elevenlabs.io/terms-of-use",
+    "creditLine": "Voice generated with ElevenLabs (elevenlabs.io)",
+    "ownWork": false
+  },
+  {
+    "file": "audio/tutorial-02/red-light.mp3",
+    "title": "Tutorial 02 voice line: red light",
+    "author": "ElevenLabs voice Mai Anh – Vietnamese News Anchor",
+    "sourceUrl": "https://elevenlabs.io",
+    "licence": "ElevenLabs free tier: attribution to ElevenLabs required, non-commercial use only",
+    "licenceUrl": "https://elevenlabs.io/terms-of-use",
+    "creditLine": "Voice generated with ElevenLabs (elevenlabs.io)",
+    "ownWork": false
+  },
+  {
+    "file": "audio/tutorial-02/stop-sign.mp3",
+    "title": "Tutorial 02 voice line: stop sign",
+    "author": "ElevenLabs voice Mai Anh – Vietnamese News Anchor",
+    "sourceUrl": "https://elevenlabs.io",
+    "licence": "ElevenLabs free tier: attribution to ElevenLabs required, non-commercial use only",
+    "licenceUrl": "https://elevenlabs.io/terms-of-use",
+    "creditLine": "Voice generated with ElevenLabs (elevenlabs.io)",
+    "ownWork": false
+  },
+  {
+    "file": "audio/tutorial-02/finish.mp3",
+    "title": "Tutorial 02 voice line: finish",
+    "author": "ElevenLabs voice Mai Anh – Vietnamese News Anchor",
+    "sourceUrl": "https://elevenlabs.io",
+    "licence": "ElevenLabs free tier: attribution to ElevenLabs required, non-commercial use only",
+    "licenceUrl": "https://elevenlabs.io/terms-of-use",
+    "creditLine": "Voice generated with ElevenLabs (elevenlabs.io)",
+    "ownWork": false
   }
 ]

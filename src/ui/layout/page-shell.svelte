@@ -1,5 +1,6 @@
 <script>
   import { pageHref } from '../lib/route.js';
+  import { SITE } from '../../config/site.js';
 
   /** @type {{title?: string, children: import('svelte').Snippet}} */
   let { title, children } = $props();
@@ -10,7 +11,7 @@
     ['contact', 'Liên hệ'],
     ['donate', 'Ủng hộ'],
     ['credits', 'Ghi công'],
-  ]);
+  ]).filter(([name]) => name !== 'donate' || SITE.donateQr !== null);
 </script>
 
 <div class="flex min-h-screen flex-col bg-white text-stone-900">

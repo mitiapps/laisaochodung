@@ -147,8 +147,8 @@ applies the same file, so the Playwright smoke test runs under the policy. The b
 `third-party-licenses.md` (Vite `build.license`), linked from the credits page.
 
 `npm run release:check` (`scripts/release-check.js`) is the release gate. It fails on unverified
-legal data, unchecked sign figures, missing contact channels or donate QR (`src/config/site.js`),
-uncredited files in `public/models/` or `public/signs/`, a traffic model key with neither a
+legal data, unchecked sign figures, missing contact channels or a set donate QR whose image is missing (`src/config/site.js`),
+uncredited files in `public/models/`, `public/signs/` or `public/audio/`, a traffic model key with neither a
 credited model file nor a procedural builder, an OSM map without attribution, or a missing
 `data/maps/LICENSE-ODbL.md`. `npm run build` runs it after the data build and before the Vite
 bundle, so no build, and no deploy, gets past a failing gate.

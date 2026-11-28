@@ -293,6 +293,9 @@ export const CAMERA_NAMES = Object.freeze({ chase: 'Thứ ba (sau xe)', cockpit:
 /** Short name of each camera mode, on the HUD button. */
 export const CAMERA_SHORT_NAMES = Object.freeze({ chase: 'Sau xe', cockpit: 'Trong xe' });
 
+/** Label of the voice toggle, by the current state: it names the action a press does. */
+export const VOICE_TOGGLE_LABELS = Object.freeze({ on: Object.freeze({ vi: 'Tắt giọng đọc', en: '' }), muted: Object.freeze({ vi: 'Bật giọng đọc', en: '' }) });
+
 /** Vietnamese name of each preset, for the pause menu and the home page. */
 export const PRESET_NAMES = Object.freeze({ simple: 'Đơn giản', real: 'Thực tế' });
 

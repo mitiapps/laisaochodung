@@ -12,13 +12,14 @@
    *   game: import('../../contracts/hud.js').GameApi | null,
    *   canvas: HTMLElement | null,
    *   camera?: import('../../game/camera-control.js').CameraControl | null,
+   *   voice?: import('../../game/voice-cues.js').VoiceCues | null,
    *   mapId: string | null,
    *   vehicleId: string | null,
    *   vehicles: ReadonlyArray<import('../../contracts/vehicle.js').VehicleInfo>,
    *   mapEntry: import('../../contracts/catalog.js').MapIndexEntry | null,
    * }}
    */
-  let { game, canvas, camera = null, mapId, vehicleId, vehicles, mapEntry } = $props();
+  let { game, canvas, camera = null, voice = null, mapId, vehicleId, vehicles, mapEntry } = $props();
 
   /** @type {import('../../contracts/controls.js').CameraMode} */
   let cameraMode = $state('chase');
@@ -27,6 +28,15 @@
       cameraMode = mode;
     }),
   );
+
+  let voiceMuted = $state(false);
+  $effect(() =>
+    voice?.subscribe((muted) => {
+      voiceMuted = muted;
+    }),
+  );
+  /** Whether this map has spoken lines; the HUD shows the voice toggle only then. */
+  const hasVoice = $derived(voice?.has(mapId) ?? false);
 
   const vehicle = $derived(vehicles.find((v) => v.id === vehicleId) ?? null);
 
@@ -130,6 +140,8 @@
         toasts={stack.items}
         controls={/** @type {import('../../contracts/hud.js').GameApi} */ (game).controls}
         {cameraMode}
+        voiceMuted={hasVoice ? voiceMuted : null}
+        ontogglevoice={() => voice?.setMuted(!voiceMuted)}
         {runKey}
         onpause={togglePause}
         ondismiss={(id) => (stack = dismissToast(stack, id))}

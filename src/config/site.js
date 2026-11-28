@@ -1,7 +1,7 @@
 /**
  * Site settings the maintainer fills in. `npm run build` runs `scripts/release-check.js`
  * (`npm run release:check`) before the Vite bundle, and it fails the build while there is no
- * contact channel or no donate QR.
+ * contact channel. The donate QR is optional: when it is set, its image must exist.
  */
 
 /**
@@ -37,10 +37,10 @@ export const SITE = Object.freeze({
     { id: 'facebook', label: 'Facebook', text: 'tiennm99', href: 'https://www.facebook.com/tiennm99' },
     { id: 'telegram', label: 'Telegram', text: '@tiennm5', href: 'https://t.me/tiennm5' },
   ],
-  donateQr: {
-    src: '/donate/zalopay-vietqr.jpg',
-    alt: 'Mã QR chuyển khoản ZaloPay / VietQR, nhận tiền từ mọi ứng dụng ngân hàng',
-  },
+  // Off while the game ships free-tier generated assets licensed for non-commercial use only
+  // (data/credits/credits.json). To turn it back on, set:
+  // { src: '/donate/zalopay-vietqr.jpg', alt: 'Mã QR chuyển khoản ZaloPay / VietQR, nhận tiền từ mọi ứng dụng ngân hàng' }
+  donateQr: null,
 });
 
 const EMAIL_PATTERN = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/u;

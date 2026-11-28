@@ -17,10 +17,11 @@
    *   game?: import('./contracts/hud.js').GameApi | null,
    *   canvas?: HTMLElement | null,
    *   camera?: import('./game/camera-control.js').CameraControl | null,
+   *   voice?: import('./game/voice-cues.js').VoiceCues | null,
    *   loadMaps?: () => Promise<import('./contracts/catalog.js').MapIndexEntry[]>,
    * }}
    */
-  let { game = null, canvas = null, camera = null, loadMaps = () => loadMapIndex() } = $props();
+  let { game = null, canvas = null, camera = null, voice = null, loadMaps = () => loadMapIndex() } = $props();
 
   let route = $state(parseHash(location.hash));
   /** @type {import('./ui/lib/catalog.js').MapsState} */
@@ -57,7 +58,7 @@
   <HomePage vehicles={VEHICLES} {maps} {camera} />
 {:else if route.name === 'play'}
   {#key `${route.mapId}|${route.vehicleId}`}
-    <PlayPage {game} {canvas} {camera} mapId={route.mapId} vehicleId={route.vehicleId} vehicles={VEHICLES} {mapEntry} />
+    <PlayPage {game} {canvas} {camera} {voice} mapId={route.mapId} vehicleId={route.vehicleId} vehicles={VEHICLES} {mapEntry} />
   {/key}
 {:else if route.name === 'disclaimer'}
   <DisclaimerPage />

@@ -11,6 +11,9 @@
  * - procedural motorbikes, each type merged with a baked Mini Characters rider (one mesh per type
  *   and rider), a pillion passenger, and their wheels;
  * - the procedural bus;
+ * - Tripo AI bodies (`vehicles/tripo.js`) that replace a procedural motorbike type or the bus once
+ *   their GLB loads: one textured set per model with its own material, its wheels baked in, and
+ *   the rider in a set of its own;
  * - brake and indicator lamps, emissive quads driven by `pose.lights` (indicators blink on the
  *   frame time);
  * - wrecks: a `crashed` car is darkened and tilted, a `fallen` motorbike lies on its side with
@@ -45,6 +48,7 @@ import { boxCarParts, kenneyParts } from './vehicles/kenney.js';
 import { createLookMaterial, lookRgb } from './vehicles/look-material.js';
 import { MOTORBIKE_LENGTH_M, MOTORBIKE_TYPES, buildMotorbike } from './vehicles/motorbike.js';
 import { PALETTE_TEXTURE, merge, unitWheel } from './vehicles/procedural.js';
+import { TRIPO_MODELS, tripoParts } from './vehicles/tripo.js';
 
 /** @typedef {import('../contracts/map.js').GameMap} GameMap */
 /** @typedef {import('../contracts/telemetry.js').Frame} Frame */
@@ -347,6 +351,85 @@ export function createActorViews(map, assets) {
   // Motorbikes, passengers, fallen bikes and the lying rider. Bike geometry is drawn at once;
   // riders join it when their character loads.
   const bikes = new Map(MOTORBIKE_TYPES.map((type) => [type, buildMotorbike(type)]));
+
+  /**
+   * A Tripo body: its geometry and material once the GLB loaded, null before and after a failure.
+   * @typedef {object} TripoState
+   * @property {import('three').BufferGeometry | null} body Fitted body geometry (owned).
+   * @property {import('three').MeshStandardMaterial} material Look material with the model's map.
+   * @property {(() => void)[]} waiting Sets to swap once the body is ready.
+   */
+  /** @type {Map<string, TripoState>} */
+  const tripo = new Map();
+  /**
+   * The Tripo body of a key, requested on first use; null while it loads, after a failure, or
+   * when the key has no Tripo model.
+   * @param {string} key `TRIPO_MODELS` key.
+   * @returns {TripoState | null} Ready state.
+   */
+  const tripoBody = (key) => {
+    const spec = TRIPO_MODELS[key];
+    if (!spec) return null;
+    let state = tripo.get(key);
+    if (!state) {
+      const created = /** @type {TripoState} */ ({ body: null, material: createLookMaterial({ roughness: 0.9 }), waiting: [] });
+      state = created;
+      tripo.set(key, created);
+      assets
+        .loadModel(spec.glb)
+        .then((gltf) => {
+          if (disposed) return;
+          const parts = tripoParts(gltf, spec);
+          created.material.map = parts.map;
+          created.material.needsUpdate = true;
+          created.body = parts.body;
+          for (const swap of created.waiting) swap();
+          created.waiting.length = 0;
+        })
+        .catch(failed(`Model ${spec.glb}`));
+    }
+    return state.body ? state : null;
+  };
+  /**
+   * A set drawn with a key's Tripo body once it loads, and with the procedural stand-in until
+   * then (or for good when it fails). The set owns a copy of the body.
+   * @param {string} name Set name.
+   * @param {string} key `TRIPO_MODELS` key.
+   * @param {() => BufferGeometry} standIn Stand-in geometry.
+   * @returns {InstancedSet} Set.
+   */
+  const tripoSet = (name, key, standIn) => {
+    const existing = sets.get(name);
+    if (existing) return existing;
+    const s = set(name, standIn, palette, 1);
+    tripoBody(key);
+    const state = /** @type {TripoState} */ (tripo.get(key));
+    const swap = () => s.setGeometry(/** @type {BufferGeometry} */ (state.body).clone(), state.material);
+    if (state.body) swap();
+    else state.waiting.push(swap);
+    return s;
+  };
+  /**
+   * Rider-only set of a Tripo motorbike type and rider (empty until the character loads).
+   * @param {import('./vehicles/motorbike.js').MotorbikeType} type Type.
+   * @param {number} rider Rider index.
+   * @returns {InstancedSet} Set.
+   */
+  const riderSet = (type, rider) => {
+    const name = `rider:${type}:${rider}`;
+    const existing = sets.get(name);
+    if (existing) return existing;
+    const s = set(name, () => new BufferGeometry(), palette, 1);
+    const bike = /** @type {import('./vehicles/motorbike.js').MotorbikeModel} */ (bikes.get(type));
+    assets
+      .loadModel(RIDERS[rider])
+      .then((gltf) => {
+        if (disposed) return;
+        s.setGeometry(bakeRider(gltf, 'drive', TRIPO_MODELS[type]?.seat ?? bike.seat, bike.legPitch));
+      })
+      .catch(failed(`Rider ${RIDERS[rider]}`));
+    return s;
+  };
   /**
    * Set of a ridden motorbike type and rider.
    * @param {import('./vehicles/motorbike.js').MotorbikeType} type Type.
@@ -383,7 +466,7 @@ export function createActorViews(map, assets) {
       .loadModel(PASSENGER)
       .then((gltf) => {
         if (disposed) return;
-        s.setGeometry(bakeRider(gltf, 'sit', bike.pillion, bike.legPitch));
+        s.setGeometry(bakeRider(gltf, 'sit', TRIPO_MODELS[type]?.pillion ?? bike.pillion, bike.legPitch));
       })
       .catch(failed(`Passenger ${PASSENGER}`));
     return s;
@@ -403,7 +486,7 @@ export function createActorViews(map, assets) {
     return s;
   };
   const bus = buildBus();
-  const busSet = () => set('bus', () => buildBus().body, palette, 1);
+  const busSet = () => tripoSet('bus', 'bus', () => buildBus().body);
 
   /** @type {{set: () => InstancedSet, box: import('three').Box3 | null}[]} */
   const debris = DEBRIS.map((path, i) => {
@@ -631,17 +714,24 @@ export function createActorViews(map, assets) {
     const paintB = st.paintB;
     const scaled = bodyM.copy(baseMatrix(draw, fallen ? (Math.PI / 2) * st.sign : 0, 0, fallen ? 0.2 * k : 0, fade)).multiply(m.makeScale(k, k, k));
     const shade = fallen ? FALLEN_SHADE : 1;
+    // A loaded Tripo body has its wheels baked in; the stand-in draws generated ones.
+    const textured = tripoBody(type) !== null;
     if (fallen) {
-      set(`fallen:${type}`, () => buildMotorbike(type).body, palette, 1).push(scaled, paintA, shade, paintB);
+      tripoSet(`fallen:${type}`, type, () => buildMotorbike(type).body).push(scaled, paintA, shade, paintB);
       // The rider lies a body length ahead, turned by the id.
       const lying = baseMatrix(draw, 0, 0, 0, fade).multiply(m.makeTranslation(-0.6 * st.sign, 0, 1.3)).multiply(m.makeRotationY(0.8 * st.sign));
       lyingSet().push(lying, paintA, 1, paintB);
+    } else if (textured) {
+      tripoSet(`tripo:${type}`, type, () => new BufferGeometry()).push(scaled, paintA, 1, paintB);
+      riderSet(type, st.look.rider).push(scaled, paintA, 1, paintB);
     } else {
       riddenSet(type, st.look.rider).push(scaled, paintA, 1, paintB);
-      if (st.look.passenger) pillionSet(type).push(scaled, paintA, 1, paintB);
+      // Bake the rider for the Tripo body now, so it rides from the body's first frame.
+      if (TRIPO_MODELS[type]) riderSet(type, st.look.rider);
     }
+    if (!fallen && st.look.passenger) pillionSet(type).push(scaled, paintA, 1, paintB);
     const wheels = unitWheels();
-    for (const w of bike.wheels) {
+    if (!textured) for (const w of bike.wheels) {
       const spin = fallen ? 0 : st.distance / (w.radius * k);
       part.copy(scaled).multiply(m.makeTranslation(0, w.radius, w.z)).multiply(m.makeRotationX(spin)).multiply(m.makeScale(w.width, w.radius, w.radius));
       wheels.push(part, paintA, shade, paintB);
@@ -665,7 +755,7 @@ export function createActorViews(map, assets) {
     const shade = crashed ? WRECK_SHADE : 1;
     busSet().push(fit, keep, shade, keep);
     const wheels = unitWheels();
-    for (const w of bus.wheels) {
+    if (tripoBody('bus') === null) for (const w of bus.wheels) {
       const spin = crashed ? 0 : st.distance / w.radius;
       for (const side of sides) {
         const x = side * (BUS_SIZE.widthM / 2 - w.width / 2 - 0.04);
@@ -745,6 +835,10 @@ export function createActorViews(map, assets) {
       for (const b of bikes.values()) b.body.dispose();
       bus.body.dispose();
       for (const view of pedestrians.values()) view.dispose();
+      for (const t of tripo.values()) {
+        t.body?.dispose();
+        t.material.dispose();
+      }
       palette.dispose();
       carKit.dispose();
       brakeMaterial.dispose();

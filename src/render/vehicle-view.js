@@ -33,6 +33,7 @@ import { RIDERS } from './vehicles/index.js';
 import { createLookMaterial, setSingleLook } from './vehicles/look-material.js';
 import { buildMotorbike, MOTORBIKE_LENGTH_M } from './vehicles/motorbike.js';
 import { PALETTE_TEXTURE, unitWheel } from './vehicles/procedural.js';
+import { TRIPO_MODELS, tripoParts } from './vehicles/tripo.js';
 
 /** @typedef {import('./vehicles/model-config.js').ModelConfig} ModelConfig */
 /** @typedef {import('../contracts/telemetry.js').EgoState} EgoState */
@@ -201,7 +202,10 @@ function primitiveScooter(kit, config, L, W) {
 /**
  * Builds the procedural motorbike of a config with its rider, scaled to the footprint length.
  * The palette texture and the rider load asynchronously; until then the bike draws untextured
- * and riderless, and a failed load leaves it so (with a console error).
+ * and riderless, and a failed load leaves it so (with a console error). When the type has a Tripo
+ * body (`TRIPO_MODELS`), that body replaces the procedural one once it loads; its wheels are baked
+ * in, so the generated tyres hide (their pivots stay for `update`) and the rider bakes after it,
+ * onto its seat.
  * @param {PartKit} kit Part kit.
  * @param {ModelConfig} config Config with `procedural` set.
  * @param {number} L Length.
@@ -216,28 +220,51 @@ function proceduralBike(kit, config, L, isDisposed) {
   setSingleLook(material, config.color, EGO_HELMET, 1);
   const content = new Group();
   content.scale.setScalar(L / MOTORBIKE_LENGTH_M);
-  content.add(new Mesh(bike.body, material));
+  const bodyMesh = new Mesh(bike.body, material);
+  content.add(bodyMesh);
   const wheelGeometry = kit.own(unitWheel());
+  /** @type {Mesh[]} */
+  const tyres = [];
   const wheels = bike.wheels.map((w) => {
     const pivot = new Group();
     pivot.rotation.order = 'YXZ';
     pivot.position.set(0, w.radius, w.z);
     const tyre = new Mesh(wheelGeometry, material);
     tyre.scale.set(w.width, w.radius, w.radius);
+    tyres.push(tyre);
     pivot.add(tyre);
     content.add(pivot);
     return pivot;
   });
+  const spec = TRIPO_MODELS[type];
+  /** @type {Promise<boolean>} */
+  const textured = spec
+    ? loadModel(spec.glb)
+        .then((gltf) => {
+          if (isDisposed()) return false;
+          const parts = tripoParts(gltf, spec);
+          bodyMesh.geometry = kit.own(parts.body);
+          bodyMesh.material = kit.own(createLookMaterial({ map: parts.map, roughness: 0.9 }));
+          for (const tyre of tyres) tyre.visible = false;
+          return true;
+        })
+        .catch((err) => {
+          console.error(`Model ${spec.glb}: ${err instanceof Error ? err.message : String(err)}; drawing the procedural ${type}.`);
+          return false;
+        })
+    : Promise.resolve(false);
   loadTexture(PALETTE_TEXTURE)
     .then((texture) => {
       material.map = texture;
       material.needsUpdate = true;
     })
     .catch((err) => console.error(`Texture ${PALETTE_TEXTURE}: ${err instanceof Error ? err.message : String(err)}`));
-  loadModel(RIDERS[0])
-    .then((gltf) => {
+  textured
+    .then((tripo) => loadModel(RIDERS[0]).then((gltf) => ({ tripo, gltf })))
+    .then(({ tripo, gltf }) => {
       if (isDisposed()) return;
-      const rider = new Mesh(kit.own(bakeRider(gltf, 'drive', bike.seat, bike.legPitch)), material);
+      const seat = tripo ? (spec?.seat ?? bike.seat) : bike.seat;
+      const rider = new Mesh(kit.own(bakeRider(gltf, 'drive', seat, bike.legPitch)), material);
       rider.castShadow = true;
       content.add(rider);
     })

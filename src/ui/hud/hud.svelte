@@ -10,7 +10,7 @@
   import RoundButton from './controls/round-button.svelte';
   import SteeringSlider from './controls/steering-slider.svelte';
   import { formatGear, formatScore, formatSpeed } from '../lib/format.js';
-  import { CAMERA_SHORT_NAMES, actionLabel, buttonView, controlLayout, newestToast, noticeItems, pedalControl, rpmFraction } from '../lib/hud-view.js';
+  import { CAMERA_SHORT_NAMES, VOICE_TOGGLE_LABELS, actionLabel, buttonView, controlLayout, newestToast, noticeItems, pedalControl, rpmFraction } from '../lib/hud-view.js';
   import { watchBadgeVisibility } from '../lib/key-label.js';
 
   /**
@@ -26,12 +26,14 @@
    *   toasts: import('../lib/toast-stack.js').Toast[],
    *   controls: import('../../contracts/hud.js').GameControls,
    *   cameraMode?: import('../../contracts/controls.js').CameraMode,
+   *   voiceMuted?: boolean | null,
+   *   ontogglevoice?: () => void,
    *   onpause: () => void,
    *   ondismiss: (episodeId: string) => void,
    *   runKey?: number,
    * }}
    */
-  let { state: hud, vehicle, toasts, controls, cameraMode = 'chase', onpause, ondismiss, runKey = 0 } = $props();
+  let { state: hud, vehicle, toasts, controls, cameraMode = 'chase', voiceMuted = null, ontogglevoice = () => {}, onpause, ondismiss, runKey = 0 } = $props();
 
   const isCar = $derived(vehicle.legalClass === 'car');
   const paused = $derived(hud.runStatus === 'paused');
@@ -115,6 +117,19 @@
         >
           <!-- Lifted above the pause overlay, so pause and the camera stay usable while paused. -->
           <div class="absolute right-0 top-0 z-10 flex gap-2">
+            {#if voiceMuted !== null}
+              <!-- Only on maps with spoken lines; null hides it. -->
+              <button
+                type="button"
+                class="h-14 min-w-14 rounded-xl border-2 border-white/70 bg-white/95 px-2 text-xs font-semibold text-stone-800 shadow-md"
+                data-testid="hud-voice"
+                data-value={voiceMuted ? 'muted' : 'on'}
+                aria-pressed={!voiceMuted}
+                onclick={ontogglevoice}
+              >
+                {VOICE_TOGGLE_LABELS[voiceMuted ? 'muted' : 'on'].vi}
+              </button>
+            {/if}
             <ControlButton
               action="camera"
               mode="press"

@@ -84,10 +84,11 @@ test('the app loads, drives, and its pages render without console errors', async
   await expect(page.getByTestId('contact-github')).toHaveAttribute('href', 'https://github.com/mitiapps/laisaochodung/issues');
   await expect(page.getByTestId('contact-email')).toHaveAttribute('href', 'mailto:tiennm99@outlook.com');
 
+  // The donate QR is off (src/config/site.js): no nav link, and the page says it is not set up.
+  await expect(page.getByTestId('nav-donate')).toHaveCount(0);
   await page.goto('/#/ung-ho');
   await expect(page.getByTestId('page-donate')).toBeVisible();
-  await expect(page.getByTestId('donate-qr')).toHaveJSProperty('complete', true);
-  expect(await page.getByTestId('donate-qr').evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
+  await expect(page.getByTestId('donate-missing')).toBeVisible();
 
   await page.goto('/#/ghi-cong');
   await expect(page.getByTestId('page-credits')).toBeVisible();

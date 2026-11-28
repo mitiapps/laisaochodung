@@ -6,9 +6,9 @@
  * It fails while any of these holds:
  * - the built rules bundle has an unverified clause, speed default or sign meaning, or a sign
  *   whose drawing was not compared with the official QCVN 41 figure (`figureChecked: null`);
- * - `src/config/site.js` has no contact channel or donate QR, a malformed one, or a donate QR
- *   whose image is missing from `public/`;
- * - a file under `public/models/` or `public/signs/` has no entry in `data/credits/credits.json`;
+ * - `src/config/site.js` has no contact channel, a malformed contact or donate QR, or a donate QR
+ *   whose image is missing from `public/` (the donate QR itself is optional);
+ * - a file under `public/models/`, `public/signs/` or `public/audio/` has no entry in `data/credits/credits.json`;
  * - an OSM map has no attribution, or `data/maps/LICENSE-ODbL.md` is missing;
  * - a traffic model key of `data/traffic/params.yaml` or of a map's `traffic.mix` draws with neither
  *   a credited model file nor a procedural builder (a mix key must also be a traffic model).
@@ -25,7 +25,7 @@ import { MOTORBIKE_TYPES } from '../src/render/vehicles/motorbike.js';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /** Folders under `public/` whose every file needs a credit entry. */
-export const CREDITED_DIRS = Object.freeze(['models', 'signs']);
+export const CREDITED_DIRS = Object.freeze(['models', 'signs', 'audio']);
 
 /** Variants tried per traffic model: more than any model's `variants`, so every look is reached. */
 const LOOK_VARIANTS = 8;
@@ -62,8 +62,7 @@ export function releaseProblems(input) {
 
   for (const p of checkSiteConfig(input.site)) problems.push(`src/config/site.js: ${p}`);
   if (input.site.contacts.length === 0) problems.push('src/config/site.js: no contact channel is set');
-  if (input.site.donateQr === null) problems.push('src/config/site.js: donateQr is not set');
-  else if (!input.donateQrExists) problems.push(`public${input.site.donateQr.src} is missing`);
+  if (input.site.donateQr !== null && !input.donateQrExists) problems.push(`public${input.site.donateQr.src} is missing`);
 
   const credited = new Set(input.credits.map((c) => c.file));
   for (const file of input.assetFiles) {

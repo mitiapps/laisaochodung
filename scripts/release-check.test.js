@@ -37,6 +37,13 @@ describe('releaseProblems', () => {
     expect(releaseProblems(await passing())).toEqual([]);
   });
 
+  it('passes without a donate QR', async () => {
+    const input = await passing();
+    input.site.donateQr = null;
+    input.donateQrExists = false;
+    expect(releaseProblems(input)).toEqual([]);
+  });
+
   it('lists every blocker of a failing release', async () => {
     const input = await passing();
     input.bundle.clauses[0].verified = false;
